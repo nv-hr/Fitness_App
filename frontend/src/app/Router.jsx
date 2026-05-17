@@ -5,6 +5,7 @@ import LoginForm from '../features/auth/components/LoginForm.jsx';
 import RegisterForm from '../features/auth/components/RegisterForm.jsx';
 import ProfileForm from '../features/profile/components/ProfileForm.jsx';
 import { FoodLogPage } from '../features/food-log/index.js';
+import { ActivitiesPage } from '../features/activities/index.js';
 import { getProfile } from '../features/profile/api/profileApi.js';
 import { t } from './shared/i18n/translations.js';
 
@@ -42,12 +43,15 @@ function DashboardPlaceholder() {
   return (
     <div style={{ maxWidth: '400px', margin: '2rem auto', padding: '1rem', textAlign: 'center' }}>
       <h2>{t('auth.welcome')}, {user?.email}</h2>
-      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '1rem' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '1rem', flexWrap: 'wrap' }}>
         <Link to="/profile" style={{ padding: '0.5rem 1rem', border: '1px solid #ccc', borderRadius: '4px', textDecoration: 'none', color: '#333' }}>
           {t('profile.title')}
         </Link>
         <Link to="/food-log" style={{ padding: '0.5rem 1rem', border: '1px solid #ccc', borderRadius: '4px', textDecoration: 'none', color: '#333' }}>
           {t('foodLog.title')}
+        </Link>
+        <Link to="/activities" style={{ padding: '0.5rem 1rem', border: '1px solid #ccc', borderRadius: '4px', textDecoration: 'none', color: '#333' }}>
+          {t('activities.title')}
         </Link>
       </div>
       <button onClick={logout} style={{ padding: '0.5rem 1rem' }}>{t('auth.logout')}</button>
@@ -63,6 +67,7 @@ export default function Router() {
         <Route path="/register" element={<PublicRoute><RegisterForm /></PublicRoute>} />
         <Route path="/profile" element={<ProtectedRoute><ProfileForm /></ProtectedRoute>} />
         <Route path="/food-log" element={<ProtectedRoute><FoodLogPage /></ProtectedRoute>} />
+        <Route path="/activities" element={<ProtectedRoute><ActivitiesPage /></ProtectedRoute>} />
         <Route path="/" element={<ProtectedRoute><ProfileGuard><DashboardPlaceholder /></ProfileGuard></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
