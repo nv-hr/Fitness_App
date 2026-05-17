@@ -1,0 +1,113 @@
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { createCustomFood } from '../api/foodLogApi.js';
+import { t } from '../../../shared/i18n/translations.js';
+
+const schema = z.object({
+  name: z.string().min(1, t('validation.required')).max(100, 'Maksimal 100 karakter'),
+  calories_per_100g: z.coerce.number().min(0, 'Minimal 0 kkal').max(5000, 'Maksimal 5000 kkal'),
+  category: z.enum(['makanan_pokok', 'lauk', 'sayur', 'buah', 'minuman', 'snack', 'lainnya'], {
+    message: t('validation.required'),
+  }),
+});
+
+export default function CustomFoodForm({ onSuccess, onCancel }) {
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({
+    resolver: zodResolver(schema),
+    defaultValues: { category: 'lainnya' },
+  });
+
+  const [message, setMessage] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const onSubmit = async (data) => {
+    try {
+      setMessage('');
+      setErrorMsg('');
+      await createCustomFood(data);
+      setMessage(t('foodLog.customFoodSaved'));
+      reset();
+      if (onSuccess) onSuccess();
+    } catch (err) {
+      setErrorMsg(err.message || t('foodLog.customFoodError'));
+    }
+  };
+
+  return (
+    <div style={{
+      border: '1px solid #e5e7eb',
+      borderRadius: '8px',
+      padding: '1rem',
+      marginBottom: '1rem',
+      background: '#fafafa',
+    }}>
+      <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem' }}>{t('foodLog.addCustomFood')}</h3>
+
+      {message && <p style={{ color: '#16a34a', fontSize: '0.875rem' }}>{message}</p>}
+      {errorMsg && <p style={{ color: 'red', fontSize: '0.875rem' }}>{errorMsg}</p>}
+
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div style={{ marginBottom: '0.75rem' }}>
+          <label htmlFor="customFoodName">{t('foodLog.customFoodName')}</label>
+          <input
+            id="customFoodName"
+            type="text"
+            {...register('name')}
+            style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: '0.25rem', boxSizing: 'border-box' }}
+          />
+          {errors.name && <p style={{ color: 'red', fontSize: '0.875rem' }}>{errors.name.message}</p>}
+        </div>
+
+        <div style={{ marginBottom: '0.75rem' }}>
+          <label htmlFor="caloriesPer100g">{t('foodLog.caloriesPer100g')}</label>
+          <input
+            id="caloriesPer100g"
+            type="number"
+            {...register('calories_per_100g')}
+            style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: '0.25rem', boxSizing: 'border-box' }}
+          />
+          {errors.calories_per_100g && <p style={{ color: 'red', fontSize: '0.875rem' }}>{errors.calories_per_100g.message}</p>}
+        </div>
+
+        <div style={{ marginBottom: '0.75rem' }}>
+          <label htmlFor="category">{t('foodLog.mealType')}</label>
+          <select
+            id="category"
+            {...register('category')}
+            style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: '0.25rem', boxSizing: 'border-box' }}
+          >
+            <option value="makanan_pokok">{t('foodLog.categories.makanan_pokok')}</option>
+            <option value="lauk">{t('foodLog.categories.lauk')}</option>
+            <option value="sayur">{t('foodLog.categories.sayur')}</option>
+            <option value="buah">{t('foodLog.categories.buah')}</option>
+            <option value="minuman">{t('foodLog.categories.minuman')}</option>
+            <option value="snack">{t('foodLog.categories.snack')}</option>
+            <option value="lainnya">{t('foodLog.categories.lainnya')}</option>
+          </select>
+          {errors.category && <p style={{ color: 'red', fontSize: '0.875rem' }}>{errors.category.message}</p>}
+        </div>
+
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            style={{ padding: '0.5rem 1rem', cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
+          >
+            {isSubmitting ? t('auth.loading') : t('foodLog.addCustomFood')}
+          </button>
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              style={{ padding: '0.5rem 1rem', cursor: 'pointer' }}
+            >
+              Batal
+            </button>
+          )}
+        </div>
+      </form>
+    </div>
+  );
+}
