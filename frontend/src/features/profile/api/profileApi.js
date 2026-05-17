@@ -7,6 +7,7 @@ export async function createProfile(data) {
     age: data.age,
     gender: data.gender,
     fitnessGoal: data.fitnessGoal,
+    activityLevel: data.activityLevel,
   });
 }
 
@@ -23,6 +24,7 @@ export async function updateProfile(data) {
       age: data.age,
       gender: data.gender,
       fitnessGoal: data.fitnessGoal,
+      activityLevel: data.activityLevel,
     }),
   });
 }
