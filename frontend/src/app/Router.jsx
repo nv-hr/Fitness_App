@@ -1,7 +1,10 @@
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/hooks/useAuth.js';
 import LoginForm from '../features/auth/components/LoginForm.jsx';
 import RegisterForm from '../features/auth/components/RegisterForm.jsx';
+import ProfileForm from '../features/profile/components/ProfileForm.jsx';
+import { getProfile } from '../features/profile/api/profileApi.js';
 import { t } from './shared/i18n/translations.js';
 
 function ProtectedRoute({ children }) {
@@ -15,6 +18,21 @@ function PublicRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return <div>{t('auth.loading')}</div>;
   if (user) return <Navigate to="/" />;
+  return children;
+}
+
+function ProfileGuard({ children }) {
+  const [checked, setChecked] = useState(false);
+  const [hasProfile, setHasProfile] = useState(true);
+
+  useEffect(() => {
+    getProfile()
+      .then(() => { setHasProfile(true); setChecked(true); })
+      .catch(() => { setHasProfile(false); setChecked(true); });
+  }, []);
+
+  if (!checked) return <div>{t('auth.loading')}</div>;
+  if (!hasProfile) return <Navigate to="/profile" />;
   return children;
 }
 
@@ -34,7 +52,8 @@ export default function Router() {
       <Routes>
         <Route path="/login" element={<PublicRoute><LoginForm /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><RegisterForm /></PublicRoute>} />
-        <Route path="/" element={<ProtectedRoute><DashboardPlaceholder /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><ProfileForm /></ProtectedRoute>} />
+        <Route path="/" element={<ProtectedRoute><ProfileGuard><DashboardPlaceholder /></ProfileGuard></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );
