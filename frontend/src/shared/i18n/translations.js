@@ -125,6 +125,28 @@ export const translations = {
       lainnya: 'Lainnya',
     },
   },
+  activities: {
+    title: 'Rekomendasi Aktivitas',
+    subtitle: 'Aktivitas yang disarankan untuk tujuan kebugaran Anda',
+    yourRecommendations: 'Rekomendasi Hari Ini',
+    reshuffle: 'Acak Ulang',
+    loadingRecommendations: 'Memuat rekomendasi...',
+    noRecommendations: 'Tidak ada rekomendasi saat ini',
+    duration: 'Durasi',
+    minutes: 'menit',
+    calories: 'kkal',
+    estimatedCalories: 'Estimasi Kalori',
+    equipment: 'Alat yang Dibutuhkan',
+    noEquipment: 'Tanpa alat',
+    activityPool: 'Semua Aktivitas',
+    totalActivities: 'Total aktivitas',
+    goalTags: {
+      lose_weight: 'Menurunkan Berat Badan',
+      maintain: 'Menjaga Berat Badan',
+      gain_weight: 'Menambah Berat Badan',
+    },
+    error: 'Gagal memuat aktivitas',
+  },
 };
 
 export function t(key) {
