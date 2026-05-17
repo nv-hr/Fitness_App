@@ -136,6 +136,19 @@ export async function getDailySummary(req, res, next) {
 }
 
 /**
+ * GET /api/food/logs?date= — Individual log entries for a date.
+ */
+export async function getDailyLogs(req, res, next) {
+  try {
+    const date = req.query.date || new Date().toISOString().split('T')[0];
+    const logs = await foodRepo.getDailyLogs(req.user.userId, date);
+    return successResponse(res, logs);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * GET /api/food/history?days= — Calorie history for past days (LOG-04).
  */
 export async function getLogHistory(req, res, next) {
@@ -165,6 +178,7 @@ export default {
   createCustomFood,
   logFood,
   getDailySummary,
+  getDailyLogs,
   getLogHistory,
   getRecentFoods,
 };

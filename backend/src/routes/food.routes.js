@@ -19,6 +19,9 @@ router.post('/log', foodController.logFood);
 // GET /api/food/summary?date= — Daily calorie summary
 router.get('/summary', foodController.getDailySummary);
 
+// GET /api/food/logs?date= — Individual log entries for a date
+router.get('/logs', foodController.getDailyLogs);
+
 // GET /api/food/history?days= — Calorie history
 router.get('/history', foodController.getLogHistory);
 

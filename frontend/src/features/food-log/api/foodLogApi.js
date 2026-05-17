@@ -16,6 +16,10 @@ export async function getDailySummary(date) {
   return apiGet(`/api/food/summary?date=${date}`);
 }
 
+export async function getDailyLogs(date) {
+  return apiGet(`/api/food/logs?date=${date}`);
+}
+
 export async function getLogHistory(days = 7) {
   return apiGet(`/api/food/history?days=${days}`);
 }
