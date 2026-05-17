@@ -76,6 +76,8 @@ Plans:
 - [x] 04-02-PLAN.md — Backend API (search, custom food, logging, summary, history, recent)
 - [x] 04-03-PLAN.md — Frontend /food-log page (search, logging UI, calorie summary, history)
 **UI hint**: yes
+
+### Phase 5: Activity Recommendations & Polish
 **Goal:** Users receive personalized activity suggestions and the application works seamlessly across devices
 **Depends on:** Phase 4
 **Requirements:** ACT-01, ACT-02, UI-02, UI-03
@@ -84,7 +86,12 @@ Plans:
   2. Recommended activities are suitable for home use without gym equipment
   3. Application layout is fully responsive and usable on both mobile and desktop screens
   4. All UI elements have clean, minimal styling consistent across the application
-**Plans:** TBD
+**Plans:** 4 plans
+Plans:
+- [ ] 05-01-PLAN.md — Database schema (activities + user_activity_log tables) + 35 Indonesian home exercise seeding
+- [ ] 05-02-PLAN.md — Backend API (recommendations, activity pool, goal-filtered shuffle)
+- [ ] 05-03-PLAN.md — Frontend /activities page (recommendations, reshuffle, activity pool, Indonesian i18n)
+- [ ] 05-04-PLAN.md — Responsive CSS + polish across all pages (mobile-first, touch-friendly, clean styling)
 **UI hint**: yes
 
 ## Progress Table
@@ -95,8 +102,8 @@ Plans:
 | 2. Profile & BMI Calculator | 2/2 | Complete   | 2026-05-17 |
 | 3. TDEE Calculator & Goals | 2/2 | Complete   | 2026-05-17 |
 | 4. Food Database & Calorie Logging | 3/3 | Complete   | 2026-05-17 |
-| 5. Activity Recommendations & Polish | 0/0 | Not started | - |
+| 5. Activity Recommendations & Polish | 0/4 | Planned | - |
 
 ---
 *Roadmap created: 2026-05-17*
-*Last updated: 2026-05-17*
+*Last updated: 2026-05-18*
