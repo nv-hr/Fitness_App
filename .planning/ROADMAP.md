@@ -40,7 +40,10 @@ Plans:
   1. User can set and update their profile data (weight, height, age, gender, fitness goal)
   2. User can calculate BMI from their profile data and see the result with Asian-Pacific category (underweight, normal, overweight, obese)
   3. BMI display includes a clear disclaimer that the result is an estimate, not a diagnosis
-**Plans:** TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 02-01-PLAN.md — Database + Backend Profile API (profiles table, repository, service with BMI calc, controller, routes)
+- [ ] 02-02-PLAN.md — Frontend Profile UI (API adapter, ProfileForm + BmiResult components, route wiring, first-login redirect)
 **UI hint**: yes
 
 ### Phase 3: TDEE Calculator & Goals
