@@ -34,19 +34,19 @@
 
 ### Food Database
 
-- [ ] **FOOD-01**: User can search pre-seeded Indonesian food database by name
-- [ ] **FOOD-02**: Food search returns results with calorie info (kcal per serving)
-- [ ] **FOOD-03**: User can add custom foods not in the database (name + calories)
+- [x] **FOOD-01**: User can search pre-seeded Indonesian food database by name
+- [x] **FOOD-02**: Food search returns results with calorie info (kcal per serving)
+- [x] **FOOD-03**: User can add custom foods not in the database (name + calories)
 - [ ] **FOOD-04**: Database contains minimum 200 curated Indonesian foods at launch
 
 ### Calorie Logging
 
-- [ ] **LOG-01**: User can log food consumption for a specific date (select food + quantity)
-- [ ] **LOG-02**: User can view daily total calories consumed
-- [ ] **LOG-03**: User can view daily calorie balance (consumed vs TDEE target)
-- [ ] **LOG-04**: User can view calorie history (past days' logs)
-- [ ] **LOG-05**: Quick-add feature for recently logged foods
-- [ ] **LOG-06**: Warning displayed if daily intake shows extreme deficit (<1200 kcal)
+- [x] **LOG-01**: User can log food consumption for a specific date (select food + quantity)
+- [x] **LOG-02**: User can view daily total calories consumed
+- [x] **LOG-03**: User can view daily calorie balance (consumed vs TDEE target)
+- [x] **LOG-04**: User can view calorie history (past days' logs)
+- [x] **LOG-05**: Quick-add feature for recently logged foods
+- [x] **LOG-06**: Warning displayed if daily intake shows extreme deficit (<1200 kcal)
 
 ### Activity Recommendations
 
@@ -55,7 +55,7 @@
 
 ### UI/UX
 
-- [ ] **UI-01**: All UI text is in Bahasa Indonesia
+- [x] **UI-01**: All UI text is in Bahasa Indonesia
 - [ ] **UI-02**: Application is responsive (works on mobile and desktop)
 - [ ] **UI-03**: Minimal but clean styling
 
@@ -113,19 +113,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TDEE-01 | Phase 3 | Complete |
 | TDEE-02 | Phase 3 | Complete |
 | TDEE-03 | Phase 3 | Complete |
-| FOOD-01 | Phase 4 | Pending |
-| FOOD-02 | Phase 4 | Pending |
-| FOOD-03 | Phase 4 | Pending |
+| FOOD-01 | Phase 4 | Complete |
+| FOOD-02 | Phase 4 | Complete |
+| FOOD-03 | Phase 4 | Complete |
 | FOOD-04 | Phase 4 | Pending |
-| LOG-01 | Phase 4 | Pending |
-| LOG-02 | Phase 4 | Pending |
-| LOG-03 | Phase 4 | Pending |
-| LOG-04 | Phase 4 | Pending |
-| LOG-05 | Phase 4 | Pending |
-| LOG-06 | Phase 4 | Pending |
+| LOG-01 | Phase 4 | Complete |
+| LOG-02 | Phase 4 | Complete |
+| LOG-03 | Phase 4 | Complete |
+| LOG-04 | Phase 4 | Complete |
+| LOG-05 | Phase 4 | Complete |
+| LOG-06 | Phase 4 | Complete |
 | ACT-01 | Phase 5 | Pending |
 | ACT-02 | Phase 5 | Pending |
-| UI-01 | Phase 1 | Pending |
+| UI-01 | Phase 1 | Complete |
 | UI-02 | Phase 5 | Pending |
 | UI-03 | Phase 5 | Pending |
 

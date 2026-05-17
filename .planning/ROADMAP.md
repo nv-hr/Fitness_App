@@ -10,7 +10,7 @@
 - [x] **Phase 1: Foundation & Authentication** — Users can securely register, login, and access the app with PDP consent (completed 2026-05-17)
 - [x] **Phase 2: Profile & BMI Calculator** — Users can set body metrics and view BMI results with Asian-Pacific cutoffs (completed 2026-05-17)
 - [x] **Phase 3: TDEE Calculator & Goals** — Users can calculate daily calorie targets based on activity level and fitness goals (completed 2026-05-17)
-- [ ] **Phase 4: Food Database & Calorie Logging** — Users can search Indonesian foods, log meals, and track daily calorie balance
+- [x] **Phase 4: Food Database & Calorie Logging** — Users can search Indonesian foods, log meals, and track daily calorie balance (completed 2026-05-17)
 - [ ] **Phase 5: Activity Recommendations & Polish** — Users receive goal-based activity suggestions; app is fully responsive and in Bahasa Indonesia
 
 ## Phase Details
@@ -70,11 +70,11 @@ Plans:
   3. User can log food consumption for a specific date with quantity
   4. User can view daily total calories consumed, calorie balance against TDEE target, and calorie history for past days
   5. User sees a warning when daily intake shows extreme deficit (<1200 kcal) and can quick-add recently logged foods
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 Plans:
-- [ ] 04-01-PLAN.md — Database schema (foods + food_logs tables) + 100+ Indonesian food seeding
-- [ ] 04-02-PLAN.md — Backend API (search, custom food, logging, summary, history, recent)
-- [ ] 04-03-PLAN.md — Frontend /food-log page (search, logging UI, calorie summary, history)
+- [x] 04-01-PLAN.md — Database schema (foods + food_logs tables) + 100+ Indonesian food seeding
+- [x] 04-02-PLAN.md — Backend API (search, custom food, logging, summary, history, recent)
+- [x] 04-03-PLAN.md — Frontend /food-log page (search, logging UI, calorie summary, history)
 **UI hint**: yes
 **Goal:** Users receive personalized activity suggestions and the application works seamlessly across devices
 **Depends on:** Phase 4
@@ -94,7 +94,7 @@ Plans:
 | 1. Foundation & Authentication | 3/3 | Complete   | 2026-05-17 |
 | 2. Profile & BMI Calculator | 2/2 | Complete   | 2026-05-17 |
 | 3. TDEE Calculator & Goals | 2/2 | Complete   | 2026-05-17 |
-| 4. Food Database & Calorie Logging | 0/3 | Planned | - |
+| 4. Food Database & Calorie Logging | 3/3 | Complete   | 2026-05-17 |
 | 5. Activity Recommendations & Polish | 0/0 | Not started | - |
 
 ---
