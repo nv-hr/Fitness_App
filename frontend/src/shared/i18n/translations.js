@@ -33,7 +33,7 @@ export const translations = {
     minLength: 'Minimal {{min}} karakter',
   },
   profile: {
-    title: 'Profil & Kalkulator BMI',
+    title: 'Profil, BMI & TDEE',
     weight: 'Berat Badan (kg)',
     height: 'Tinggi Badan (cm)',
     age: 'Usia',
@@ -61,6 +61,10 @@ export const translations = {
     heightMax: 'Tinggi badan maksimal 250 cm',
     ageMin: 'Usia minimal 5 tahun',
     ageMax: 'Usia maksimal 120 tahun',
+    activityLevel: 'Tingkat Aktivitas',
+    activityLow: 'Rendah (Jarang olahraga)',
+    activityMedium: 'Sedang (Olahraga 3-5x/minggu)',
+    activityHigh: 'Tinggi (Olahraga setiap hari)',
   },
   bmi: {
     yourBmi: 'BMI Anda',
@@ -69,6 +73,17 @@ export const translations = {
     overweight: 'Berat Badan Lebih',
     obese: 'Obesitas',
     disclaimer: 'Hasil ini adalah estimasi dan bukan diagnosis medis.',
+  },
+  tdee: {
+    yourTdee: 'Kebutuhan Kalori Harian Anda',
+    caloriesPerDay: 'kkal/hari',
+    calorieTarget: 'Target Kalori Harian',
+    disclaimer: 'Hasil ini adalah estimasi dan bukan diagnosis medis.',
+    activity: {
+      low: 'Jarang berolahraga, pekerjaan duduk',
+      medium: 'Olahraga 3-5x per minggu',
+      high: 'Olahraga intensif setiap hari',
+    },
   },
 };
 
