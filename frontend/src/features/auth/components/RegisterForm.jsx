@@ -39,7 +39,7 @@ export default function RegisterForm() {
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '2rem auto', padding: '1rem' }}>
+    <div style={{ maxWidth: '400px', margin: '0 auto', padding: '1rem' }}>
       <h2>{t('auth.registerTitle')}</h2>
       {error && <p style={{ color: 'red' }}>{error}</p>}
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -49,7 +49,7 @@ export default function RegisterForm() {
             id="email"
             type="email"
             {...register('email')}
-            style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: '0.25rem' }}
+            style={{ display: 'block', width: '100%', padding: '0.75rem 0.5rem', marginTop: '0.25rem', boxSizing: 'border-box', minHeight: '44px' }}
           />
           {errors.email && <p style={{ color: 'red', fontSize: '0.875rem' }}>{errors.email.message}</p>}
         </div>
@@ -59,7 +59,7 @@ export default function RegisterForm() {
             id="password"
             type="password"
             {...register('password')}
-            style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: '0.25rem' }}
+            style={{ display: 'block', width: '100%', padding: '0.75rem 0.5rem', marginTop: '0.25rem', boxSizing: 'border-box', minHeight: '44px' }}
           />
           {errors.password && <p style={{ color: 'red', fontSize: '0.875rem' }}>{errors.password.message}</p>}
         </div>
@@ -69,13 +69,13 @@ export default function RegisterForm() {
             id="confirmPassword"
             type="password"
             {...register('confirmPassword')}
-            style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: '0.25rem' }}
+            style={{ display: 'block', width: '100%', padding: '0.75rem 0.5rem', marginTop: '0.25rem', boxSizing: 'border-box', minHeight: '44px' }}
           />
           {errors.confirmPassword && <p style={{ color: 'red', fontSize: '0.875rem' }}>{errors.confirmPassword.message}</p>}
         </div>
-        <div style={{ marginBottom: '1rem' }}>
-          <label>
-            <input type="checkbox" {...register('pdpConsent')} />
+        <div style={{ marginBottom: '1rem', minHeight: '44px', display: 'flex', alignItems: 'center' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+            <input type="checkbox" {...register('pdpConsent')} style={{ width: '20px', height: '20px' }} />
             {' '}{t('auth.pdpConsent')}
           </label>
           {errors.pdpConsent && <p style={{ color: 'red', fontSize: '0.875rem' }}>{errors.pdpConsent.message}</p>}
@@ -83,7 +83,7 @@ export default function RegisterForm() {
         <button
           type="submit"
           disabled={isSubmitting}
-          style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
+          style={{ width: '100%', padding: '0.75rem 1rem', marginBottom: '1rem', minHeight: '44px', cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
         >
           {isSubmitting ? t('auth.loading') : t('auth.registerButton')}
         </button>

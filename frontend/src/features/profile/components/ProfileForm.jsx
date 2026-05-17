@@ -96,13 +96,13 @@ export default function ProfileForm() {
   };
 
   if (loading) {
-    return <div style={{ maxWidth: '400px', margin: '2rem auto', padding: '1rem' }}>{t('auth.loading')}</div>;
+    return <div style={{ maxWidth: '400px', margin: '0 auto', padding: '1rem' }}>{t('auth.loading')}</div>;
   }
 
   const isUpdate = !!existingProfile;
 
   return (
-    <div style={{ maxWidth: '400px', margin: '2rem auto', padding: '1rem' }}>
+    <div style={{ maxWidth: '400px', margin: '0 auto', padding: '1rem' }}>
       <h2>{t('profile.title')}</h2>
       {error && <p style={{ color: 'red' }}>{error}</p>}
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -113,7 +113,7 @@ export default function ProfileForm() {
             type="number"
             step="0.1"
             {...register('weightKg')}
-            style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: '0.25rem', boxSizing: 'border-box' }}
+            style={{ display: 'block', width: '100%', padding: '0.75rem 0.5rem', marginTop: '0.25rem', boxSizing: 'border-box', minHeight: '44px' }}
           />
           {errors.weightKg && <p style={{ color: 'red', fontSize: '0.875rem' }}>{errors.weightKg.message}</p>}
         </div>
@@ -125,7 +125,7 @@ export default function ProfileForm() {
             type="number"
             step="0.1"
             {...register('heightCm')}
-            style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: '0.25rem', boxSizing: 'border-box' }}
+            style={{ display: 'block', width: '100%', padding: '0.75rem 0.5rem', marginTop: '0.25rem', boxSizing: 'border-box', minHeight: '44px' }}
           />
           {errors.heightCm && <p style={{ color: 'red', fontSize: '0.875rem' }}>{errors.heightCm.message}</p>}
         </div>
@@ -136,7 +136,7 @@ export default function ProfileForm() {
             id="age"
             type="number"
             {...register('age')}
-            style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: '0.25rem', boxSizing: 'border-box' }}
+            style={{ display: 'block', width: '100%', padding: '0.75rem 0.5rem', marginTop: '0.25rem', boxSizing: 'border-box', minHeight: '44px' }}
           />
           {errors.age && <p style={{ color: 'red', fontSize: '0.875rem' }}>{errors.age.message}</p>}
         </div>
@@ -146,7 +146,7 @@ export default function ProfileForm() {
           <select
             id="gender"
             {...register('gender')}
-            style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: '0.25rem', boxSizing: 'border-box' }}
+            style={{ display: 'block', width: '100%', padding: '0.75rem 0.5rem', marginTop: '0.25rem', boxSizing: 'border-box', minHeight: '44px' }}
           >
             <option value="male">{t('profile.male')}</option>
             <option value="female">{t('profile.female')}</option>
@@ -160,7 +160,7 @@ export default function ProfileForm() {
           <select
             id="fitnessGoal"
             {...register('fitnessGoal')}
-            style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: '0.25rem', boxSizing: 'border-box' }}
+            style={{ display: 'block', width: '100%', padding: '0.75rem 0.5rem', marginTop: '0.25rem', boxSizing: 'border-box', minHeight: '44px' }}
           >
             <option value="lose_weight">{t('profile.loseWeight')}</option>
             <option value="maintain">{t('profile.maintain')}</option>
@@ -174,7 +174,7 @@ export default function ProfileForm() {
           <select
             id="activityLevel"
             {...register('activityLevel')}
-            style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: '0.25rem', boxSizing: 'border-box' }}
+            style={{ display: 'block', width: '100%', padding: '0.75rem 0.5rem', marginTop: '0.25rem', boxSizing: 'border-box', minHeight: '44px' }}
           >
             <option value="low">{t('profile.activityLow')}</option>
             <option value="medium">{t('profile.activityMedium')}</option>
@@ -185,7 +185,7 @@ export default function ProfileForm() {
         <button
           type="submit"
           disabled={isSubmitting}
-          style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
+          style={{ width: '100%', padding: '0.75rem 1rem', marginBottom: '1rem', minHeight: '44px', cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
         >
           {isSubmitting ? t('auth.loading') : (isUpdate ? t('profile.updateProfile') : t('profile.saveProfile'))}
         </button>

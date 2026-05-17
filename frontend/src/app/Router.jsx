@@ -7,7 +7,22 @@ import ProfileForm from '../features/profile/components/ProfileForm.jsx';
 import { FoodLogPage } from '../features/food-log/index.js';
 import { ActivitiesPage } from '../features/activities/index.js';
 import { getProfile } from '../features/profile/api/profileApi.js';
-import { t } from './shared/i18n/translations.js';
+import { t } from '../shared/i18n/translations.js';
+import { useResponsive } from '../shared/hooks/useResponsive.js';
+
+function ResponsiveLayout({ children }) {
+  const { isMobile } = useResponsive();
+  return (
+    <div style={{
+      maxWidth: isMobile ? '100%' : '600px',
+      margin: '0 auto',
+      padding: isMobile ? '1rem' : '2rem 1rem',
+      minHeight: '100vh',
+    }}>
+      {children}
+    </div>
+  );
+}
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -40,21 +55,22 @@ function ProfileGuard({ children }) {
 
 function DashboardPlaceholder() {
   const { user, logout } = useAuth();
+  const { isMobile } = useResponsive();
   return (
-    <div style={{ maxWidth: '400px', margin: '2rem auto', padding: '1rem', textAlign: 'center' }}>
+    <div style={{ maxWidth: isMobile ? '100%' : '400px', margin: '2rem auto', padding: '1rem', textAlign: 'center' }}>
       <h2>{t('auth.welcome')}, {user?.email}</h2>
-      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '1rem', flexWrap: 'wrap' }}>
-        <Link to="/profile" style={{ padding: '0.5rem 1rem', border: '1px solid #ccc', borderRadius: '4px', textDecoration: 'none', color: '#333' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '1rem', flexWrap: 'wrap', flexDirection: isMobile ? 'column' : 'row', alignItems: 'center' }}>
+        <Link to="/profile" style={{ padding: '0.75rem 1rem', border: '1px solid #ccc', borderRadius: '4px', textDecoration: 'none', color: '#333', minHeight: '44px', display: 'inline-flex', alignItems: 'center' }}>
           {t('profile.title')}
         </Link>
-        <Link to="/food-log" style={{ padding: '0.5rem 1rem', border: '1px solid #ccc', borderRadius: '4px', textDecoration: 'none', color: '#333' }}>
+        <Link to="/food-log" style={{ padding: '0.75rem 1rem', border: '1px solid #ccc', borderRadius: '4px', textDecoration: 'none', color: '#333', minHeight: '44px', display: 'inline-flex', alignItems: 'center' }}>
           {t('foodLog.title')}
         </Link>
-        <Link to="/activities" style={{ padding: '0.5rem 1rem', border: '1px solid #ccc', borderRadius: '4px', textDecoration: 'none', color: '#333' }}>
+        <Link to="/activities" style={{ padding: '0.75rem 1rem', border: '1px solid #ccc', borderRadius: '4px', textDecoration: 'none', color: '#333', minHeight: '44px', display: 'inline-flex', alignItems: 'center' }}>
           {t('activities.title')}
         </Link>
       </div>
-      <button onClick={logout} style={{ padding: '0.5rem 1rem' }}>{t('auth.logout')}</button>
+      <button onClick={logout} style={{ padding: '0.75rem 1rem', minHeight: '44px', cursor: 'pointer' }}>{t('auth.logout')}</button>
     </div>
   );
 }
@@ -63,12 +79,12 @@ export default function Router() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<PublicRoute><LoginForm /></PublicRoute>} />
-        <Route path="/register" element={<PublicRoute><RegisterForm /></PublicRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><ProfileForm /></ProtectedRoute>} />
-        <Route path="/food-log" element={<ProtectedRoute><FoodLogPage /></ProtectedRoute>} />
-        <Route path="/activities" element={<ProtectedRoute><ActivitiesPage /></ProtectedRoute>} />
-        <Route path="/" element={<ProtectedRoute><ProfileGuard><DashboardPlaceholder /></ProfileGuard></ProtectedRoute>} />
+        <Route path="/login" element={<ResponsiveLayout><PublicRoute><LoginForm /></PublicRoute></ResponsiveLayout>} />
+        <Route path="/register" element={<ResponsiveLayout><PublicRoute><RegisterForm /></PublicRoute></ResponsiveLayout>} />
+        <Route path="/profile" element={<ResponsiveLayout><ProtectedRoute><ProfileForm /></ProtectedRoute></ResponsiveLayout>} />
+        <Route path="/food-log" element={<ResponsiveLayout><ProtectedRoute><FoodLogPage /></ProtectedRoute></ResponsiveLayout>} />
+        <Route path="/activities" element={<ResponsiveLayout><ProtectedRoute><ActivitiesPage /></ProtectedRoute></ResponsiveLayout>} />
+        <Route path="/" element={<ResponsiveLayout><ProtectedRoute><ProfileGuard><DashboardPlaceholder /></ProfileGuard></ProtectedRoute></ResponsiveLayout>} />
       </Routes>
     </BrowserRouter>
   );

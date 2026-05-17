@@ -47,9 +47,10 @@ export default function FoodSearch({ onFoodSelect, onToggleCustomForm }) {
         onChange={(e) => setQuery(e.target.value)}
         style={{
           width: '100%',
-          padding: '0.5rem',
+          padding: '0.75rem 0.5rem',
           boxSizing: 'border-box',
           fontSize: '1rem',
+          minHeight: '44px',
         }}
       />
 
@@ -72,11 +73,13 @@ export default function FoodSearch({ onFoodSelect, onToggleCustomForm }) {
               key={food.id}
               onClick={() => onFoodSelect(food)}
               style={{
-                padding: '0.5rem',
+                padding: '0.75rem 0.5rem',
+                minHeight: '44px',
                 cursor: 'pointer',
                 borderBottom: '1px solid #f3f4f6',
                 display: 'flex',
                 justifyContent: 'space-between',
+                alignItems: 'center',
               }}
               onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
@@ -95,9 +98,10 @@ export default function FoodSearch({ onFoodSelect, onToggleCustomForm }) {
         onClick={onToggleCustomForm}
         style={{
           marginTop: '0.5rem',
-          padding: '0.375rem 0.75rem',
+          padding: '0.75rem 1rem',
           fontSize: '0.875rem',
           cursor: 'pointer',
+          minHeight: '44px',
         }}
       >
         + {t('foodLog.addCustomFood')}

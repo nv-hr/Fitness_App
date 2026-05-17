@@ -30,7 +30,7 @@ export default function LoginForm() {
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '2rem auto', padding: '1rem' }}>
+    <div style={{ maxWidth: '400px', margin: '0 auto', padding: '1rem' }}>
       <h2>{t('auth.loginTitle')}</h2>
       {error && <p style={{ color: 'red' }}>{error}</p>}
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -40,7 +40,7 @@ export default function LoginForm() {
             id="email"
             type="email"
             {...register('email')}
-            style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: '0.25rem' }}
+            style={{ display: 'block', width: '100%', padding: '0.75rem 0.5rem', marginTop: '0.25rem', boxSizing: 'border-box', minHeight: '44px' }}
           />
           {errors.email && <p style={{ color: 'red', fontSize: '0.875rem' }}>{errors.email.message}</p>}
         </div>
@@ -50,21 +50,21 @@ export default function LoginForm() {
             id="password"
             type="password"
             {...register('password')}
-            style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: '0.25rem' }}
+            style={{ display: 'block', width: '100%', padding: '0.75rem 0.5rem', marginTop: '0.25rem', boxSizing: 'border-box', minHeight: '44px' }}
           />
           {errors.password && <p style={{ color: 'red', fontSize: '0.875rem' }}>{errors.password.message}</p>}
         </div>
         <button
           type="submit"
           disabled={isSubmitting}
-          style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
+          style={{ width: '100%', padding: '0.75rem 1rem', marginBottom: '1rem', minHeight: '44px', cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
         >
           {isSubmitting ? t('auth.loading') : t('auth.loginButton')}
         </button>
       </form>
       <a
         href="/api/auth/google"
-        style={{ display: 'block', textAlign: 'center', marginBottom: '1rem' }}
+        style={{ display: 'block', textAlign: 'center', marginBottom: '1rem', padding: '0.75rem 1rem', minHeight: '44px', lineHeight: '44px' }}
       >
         {t('auth.loginWithGoogle')}
       </a>

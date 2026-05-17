@@ -124,11 +124,11 @@ export default function FoodLogPage() {
   };
 
   if (loading) {
-    return <div style={{ maxWidth: '600px', margin: '2rem auto', padding: '1rem' }}>{t('auth.loading')}</div>;
+    return <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1rem' }}>{t('auth.loading')}</div>;
   }
 
   return (
-    <div style={{ maxWidth: '600px', margin: '2rem auto', padding: '1rem' }}>
+    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1rem' }}>
       <h2>{t('foodLog.title')}</h2>
 
       {error && <p style={{ color: 'red' }}>{error}</p>}
@@ -206,7 +206,7 @@ export default function FoodLogPage() {
 
           <button
             onClick={handleLogFood}
-            style={{ width: '100%', padding: '0.5rem', cursor: 'pointer' }}
+            style={{ width: '100%', padding: '0.75rem 1rem', cursor: 'pointer', minHeight: '44px' }}
           >
             {t('foodLog.logFood')}
           </button>
