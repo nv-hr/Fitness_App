@@ -70,10 +70,12 @@ Plans:
   3. User can log food consumption for a specific date with quantity
   4. User can view daily total calories consumed, calorie balance against TDEE target, and calorie history for past days
   5. User sees a warning when daily intake shows extreme deficit (<1200 kcal) and can quick-add recently logged foods
-**Plans:** TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 04-01-PLAN.md — Database schema (foods + food_logs tables) + 100+ Indonesian food seeding
+- [ ] 04-02-PLAN.md — Backend API (search, custom food, logging, summary, history, recent)
+- [ ] 04-03-PLAN.md — Frontend /food-log page (search, logging UI, calorie summary, history)
 **UI hint**: yes
-
-### Phase 5: Activity Recommendations & Polish
 **Goal:** Users receive personalized activity suggestions and the application works seamlessly across devices
 **Depends on:** Phase 4
 **Requirements:** ACT-01, ACT-02, UI-02, UI-03
@@ -92,7 +94,7 @@ Plans:
 | 1. Foundation & Authentication | 3/3 | Complete   | 2026-05-17 |
 | 2. Profile & BMI Calculator | 2/2 | Complete   | 2026-05-17 |
 | 3. TDEE Calculator & Goals | 2/2 | Complete   | 2026-05-17 |
-| 4. Food Database & Calorie Logging | 0/0 | Not started | - |
+| 4. Food Database & Calorie Logging | 0/3 | Planned | - |
 | 5. Activity Recommendations & Polish | 0/0 | Not started | - |
 
 ---
