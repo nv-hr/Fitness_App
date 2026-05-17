@@ -54,7 +54,10 @@ Plans:
   1. User can calculate TDEE using Mifflin-St Jeor formula with their profile data and selected activity level
   2. TDEE result is displayed as a range (not a precise number) with activity level description
   3. User sees a recommended daily calorie target adjusted for their fitness goal (deficit for weight loss, surplus for weight gain)
-**Plans:** TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 03-01-PLAN.md — Backend TDEE: activity_level schema, repository, service with Mifflin-St Jeor, controller extension
+- [ ] 03-02-PLAN.md — Frontend TDEE UI: activity selector, TdeeResult component, API adapter, Indonesian translations
 **UI hint**: yes
 
 ### Phase 4: Food Database & Calorie Logging
