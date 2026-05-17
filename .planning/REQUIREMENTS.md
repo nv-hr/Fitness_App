@@ -28,9 +28,9 @@
 
 ### TDEE Calculator
 
-- [ ] **TDEE-01**: User can calculate TDEE using Mifflin-St Jeor formula with profile data and activity level
-- [ ] **TDEE-02**: TDEE result displays as a range (not exact number) with activity level description
-- [ ] **TDEE-03**: User sees recommended daily calorie target based on fitness goal (deficit/surplus adjustments)
+- [x] **TDEE-01**: User can calculate TDEE using Mifflin-St Jeor formula with profile data and activity level
+- [x] **TDEE-02**: TDEE result displays as a range (not exact number) with activity level description
+- [x] **TDEE-03**: User sees recommended daily calorie target based on fitness goal (deficit/surplus adjustments)
 
 ### Food Database
 
@@ -110,9 +110,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BMI-01 | Phase 2 | Pending |
 | BMI-02 | Phase 2 | Pending |
 | BMI-03 | Phase 2 | Pending |
-| TDEE-01 | Phase 3 | Pending |
-| TDEE-02 | Phase 3 | Pending |
-| TDEE-03 | Phase 3 | Pending |
+| TDEE-01 | Phase 3 | Complete |
+| TDEE-02 | Phase 3 | Complete |
+| TDEE-03 | Phase 3 | Complete |
 | FOOD-01 | Phase 4 | Pending |
 | FOOD-02 | Phase 4 | Pending |
 | FOOD-03 | Phase 4 | Pending |

@@ -9,7 +9,7 @@
 
 - [x] **Phase 1: Foundation & Authentication** — Users can securely register, login, and access the app with PDP consent (completed 2026-05-17)
 - [x] **Phase 2: Profile & BMI Calculator** — Users can set body metrics and view BMI results with Asian-Pacific cutoffs (completed 2026-05-17)
-- [ ] **Phase 3: TDEE Calculator & Goals** — Users can calculate daily calorie targets based on activity level and fitness goals
+- [x] **Phase 3: TDEE Calculator & Goals** — Users can calculate daily calorie targets based on activity level and fitness goals (completed 2026-05-17)
 - [ ] **Phase 4: Food Database & Calorie Logging** — Users can search Indonesian foods, log meals, and track daily calorie balance
 - [ ] **Phase 5: Activity Recommendations & Polish** — Users receive goal-based activity suggestions; app is fully responsive and in Bahasa Indonesia
 
@@ -54,10 +54,10 @@ Plans:
   1. User can calculate TDEE using Mifflin-St Jeor formula with their profile data and selected activity level
   2. TDEE result is displayed as a range (not a precise number) with activity level description
   3. User sees a recommended daily calorie target adjusted for their fitness goal (deficit for weight loss, surplus for weight gain)
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 03-01-PLAN.md — Backend TDEE: activity_level schema, repository, service with Mifflin-St Jeor, controller extension
-- [ ] 03-02-PLAN.md — Frontend TDEE UI: activity selector, TdeeResult component, API adapter, Indonesian translations
+- [x] 03-01-PLAN.md — Backend TDEE: activity_level schema, repository, service with Mifflin-St Jeor, controller extension
+- [x] 03-02-PLAN.md — Frontend TDEE UI: activity selector, TdeeResult component, API adapter, Indonesian translations
 **UI hint**: yes
 
 ### Phase 4: Food Database & Calorie Logging
@@ -91,7 +91,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Foundation & Authentication | 3/3 | Complete   | 2026-05-17 |
 | 2. Profile & BMI Calculator | 2/2 | Complete   | 2026-05-17 |
-| 3. TDEE Calculator & Goals | 0/0 | Not started | - |
+| 3. TDEE Calculator & Goals | 2/2 | Complete   | 2026-05-17 |
 | 4. Food Database & Calorie Logging | 0/0 | Not started | - |
 | 5. Activity Recommendations & Polish | 0/0 | Not started | - |
 
