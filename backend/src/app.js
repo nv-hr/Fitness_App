@@ -10,6 +10,7 @@ import authRoutes from './routes/auth.routes.js';
 import authController from './controllers/auth.controller.js';
 import profileRoutes from './routes/profile.routes.js';
 import foodRoutes from './routes/food.routes.js';
+import activityRoutes from './routes/activity.routes.js';
 import { errorResponse } from './utils/response.js';
 
 const app = express();
@@ -81,6 +82,15 @@ const foodLimiter = rateLimit({
 });
 app.use('/api/food', foodLimiter);
 app.use('/api/food', foodRoutes);
+
+// Activity API routes — rate limiter for ORDER BY RAND() queries (T-05-07)
+const activityLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 60,
+  message: 'Too many activity requests',
+});
+app.use('/api/activities', activityLimiter);
+app.use('/api/activities', activityRoutes);
 
 // Google OAuth routes (must be separate from authRoutes for Passport middleware)
 app.get(
