@@ -25,7 +25,11 @@
   3. User can log out from any page in the application
   4. User must explicitly consent to PDP terms before any health data is collected
   5. All visible UI text is in Bahasa Indonesia
-**Plans:** TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 01-01-PLAN.md — Infrastructure + Database + Backend foundation (Docker, MySQL, user repository)
+- [ ] 01-02-PLAN.md — Complete auth backend (email/password, Google OAuth, JWT, PDP consent)
+- [ ] 01-03-PLAN.md — Frontend auth UI (login, register, OAuth, Indonesian i18n, session persistence)
 **UI hint**: yes
 
 ### Phase 2: Profile & BMI Calculator
@@ -79,7 +83,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Authentication | 0/0 | Not started | - |
+| 1. Foundation & Authentication | 0/3 | Planned | - |
 | 2. Profile & BMI Calculator | 0/0 | Not started | - |
 | 3. TDEE Calculator & Goals | 0/0 | Not started | - |
 | 4. Food Database & Calorie Logging | 0/0 | Not started | - |
