@@ -7,7 +7,7 @@
 
 ## Phases
 
-- [ ] **Phase 1: Foundation & Authentication** — Users can securely register, login, and access the app with PDP consent
+- [x] **Phase 1: Foundation & Authentication** — Users can securely register, login, and access the app with PDP consent (completed 2026-05-17)
 - [ ] **Phase 2: Profile & BMI Calculator** — Users can set body metrics and view BMI results with Asian-Pacific cutoffs
 - [ ] **Phase 3: TDEE Calculator & Goals** — Users can calculate daily calorie targets based on activity level and fitness goals
 - [ ] **Phase 4: Food Database & Calorie Logging** — Users can search Indonesian foods, log meals, and track daily calorie balance
@@ -25,11 +25,11 @@
   3. User can log out from any page in the application
   4. User must explicitly consent to PDP terms before any health data is collected
   5. All visible UI text is in Bahasa Indonesia
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 Plans:
-- [ ] 01-01-PLAN.md — Infrastructure + Database + Backend foundation (Docker, MySQL, user repository)
-- [ ] 01-02-PLAN.md — Complete auth backend (email/password, Google OAuth, JWT, PDP consent)
-- [ ] 01-03-PLAN.md — Frontend auth UI (login, register, OAuth, Indonesian i18n, session persistence)
+- [x] 01-01-PLAN.md — Infrastructure + Database + Backend foundation (Docker, MySQL, user repository)
+- [x] 01-02-PLAN.md — Complete auth backend (email/password, Google OAuth, JWT, PDP consent)
+- [x] 01-03-PLAN.md — Frontend auth UI (login, register, OAuth, Indonesian i18n, session persistence)
 **UI hint**: yes
 
 ### Phase 2: Profile & BMI Calculator
@@ -83,7 +83,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Authentication | 0/3 | Planned | - |
+| 1. Foundation & Authentication | 3/3 | Complete   | 2026-05-17 |
 | 2. Profile & BMI Calculator | 0/0 | Not started | - |
 | 3. TDEE Calculator & Goals | 0/0 | Not started | - |
 | 4. Food Database & Calorie Logging | 0/0 | Not started | - |
