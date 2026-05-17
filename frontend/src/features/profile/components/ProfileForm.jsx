@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { createProfile, getProfile, updateProfile } from '../api/profileApi.js';
 import BmiResult from './BmiResult.jsx';
+import TdeeResult from './TdeeResult.jsx';
 import { t } from '../../../shared/i18n/translations.js';
 
 const schema = z.object({
@@ -12,6 +13,7 @@ const schema = z.object({
   age: z.coerce.number().min(5, t('profile.ageMin')).max(120, t('profile.ageMax')),
   gender: z.enum(['male', 'female', 'other'], { message: t('profile.genderRequired') }),
   fitnessGoal: z.enum(['lose_weight', 'maintain', 'gain_weight'], { message: t('profile.fitnessGoalRequired') }),
+  activityLevel: z.enum(['low', 'medium', 'high']).optional(),
 });
 
 export default function ProfileForm() {
@@ -25,11 +27,13 @@ export default function ProfileForm() {
     defaultValues: {
       gender: 'male',
       fitnessGoal: 'maintain',
+      activityLevel: 'medium',
     },
   });
 
   const [existingProfile, setExistingProfile] = useState(null);
   const [bmiResult, setBmiResult] = useState(null);
+  const [tdeeResult, setTdeeResult] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -44,7 +48,28 @@ export default function ProfileForm() {
         setValue('age', profile.age);
         setValue('gender', profile.gender);
         setValue('fitnessGoal', profile.fitness_goal);
-        setBmiResult({ bmi: response.data.bmi, bmiCategory: response.data.bmiCategory });
+        if (profile.activity_level) {
+          setValue('activityLevel', profile.activity_level);
+        }
+      setBmiResult({ bmi: response.data.bmi, bmiCategory: response.data.bmiCategory });
+      if (response.data.tdee) {
+        setTdeeResult({
+          tdee: response.data.tdee,
+          tdeeRange: response.data.tdeeRange,
+          calorieTarget: response.data.calorieTarget,
+          activityLevel: data.activityLevel,
+          fitnessGoal: data.fitnessGoal,
+        });
+      }
+        if (response.data.tdee) {
+          setTdeeResult({
+            tdee: response.data.tdee,
+            tdeeRange: response.data.tdeeRange,
+            calorieTarget: response.data.calorieTarget,
+            activityLevel: profile.activity_level,
+            fitnessGoal: profile.fitness_goal,
+          });
+        }
       } catch {
         // No profile exists yet
       } finally {
@@ -144,6 +169,19 @@ export default function ProfileForm() {
           {errors.fitnessGoal && <p style={{ color: 'red', fontSize: '0.875rem' }}>{errors.fitnessGoal.message}</p>}
         </div>
 
+        <div style={{ marginBottom: '1rem' }}>
+          <label htmlFor="activityLevel">{t('profile.activityLevel')}</label>
+          <select
+            id="activityLevel"
+            {...register('activityLevel')}
+            style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: '0.25rem', boxSizing: 'border-box' }}
+          >
+            <option value="low">{t('profile.activityLow')}</option>
+            <option value="medium">{t('profile.activityMedium')}</option>
+            <option value="high">{t('profile.activityHigh')}</option>
+          </select>
+        </div>
+
         <button
           type="submit"
           disabled={isSubmitting}
@@ -155,6 +193,16 @@ export default function ProfileForm() {
 
       {bmiResult && (
         <BmiResult bmi={bmiResult.bmi} bmiCategory={bmiResult.bmiCategory} />
+      )}
+
+      {tdeeResult && tdeeResult.tdee && (
+        <TdeeResult
+          tdee={tdeeResult.tdee}
+          tdeeRange={tdeeResult.tdeeRange}
+          calorieTarget={tdeeResult.calorieTarget}
+          activityLevel={tdeeResult.activityLevel}
+          fitnessGoal={tdeeResult.fitnessGoal}
+        />
       )}
     </div>
   );
