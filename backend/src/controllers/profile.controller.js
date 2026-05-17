@@ -10,15 +10,16 @@ export async function createProfile(req, res, next) {
     const userId = req.user.userId;
     const { weightKg, heightCm, age, gender, fitnessGoal } = req.body;
 
-    const { profile, bmi, bmiCategory } = await profileService.createProfile(userId, {
+    const { profile, bmi, bmiCategory, tdee, tdeeRange, calorieTarget } = await profileService.createProfile(userId, {
       weightKg,
       heightCm,
       age,
       gender,
       fitnessGoal,
+      activityLevel: req.body.activityLevel,
     });
 
-    return successResponse(res, { profile, bmi, bmiCategory }, 201);
+    return successResponse(res, { profile, bmi, bmiCategory, tdee, tdeeRange, calorieTarget }, 201);
   } catch (err) {
     if (err instanceof ValidationError) {
       return errorResponse(res, err.message, 400, 'VALIDATION_ERROR');
@@ -56,15 +57,16 @@ export async function updateProfile(req, res, next) {
     const userId = req.user.userId;
     const { weightKg, heightCm, age, gender, fitnessGoal } = req.body;
 
-    const { profile, bmi, bmiCategory } = await profileService.updateProfile(userId, {
+    const { profile, bmi, bmiCategory, tdee, tdeeRange, calorieTarget } = await profileService.updateProfile(userId, {
       weightKg,
       heightCm,
       age,
       gender,
       fitnessGoal,
+      activityLevel: req.body.activityLevel,
     });
 
-    return successResponse(res, { profile, bmi, bmiCategory });
+    return successResponse(res, { profile, bmi, bmiCategory, tdee, tdeeRange, calorieTarget });
   } catch (err) {
     if (err instanceof ValidationError) {
       return errorResponse(res, err.message, 400, 'VALIDATION_ERROR');
