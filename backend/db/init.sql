@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   age INT NOT NULL,
   gender ENUM('male', 'female', 'other') NOT NULL,
   fitness_goal ENUM('lose_weight', 'maintain', 'gain_weight') NOT NULL,
+  activity_level ENUM('low', 'medium', 'high') NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
