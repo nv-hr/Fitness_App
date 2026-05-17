@@ -8,7 +8,7 @@
 ## Phases
 
 - [x] **Phase 1: Foundation & Authentication** — Users can securely register, login, and access the app with PDP consent (completed 2026-05-17)
-- [ ] **Phase 2: Profile & BMI Calculator** — Users can set body metrics and view BMI results with Asian-Pacific cutoffs
+- [x] **Phase 2: Profile & BMI Calculator** — Users can set body metrics and view BMI results with Asian-Pacific cutoffs (completed 2026-05-17)
 - [ ] **Phase 3: TDEE Calculator & Goals** — Users can calculate daily calorie targets based on activity level and fitness goals
 - [ ] **Phase 4: Food Database & Calorie Logging** — Users can search Indonesian foods, log meals, and track daily calorie balance
 - [ ] **Phase 5: Activity Recommendations & Polish** — Users receive goal-based activity suggestions; app is fully responsive and in Bahasa Indonesia
@@ -40,10 +40,10 @@ Plans:
   1. User can set and update their profile data (weight, height, age, gender, fitness goal)
   2. User can calculate BMI from their profile data and see the result with Asian-Pacific category (underweight, normal, overweight, obese)
   3. BMI display includes a clear disclaimer that the result is an estimate, not a diagnosis
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 02-01-PLAN.md — Database + Backend Profile API (profiles table, repository, service with BMI calc, controller, routes)
-- [ ] 02-02-PLAN.md — Frontend Profile UI (API adapter, ProfileForm + BmiResult components, route wiring, first-login redirect)
+- [x] 02-01-PLAN.md — Database + Backend Profile API (profiles table, repository, service with BMI calc, controller, routes)
+- [x] 02-02-PLAN.md — Frontend Profile UI (API adapter, ProfileForm + BmiResult components, route wiring, first-login redirect)
 **UI hint**: yes
 
 ### Phase 3: TDEE Calculator & Goals
@@ -87,7 +87,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Authentication | 3/3 | Complete   | 2026-05-17 |
-| 2. Profile & BMI Calculator | 0/0 | Not started | - |
+| 2. Profile & BMI Calculator | 2/2 | Complete   | 2026-05-17 |
 | 3. TDEE Calculator & Goals | 0/0 | Not started | - |
 | 4. Food Database & Calorie Logging | 0/0 | Not started | - |
 | 5. Activity Recommendations & Polish | 0/0 | Not started | - |
