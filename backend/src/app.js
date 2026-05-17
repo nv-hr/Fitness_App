@@ -8,6 +8,7 @@ import cookieParser from 'cookie-parser';
 import passport from './config/passport.js';
 import authRoutes from './routes/auth.routes.js';
 import authController from './controllers/auth.controller.js';
+import profileRoutes from './routes/profile.routes.js';
 import { errorResponse } from './utils/response.js';
 
 const app = express();
@@ -61,6 +62,15 @@ app.use('/api/auth/register', authLimiter);
 
 // Auth API routes
 app.use('/api/auth', authRoutes);
+
+// Profile API routes — stricter rate limiter for user data endpoints
+const profileLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 15,
+  message: 'Too many profile requests',
+});
+app.use('/api/profile', profileLimiter);
+app.use('/api/profile', profileRoutes);
 
 // Google OAuth routes (must be separate from authRoutes for Passport middleware)
 app.get(

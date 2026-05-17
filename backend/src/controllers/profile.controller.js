@@ -1,4 +1,4 @@
-import profileService from '../services/profile.service.js';
+import * as profileService from '../services/profile.service.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { ValidationError } from '../utils/errors.js';
 
