@@ -9,6 +9,7 @@ import passport from './config/passport.js';
 import authRoutes from './routes/auth.routes.js';
 import authController from './controllers/auth.controller.js';
 import profileRoutes from './routes/profile.routes.js';
+import foodRoutes from './routes/food.routes.js';
 import { errorResponse } from './utils/response.js';
 
 const app = express();
@@ -71,6 +72,15 @@ const profileLimiter = rateLimit({
 });
 app.use('/api/profile', profileLimiter);
 app.use('/api/profile', profileRoutes);
+
+// Food API routes — higher rate limit for search-as-you-type (T-04-08)
+const foodLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200,
+  message: 'Too many food requests',
+});
+app.use('/api/food', foodLimiter);
+app.use('/api/food', foodRoutes);
 
 // Google OAuth routes (must be separate from authRoutes for Passport middleware)
 app.get(
