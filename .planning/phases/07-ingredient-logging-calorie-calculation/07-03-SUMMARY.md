@@ -119,7 +119,7 @@ None
 
 ## Self-Check: PASSED
 
-All 3 modified files found on disk. Both task commits present (b09d06a, aae103b). All acceptance criteria verified via grep.
+All 3 modified files found on disk. All 3 commits present (b09d06a, aae103b, b09a29f). All acceptance criteria verified via grep.
 
 ---
 *Phase: 07-ingredient-logging-calorie-calculation*
