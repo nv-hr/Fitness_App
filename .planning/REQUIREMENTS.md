@@ -1,63 +1,33 @@
 # Requirements: Fitness_App
 
-**Defined:** 2026-05-17
-**Core Value:** Users can accurately calculate their BMI and TDEE, log daily food intake, and understand their calorie balance — all in one integrated, easy-to-use Indonesian-language health tool.
+**Defined:** 2026-05-18
+**Core Value:** Users can accurately calculate their BMI and TDEE, log daily food intake by ingredients, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
 
-## v1 Requirements
+## v1.1 Requirements
 
-### Authentication & User Management
+### Ingredient Database
 
-- [ ] **AUTH-01**: User can register with email and password
-- [ ] **AUTH-02**: User can login with email and password
-- [ ] **AUTH-03**: User can login with Google OAuth
-- [ ] **AUTH-04**: User session persists via httpOnly JWT cookie across page refreshes
-- [ ] **AUTH-05**: User can logout from any page
-- [ ] **AUTH-06**: User must consent to PDP (Personal Data Protection) terms before health data collection
+- [ ] **INGR-01**: Database contains comprehensive international ingredients (proteins, grains, vegetables, fruits, dairy, oils, etc.)
+- [ ] **INGR-02**: Each ingredient has calories per 100g value
+- [ ] **INGR-03**: Ingredients organized by category for browsing
+- [ ] **INGR-04**: User can search ingredients by name
 
-### User Profile
+### Ingredient Logging
 
-- [ ] **PROF-01**: User can set profile data (weight, height, age, gender)
-- [ ] **PROF-02**: User can update profile data at any time
-- [ ] **PROF-03**: User can set fitness goal (lose weight, maintain, gain weight)
+- [ ] **LOG-07**: User can select an ingredient and enter weight in grams
+- [ ] **LOG-08**: System calculates calories automatically (weight × calories per 100g)
+- [ ] **LOG-09**: User can add custom ingredients not in database (name + calories per 100g)
 
-### BMI Calculator
+### English UI
 
-- [ ] **BMI-01**: User can calculate BMI from profile data (weight, height)
-- [ ] **BMI-02**: User sees BMI result with category using Asian-Pacific cutoffs (underweight <18.5, normal 18.5-22.9, overweight 23-24.9, obese >=25)
-- [ ] **BMI-03**: BMI display includes disclaimer that result is an estimate
+- [ ] **UI-04**: All UI text in English — form labels, buttons, error messages, navigation
+- [ ] **UI-05**: Category names in English (proteins, grains, vegetables, fruits, dairy, oils)
+- [ ] **UI-06**: Meal type labels in English (breakfast, lunch, dinner, snack)
 
-### TDEE Calculator
+### Calorie Display
 
-- [x] **TDEE-01**: User can calculate TDEE using Mifflin-St Jeor formula with profile data and activity level
-- [x] **TDEE-02**: TDEE result displays as a range (not exact number) with activity level description
-- [x] **TDEE-03**: User sees recommended daily calorie target based on fitness goal (deficit/surplus adjustments)
-
-### Food Database
-
-- [x] **FOOD-01**: User can search pre-seeded Indonesian food database by name
-- [x] **FOOD-02**: Food search returns results with calorie info (kcal per serving)
-- [x] **FOOD-03**: User can add custom foods not in the database (name + calories)
-- [ ] **FOOD-04**: Database contains minimum 200 curated Indonesian foods at launch
-
-### Calorie Logging
-
-- [x] **LOG-01**: User can log food consumption for a specific date (select food + quantity)
-- [x] **LOG-02**: User can view daily total calories consumed
-- [x] **LOG-03**: User can view daily calorie balance (consumed vs TDEE target)
-- [x] **LOG-04**: User can view calorie history (past days' logs)
-- [x] **LOG-05**: Quick-add feature for recently logged foods
-- [x] **LOG-06**: Warning displayed if daily intake shows extreme deficit (<1200 kcal)
-
-### Activity Recommendations
-
-- [ ] **ACT-01**: User receives randomized simple activity recommendations based on their fitness goal
-- [ ] **ACT-02**: Activities are suitable for home use (no gym equipment required)
-
-### UI/UX
-
-- [x] **UI-01**: All UI text is in Bahasa Indonesia
-- [ ] **UI-02**: Application is responsive (works on mobile and desktop)
-- [ ] **UI-03**: Minimal but clean styling
+- [ ] **CALC-01**: Daily calorie summary shows total from ingredient-based logging
+- [ ] **CALC-02**: Calorie balance against TDEE target still works with new logging model
 
 ## v2 Requirements
 
@@ -68,7 +38,7 @@
 
 ### Advanced Nutrition
 
-- **NUTR-01**: Display macro breakdown (protein, carbs, fat) for foods
+- **NUTR-01**: Display macro breakdown (protein, carbs, fat) for ingredients
 - **NUTR-02**: User can set macro targets
 
 ### Social Features
@@ -85,12 +55,13 @@
 
 | Feature | Reason |
 |---------|--------|
-| Barcode scanning | Poor Indonesian food coverage, high complexity |
+| Barcode scanning | Poor international ingredient coverage, high complexity |
 | Macro tracking in v1 | Adds UI complexity for beginners, defer to v2 |
 | Social features | Not core to individual health tracking |
 | Mobile app (native) | Web-first, responsive design sufficient |
 | Real AI/ML in v1 | Rule-based randomization validated by research |
 | Video exercise tutorials | Storage/bandwidth costs, defer to v2+ |
+| Meal/recipe logging | Ingredient-level only for now |
 
 ## Traceability
 
@@ -98,42 +69,24 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 1 | Pending |
-| AUTH-02 | Phase 1 | Pending |
-| AUTH-03 | Phase 1 | Pending |
-| AUTH-04 | Phase 1 | Pending |
-| AUTH-05 | Phase 1 | Pending |
-| AUTH-06 | Phase 1 | Pending |
-| PROF-01 | Phase 2 | Pending |
-| PROF-02 | Phase 2 | Pending |
-| PROF-03 | Phase 2 | Pending |
-| BMI-01 | Phase 2 | Pending |
-| BMI-02 | Phase 2 | Pending |
-| BMI-03 | Phase 2 | Pending |
-| TDEE-01 | Phase 3 | Complete |
-| TDEE-02 | Phase 3 | Complete |
-| TDEE-03 | Phase 3 | Complete |
-| FOOD-01 | Phase 4 | Complete |
-| FOOD-02 | Phase 4 | Complete |
-| FOOD-03 | Phase 4 | Complete |
-| FOOD-04 | Phase 4 | Pending |
-| LOG-01 | Phase 4 | Complete |
-| LOG-02 | Phase 4 | Complete |
-| LOG-03 | Phase 4 | Complete |
-| LOG-04 | Phase 4 | Complete |
-| LOG-05 | Phase 4 | Complete |
-| LOG-06 | Phase 4 | Complete |
-| ACT-01 | Phase 5 | Pending |
-| ACT-02 | Phase 5 | Pending |
-| UI-01 | Phase 1 | Complete |
-| UI-02 | Phase 5 | Pending |
-| UI-03 | Phase 5 | Pending |
+| INGR-01 | Phase 6 | Pending |
+| INGR-02 | Phase 6 | Pending |
+| INGR-03 | Phase 6 | Pending |
+| INGR-04 | Phase 6 | Pending |
+| LOG-07 | Phase 7 | Pending |
+| LOG-08 | Phase 7 | Pending |
+| LOG-09 | Phase 7 | Pending |
+| UI-04 | Phase 8 | Pending |
+| UI-05 | Phase 8 | Pending |
+| UI-06 | Phase 8 | Pending |
+| CALC-01 | Phase 7 | Pending |
+| CALC-02 | Phase 7 | Pending |
 
 **Coverage:**
-- v1 requirements: 30 total
-- Mapped to phases: 30
+- v1.1 requirements: 12 total
+- Mapped to phases: 12
 - Unmapped: 0 ✓
 
 ---
-*Requirements defined: 2026-05-17*
-*Last updated: 2026-05-17 after initial definition*
+*Requirements defined: 2026-05-18*
+*Last updated: 2026-05-18 after v1.1 roadmap created*
