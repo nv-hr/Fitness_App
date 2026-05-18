@@ -66,13 +66,31 @@ CREATE TABLE IF NOT EXISTS food_logs (
   calories INT NOT NULL,
   portion_grams INT NOT NULL,
   log_date DATE NOT NULL,
-  meal_type ENUM('sarapan', 'makan_siang', 'makan_malam', 'camilan') NOT NULL,
+  meal_type ENUM('breakfast', 'lunch', 'dinner', 'snack') NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_user_date (user_id, log_date),
   INDEX idx_user_recent (user_id, log_date DESC),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (food_id) REFERENCES foods(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
+
+-- ============================================================
+-- Phase 08 Migration: meal_type ENUM from Indonesian to English
+-- Order: UPDATE existing data first, then ALTER ENUM (D-20)
+-- Mapping: sarapan→breakfast, makan_siang→lunch, makan_malam→dinner, camilan→snack
+-- ============================================================
+
+-- Step 1: Expand ENUM to include both old and new values
+ALTER TABLE food_logs MODIFY COLUMN meal_type ENUM('sarapan', 'makan_siang', 'makan_malam', 'camilan', 'breakfast', 'lunch', 'dinner', 'snack') NOT NULL;
+
+-- Step 2: Migrate existing rows from Indonesian to English
+UPDATE food_logs SET meal_type = 'breakfast' WHERE meal_type = 'sarapan';
+UPDATE food_logs SET meal_type = 'lunch' WHERE meal_type = 'makan_siang';
+UPDATE food_logs SET meal_type = 'dinner' WHERE meal_type = 'makan_malam';
+UPDATE food_logs SET meal_type = 'snack' WHERE meal_type = 'camilan';
+
+-- Step 3: Remove Indonesian values from ENUM definition
+ALTER TABLE food_logs MODIFY COLUMN meal_type ENUM('breakfast', 'lunch', 'dinner', 'snack') NOT NULL;
 
 -- ============================================================
 -- Activity Recommendations Tables (Phase 05)
