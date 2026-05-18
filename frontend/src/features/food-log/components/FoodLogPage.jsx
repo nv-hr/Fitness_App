@@ -5,6 +5,7 @@ import FoodSearch from './FoodSearch.jsx';
 import CustomFoodForm from './CustomFoodForm.jsx';
 import FoodLogTable from './FoodLogTable.jsx';
 import CalorieHistory from './CalorieHistory.jsx';
+import { calculatePreviewCalories } from './previewCalories.js';
 import { t } from '../../../shared/i18n/translations.js';
 
 export default function FoodLogPage() {
@@ -127,6 +128,8 @@ export default function FoodLogPage() {
     return <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1rem' }}>{t('auth.loading')}</div>;
   }
 
+  const previewCalories = calculatePreviewCalories(selectedFood?.calories_per_100g, portion);
+
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1rem' }}>
       <h2>{t('foodLog.title')}</h2>
@@ -188,6 +191,12 @@ export default function FoodLogPage() {
               style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: '0.25rem', boxSizing: 'border-box' }}
             />
           </div>
+
+          {previewCalories !== null && (
+            <p style={{ margin: '0.5rem 0', fontSize: '0.875rem', color: '#666' }}>
+              {parseInt(portion, 10)}g = {previewCalories} kkal
+            </p>
+          )}
 
           <div style={{ marginBottom: '0.75rem' }}>
             <label htmlFor="mealType">{t('foodLog.mealType')}</label>
