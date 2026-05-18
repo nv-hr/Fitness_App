@@ -13,7 +13,7 @@
 - [x] **Phase 3: TDEE Calculator & Goals** — Users can calculate daily calorie targets based on activity level and fitness goals (completed 2026-05-17)
 - [x] **Phase 4: Food Database & Calorie Logging** — Users can search Indonesian foods, log meals, and track daily calorie balance (completed 2026-05-17)
 - [x] **Phase 5: Activity Recommendations & Polish** — Users receive goal-based activity suggestions; app is fully responsive and in Bahasa Indonesia (completed 2026-05-17)
-- [ ] **Phase 6: International Ingredient Database** — Replace Indonesian food database with comprehensive international ingredients organized by category with search
+- [x] **Phase 6: International Ingredient Database** — Replace Indonesian food database with comprehensive international ingredients organized by category with search (completed 2026-05-18)
 - [ ] **Phase 7: Ingredient Logging & Calorie Calculation** — Users log food by selecting ingredient + entering weight; system calculates calories and shows daily balance against TDEE
 - [ ] **Phase 8: English UI Migration** — All UI text, category names, and meal labels switched from Indonesian to English
 
@@ -106,11 +106,11 @@ Plans:
   1. User can browse ingredients organized by category (proteins, grains, vegetables, fruits, dairy, oils, etc.)
   2. User can search for ingredients by name and see results with calories per 100g displayed
   3. Database contains 200+ international ingredients with accurate calorie-per-100g values
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 Plans:
-- [ ] 06-01-PLAN.md — Database migration: ENUM update + 200+ international ingredient seeds
-- [ ] 06-02-PLAN.md — Backend service: VALID_CATEGORIES update + category audit
-- [ ] 06-03-PLAN.md — Frontend: FoodSearch categoryLabels mapping update
+- [x] 06-01-PLAN.md — Database migration: ENUM update + 201 international ingredient seeds
+- [x] 06-02-PLAN.md — Backend service: VALID_CATEGORIES update + category audit
+- [x] 06-03-PLAN.md — Frontend: FoodSearch categoryLabels mapping update
 **UI hint**: yes
 
 ### Phase 7: Ingredient Logging & Calorie Calculation
@@ -146,7 +146,7 @@ Plans:
 | 3. TDEE Calculator & Goals | 2/2 | Complete   | 2026-05-17 |
 | 4. Food Database & Calorie Logging | 3/3 | Complete   | 2026-05-17 |
 | 5. Activity Recommendations & Polish | 4/4 | Complete   | 2026-05-17 |
-| 6. International Ingredient Database | 0/TBD | Not started | - |
+| 6. International Ingredient Database | 3/3 | Complete   | 2026-05-18 |
 | 7. Ingredient Logging & Calorie Calculation | 0/TBD | Not started | - |
 | 8. English UI Migration | 0/TBD | Not started | - |
 
