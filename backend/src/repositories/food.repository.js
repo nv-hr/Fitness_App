@@ -146,7 +146,7 @@ export async function getLogHistory(userId, days = 7) {
 
 /**
  * Get recently logged foods for quick-add (LOG-05).
- * Returns distinct food names ordered by most recent log.
+ * Returns distinct foods ordered by most recent log date, with last logged portion.
  * @param {number} userId
  * @param {number} limit
  * @returns {Promise<Array>}
@@ -154,12 +154,15 @@ export async function getLogHistory(userId, days = 7) {
 export async function getRecentFoods(userId, limit = 10) {
   try {
     const [rows] = await pool.query(
-      `SELECT DISTINCT COALESCE(f.name, fl.custom_food_name) as name,
-              fl.food_id, fl.calories, fl.portion_grams
+      `SELECT COALESCE(f.name, fl.custom_food_name) as name,
+              fl.food_id,
+              fl.calories,
+              MAX(fl.portion_grams) as last_portion_grams
        FROM food_logs fl
        LEFT JOIN foods f ON fl.food_id = f.id
        WHERE fl.user_id = ?
-       ORDER BY fl.log_date DESC, fl.created_at DESC
+       GROUP BY COALESCE(f.name, fl.custom_food_name), fl.food_id, fl.calories
+       ORDER BY MAX(fl.log_date) DESC, MAX(fl.created_at) DESC
        LIMIT ?`,
       [userId, limit]
     );
