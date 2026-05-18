@@ -33,6 +33,13 @@ CREATE TABLE IF NOT EXISTS profiles (
 -- Food Database Tables (Phase 04)
 -- ============================================================
 
+-- ============================================================
+-- Phase 06 Migration: Indonesian foods → International ingredients
+-- Strategy: TRUNCATE foods table, reseed with international ingredients
+-- Existing food_logs: food_id becomes NULL (ON DELETE SET NULL FK)
+-- Existing food_logs: calories values preserved (stored as INT, not FK-dependent)
+-- ============================================================
+
 -- foods table: single table for seeded + custom foods (D-30)
 -- Seeded foods: user_id=NULL, is_custom=FALSE
 -- Custom foods: user_id=set, is_custom=TRUE
@@ -41,7 +48,7 @@ CREATE TABLE IF NOT EXISTS foods (
   user_id INT NULL,
   name VARCHAR(255) NOT NULL,
   calories_per_100g INT NOT NULL,
-  category ENUM('makanan_pokok', 'lauk', 'sayur', 'buah', 'minuman', 'snack', 'lainnya') NOT NULL,
+  category ENUM('proteins', 'carbs', 'vegetables', 'fruits', 'dairy', 'fats', 'drinks', 'other') NOT NULL,
   is_custom BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_name (name),
