@@ -1,6 +1,6 @@
 import { ValidationError } from '../utils/errors.js';
 
-const VALID_CATEGORIES = ['makanan_pokok', 'lauk', 'sayur', 'buah', 'minuman', 'snack', 'lainnya'];
+const VALID_CATEGORIES = ['proteins', 'carbs', 'vegetables', 'fruits', 'dairy', 'fats', 'drinks', 'other'];
 
 /**
  * Get count of seeded (non-custom) foods in the database.
