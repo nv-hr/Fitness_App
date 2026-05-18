@@ -138,7 +138,11 @@ Plans:
   1. All navigation labels, buttons, form inputs, error messages, and help text display in English across every page
   2. Ingredient category names display in English (proteins, grains, vegetables, fruits, dairy, oils)
   3. Meal type labels display in English (breakfast, lunch, dinner, snack) on the food logging page
-**Plans:** TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 08-01-PLAN.md — Replace all Indonesian translation values in translations.js with English
+- [ ] 08-02-PLAN.md — Replace hardcoded Indonesian strings and 'kkal' in frontend components + backend error messages
+- [ ] 08-03-PLAN.md — Database meal_type ENUM migration from Indonesian to English
 **UI hint**: yes
 
 ## Progress Table
