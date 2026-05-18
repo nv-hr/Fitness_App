@@ -1,7 +1,7 @@
 import * as foodRepo from '../repositories/food.repository.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { ValidationError } from '../utils/errors.js';
-import { calculateCalories, validateFoodData } from '../services/food.service.js';
+import { calculateCalories, validateFoodData, validateCustomFoodData } from '../services/food.service.js';
 import { findByUserId as findProfileByUserId } from '../repositories/profile.repository.js';
 import { calculateTdee, getCalorieTarget } from '../services/profile.service.js';
 
@@ -33,8 +33,8 @@ export async function searchFoods(req, res) {
 export async function createCustomFood(req, res, next) {
   try {
     const { name, calories_per_100g, category } = req.body;
-    validateFoodData({ name, calories_per_100g, category });
-    const food = await foodRepo.createCustomFood(req.user.userId, { name, calories_per_100g, category });
+    const validated = validateCustomFoodData({ name, calories_per_100g, category });
+    const food = await foodRepo.createCustomFood(req.user.userId, validated);
     return successResponse(res, food, 201);
   } catch (err) {
     if (err instanceof ValidationError) {

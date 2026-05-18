@@ -50,6 +50,33 @@ export function validateFoodData(data) {
 }
 
 /**
+ * Validate custom food input data with optional category (Phase 7: D-09).
+ * Category defaults to 'other' when not provided.
+ * @param {Object} data
+ * @param {string} data.name - Food name (1-100 characters)
+ * @param {number} data.calories_per_100g - Calories per 100g (0-5000)
+ * @param {string} [data.category] - Optional, defaults to 'other'
+ * @returns {Object} Validated data with category defaulted
+ * @throws {ValidationError} with Indonesian message on failure
+ */
+export function validateCustomFoodData(data) {
+  const { name, calories_per_100g, category } = data;
+
+  if (!name || typeof name !== 'string' || name.trim().length < 1 || name.trim().length > 100) {
+    throw new ValidationError('Nama makanan wajib diisi (1-100 karakter)');
+  }
+
+  if (calories_per_100g == null || typeof calories_per_100g !== 'number' || calories_per_100g < 0 || calories_per_100g > 5000) {
+    throw new ValidationError('Kalori per 100g harus antara 0-5000 kkal');
+  }
+
+  // Category optional — default to 'other' (D-09)
+  const validCategory = category || 'other';
+
+  return { name: name.trim(), calories_per_100g, category: validCategory };
+}
+
+/**
  * Calculate calories for a given portion based on calories per 100g.
  * Formula: (caloriesPer100g * portionGrams) / 100
  * @param {number} caloriesPer100g
