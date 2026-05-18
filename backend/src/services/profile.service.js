@@ -97,19 +97,19 @@ function validateProfileData(data) {
   const { weightKg, heightCm, age, gender, fitnessGoal } = data;
 
   if (weightKg == null || weightKg < 2 || weightKg > 300) {
-    throw new ValidationError('Berat badan harus antara 2-300 kg');
+    throw new ValidationError('Weight must be between 2-300 kg');
   }
   if (heightCm == null || heightCm < 50 || heightCm > 250) {
-    throw new ValidationError('Tinggi badan harus antara 50-250 cm');
+    throw new ValidationError('Height must be between 50-250 cm');
   }
   if (age == null || age < 5 || age > 120) {
-    throw new ValidationError('Umur harus antara 5-120 tahun');
+    throw new ValidationError('Age must be between 5-120 years');
   }
   if (!['male', 'female', 'other'].includes(gender)) {
-    throw new ValidationError('Jenis kelamin harus male, female, atau other');
+    throw new ValidationError('Gender must be male, female, or other');
   }
   if (!['lose_weight', 'maintain', 'gain_weight'].includes(fitnessGoal)) {
-    throw new ValidationError('Tujuan fitness harus lose_weight, maintain, atau gain_weight');
+    throw new ValidationError('Fitness goal must be lose_weight, maintain, or gain_weight');
   }
 }
 

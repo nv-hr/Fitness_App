@@ -31,21 +31,21 @@ export async function getFoodsByCategory(findByCategory) {
  * @param {string} data.name - Food name (1-100 characters)
  * @param {number} data.calories_per_100g - Calories per 100g (0-5000)
  * @param {string} data.category - Must be one of 7 valid categories
- * @throws {ValidationError} with Indonesian message on failure
+ * @throws {ValidationError} with English message on failure
  */
 export function validateFoodData(data) {
   const { name, calories_per_100g, category } = data;
 
   if (!name || typeof name !== 'string' || name.trim().length < 1 || name.trim().length > 100) {
-    throw new ValidationError('Nama makanan wajib diisi (1-100 karakter)');
+    throw new ValidationError('Food name is required (1-100 characters)');
   }
 
   if (calories_per_100g == null || typeof calories_per_100g !== 'number' || calories_per_100g < 0 || calories_per_100g > 5000) {
-    throw new ValidationError('Kalori per 100g harus antara 0-5000 kkal');
+    throw new ValidationError('Calories per 100g must be between 0-5000 kcal');
   }
 
   if (!category || !VALID_CATEGORIES.includes(category)) {
-    throw new ValidationError('Kategori makanan tidak valid');
+    throw new ValidationError('Invalid food category');
   }
 }
 
@@ -57,17 +57,17 @@ export function validateFoodData(data) {
  * @param {number} data.calories_per_100g - Calories per 100g (0-5000)
  * @param {string} [data.category] - Optional, defaults to 'other'
  * @returns {Object} Validated data with category defaulted
- * @throws {ValidationError} with Indonesian message on failure
+ * @throws {ValidationError} with English message on failure
  */
 export function validateCustomFoodData(data) {
   const { name, calories_per_100g, category } = data;
 
   if (!name || typeof name !== 'string' || name.trim().length < 1 || name.trim().length > 100) {
-    throw new ValidationError('Nama makanan wajib diisi (1-100 karakter)');
+    throw new ValidationError('Food name is required (1-100 characters)');
   }
 
   if (calories_per_100g == null || typeof calories_per_100g !== 'number' || calories_per_100g < 0 || calories_per_100g > 5000) {
-    throw new ValidationError('Kalori per 100g harus antara 0-5000 kkal');
+    throw new ValidationError('Calories per 100g must be between 0-5000 kcal');
   }
 
   // Category optional — default to 'other' (D-09)

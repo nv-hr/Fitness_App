@@ -5,7 +5,7 @@ import { calculateCalories, validateFoodData, validateCustomFoodData } from '../
 import { findByUserId as findProfileByUserId } from '../repositories/profile.repository.js';
 import { calculateTdee, getCalorieTarget } from '../services/profile.service.js';
 
-const VALID_MEAL_TYPES = ['sarapan', 'makan_siang', 'makan_malam', 'camilan'];
+const VALID_MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 
 /**
  * GET /api/food/search?q= — Search foods by name (FOOD-01, FOOD-02).
@@ -14,7 +14,7 @@ export async function searchFoods(req, res) {
   try {
     const q = req.query.q;
     if (!q || q.length < 2) {
-      return errorResponse(res, 'Pencarian minimal 2 karakter', 400, 'VALIDATION_ERROR');
+      return errorResponse(res, 'Search query must be at least 2 characters', 400, 'VALIDATION_ERROR');
     }
     const foods = await foodRepo.searchFoods(req.user.userId, q);
     return successResponse(res, foods);
@@ -53,12 +53,12 @@ export async function logFood(req, res, next) {
 
     // Validate portion
     if (!portionGrams || portionGrams < 1 || portionGrams > 5000) {
-      return errorResponse(res, 'Porsi harus antara 1-5000 gram', 400, 'VALIDATION_ERROR');
+      return errorResponse(res, 'Portion must be between 1-5000 grams', 400, 'VALIDATION_ERROR');
     }
 
     // Validate meal type
     if (!mealType || !VALID_MEAL_TYPES.includes(mealType)) {
-      return errorResponse(res, 'Jenis makanan tidak valid', 400, 'VALIDATION_ERROR');
+      return errorResponse(res, 'Invalid meal type', 400, 'VALIDATION_ERROR');
     }
 
     // Default logDate to today
@@ -69,17 +69,17 @@ export async function logFood(req, res, next) {
       // Seeded food: calculate server-side from calories_per_100g (T-04-06)
       const food = await foodRepo.getFoodById(foodId);
       if (!food) {
-        return errorResponse(res, 'Makanan tidak ditemukan', 404, 'NOT_FOUND');
+        return errorResponse(res, 'Food not found', 404, 'NOT_FOUND');
       }
       calories = calculateCalories(food.calories_per_100g, portionGrams);
     } else if (customFoodName) {
       // Custom one-off: use client-supplied calories (CR-03 fix: allow zero-calorie foods)
       if (clientCalories == null || clientCalories < 0) {
-        return errorResponse(res, 'Kalori wajib diisi', 400, 'VALIDATION_ERROR');
+        return errorResponse(res, 'Calories are required', 400, 'VALIDATION_ERROR');
       }
       calories = clientCalories;
     } else {
-      return errorResponse(res, 'foodId atau customFoodName wajib diisi', 400, 'VALIDATION_ERROR');
+      return errorResponse(res, 'foodId or customFoodName is required', 400, 'VALIDATION_ERROR');
     }
 
     const log = await foodRepo.createFoodLog(req.user.userId, {
