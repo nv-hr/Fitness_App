@@ -1,6 +1,9 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import authService from '../services/auth.service.js';
+import { handleGoogleOAuth } from '../services/auth.service.js';
 
 // Configure Google OAuth strategy
 passport.use(
@@ -13,7 +16,7 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        const result = await authService.handleGoogleOAuth({
+        const result = await handleGoogleOAuth({
           googleId: profile.id,
           email: profile.emails[0].value,
           displayName: profile.displayName,

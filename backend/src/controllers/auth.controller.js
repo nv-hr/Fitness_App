@@ -1,4 +1,4 @@
-import authService from '../services/auth.service.js';
+import { register as registerUser, login as loginUser, handleGoogleOAuth, generateToken } from '../services/auth.service.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { ValidationError, AuthenticationError } from '../utils/errors.js';
 import { findById } from '../repositories/user.repository.js';
@@ -20,7 +20,7 @@ const cookieOptions = {
 export async function register(req, res, next) {
   try {
     const { email, password, pdpConsent } = req.body;
-    const { user, token } = await authService.register({ email, password, pdpConsent });
+    const { user, token } = await registerUser({ email, password, pdpConsent });
 
     // D-01: Set httpOnly JWT cookie
     res.cookie('token', token, cookieOptions);
@@ -41,7 +41,7 @@ export async function register(req, res, next) {
 export async function login(req, res, next) {
   try {
     const { email, password } = req.body;
-    const { user, token } = await authService.login({ email, password });
+    const { user, token } = await loginUser({ email, password });
 
     // D-01: Set httpOnly JWT cookie
     res.cookie('token', token, cookieOptions);
@@ -92,7 +92,7 @@ export async function getMe(req, res, next) {
 export async function googleCallback(req, res, next) {
   try {
     // req.user is set by Passport after successful OAuth
-    const token = authService.generateToken(req.user);
+    const token = generateToken(req.user);
 
     // D-01: Set httpOnly JWT cookie
     res.cookie('token', token, cookieOptions);
@@ -104,3 +104,11 @@ export async function googleCallback(req, res, next) {
     next(err);
   }
 }
+
+export default {
+  register,
+  login,
+  logout,
+  getMe,
+  googleCallback,
+};

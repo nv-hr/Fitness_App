@@ -5,7 +5,7 @@ import { findByUserId as findProfileByUserId } from '../repositories/profile.rep
 /**
  * GET /api/activities/recommendations — Randomized goal-based activity recommendations (ACT-01).
  */
-export async function getRecommendations(req, res, next) {
+async function getRecommendationsHandler(req, res, next) {
   try {
     // Fetch user profile for fitness_goal
     const profile = await findProfileByUserId(req.user.userId);
@@ -27,7 +27,7 @@ export async function getRecommendations(req, res, next) {
 /**
  * GET /api/activities — Full activity pool filtered by user's goal.
  */
-export async function getAllActivities(req, res, next) {
+async function getAllActivitiesHandler(req, res, next) {
   try {
     const profile = await findProfileByUserId(req.user.userId);
 
@@ -47,6 +47,6 @@ export async function getAllActivities(req, res, next) {
 }
 
 export default {
-  getRecommendations,
-  getAllActivities,
+  getRecommendations: getRecommendationsHandler,
+  getAllActivities: getAllActivitiesHandler,
 };
