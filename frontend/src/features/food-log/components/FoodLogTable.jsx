@@ -1,13 +1,13 @@
 import { t } from '../../../shared/i18n/translations.js';
 
 const mealTypeLabels = {
-  sarapan: t('foodLog.sarapan'),
-  makan_siang: t('foodLog.makanSiang'),
-  makan_malam: t('foodLog.makanMalam'),
-  camilan: t('foodLog.camilan'),
+  breakfast: t('foodLog.sarapan'),
+  lunch: t('foodLog.makanSiang'),
+  dinner: t('foodLog.makanMalam'),
+  snack: t('foodLog.camilan'),
 };
 
-const mealTypeOrder = ['sarapan', 'makan_siang', 'makan_malam', 'camilan'];
+const mealTypeOrder = ['breakfast', 'lunch', 'dinner', 'snack'];
 
 export default function FoodLogTable({ logs, recentFoods, onQuickAdd }) {
   // Group logs by meal_type

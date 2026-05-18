@@ -15,7 +15,7 @@ export default function FoodLogPage() {
   const [recentFoods, setRecentFoods] = useState([]);
   const [selectedFood, setSelectedFood] = useState(null);
   const [portion, setPortion] = useState('');
-  const [mealType, setMealType] = useState('sarapan');
+  const [mealType, setMealType] = useState('breakfast');
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -212,10 +212,10 @@ export default function FoodLogPage() {
               onChange={(e) => setMealType(e.target.value)}
               style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: '0.25rem', boxSizing: 'border-box' }}
             >
-              <option value="sarapan">{t('foodLog.sarapan')}</option>
-              <option value="makan_siang">{t('foodLog.makanSiang')}</option>
-              <option value="makan_malam">{t('foodLog.makanMalam')}</option>
-              <option value="camilan">{t('foodLog.camilan')}</option>
+              <option value="breakfast">{t('foodLog.sarapan')}</option>
+              <option value="lunch">{t('foodLog.makanSiang')}</option>
+              <option value="dinner">{t('foodLog.makanMalam')}</option>
+              <option value="snack">{t('foodLog.camilan')}</option>
             </select>
           </div>
 
