@@ -3,13 +3,14 @@ import { searchFoods } from '../api/foodLogApi.js';
 import { t } from '../../../shared/i18n/translations.js';
 
 const categoryLabels = {
-  makanan_pokok: t('foodLog.categories.makanan_pokok'),
-  lauk: t('foodLog.categories.lauk'),
-  sayur: t('foodLog.categories.sayur'),
-  buah: t('foodLog.categories.buah'),
-  minuman: t('foodLog.categories.minuman'),
-  snack: t('foodLog.categories.snack'),
-  lainnya: t('foodLog.categories.lainnya'),
+  proteins: t('foodLog.categories.proteins'),
+  carbs: t('foodLog.categories.carbs'),
+  vegetables: t('foodLog.categories.vegetables'),
+  fruits: t('foodLog.categories.fruits'),
+  dairy: t('foodLog.categories.dairy'),
+  fats: t('foodLog.categories.fats'),
+  drinks: t('foodLog.categories.drinks'),
+  other: t('foodLog.categories.other'),
 };
 
 export default function FoodSearch({ onFoodSelect, onToggleCustomForm }) {
