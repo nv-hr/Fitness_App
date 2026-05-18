@@ -14,7 +14,7 @@
 - [x] **Phase 4: Food Database & Calorie Logging** — Users can search Indonesian foods, log meals, and track daily calorie balance (completed 2026-05-17)
 - [x] **Phase 5: Activity Recommendations & Polish** — Users receive goal-based activity suggestions; app is fully responsive and in Bahasa Indonesia (completed 2026-05-17)
 - [x] **Phase 6: International Ingredient Database** — Replace Indonesian food database with comprehensive international ingredients organized by category with search (completed 2026-05-18)
-- [ ] **Phase 7: Ingredient Logging & Calorie Calculation** — Users log food by selecting ingredient + entering weight; system calculates calories and shows daily balance against TDEE
+- [x] **Phase 7: Ingredient Logging & Calorie Calculation** — Users log food by selecting ingredient + entering weight; system calculates calories and shows daily balance against TDEE (completed 2026-05-18)
 - [ ] **Phase 8: English UI Migration** — All UI text, category names, and meal labels switched from Indonesian to English
 
 ## Phase Details
@@ -123,11 +123,11 @@ Plans:
   3. User can add a custom ingredient not in the database by providing a name and calories per 100g
   4. Daily calorie summary shows total calories consumed from all logged ingredient entries
   5. Calorie balance (consumed vs TDEE target) displays correctly using the new ingredient-based logging model
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 Plans:
-- [ ] 07-01-PLAN.md — Live calorie preview + ingredient selection/weight logging flow
-- [ ] 07-02-PLAN.md — Custom ingredient entry (name + calories only, no category)
-- [ ] 07-03-PLAN.md — Quick-add last portion defaults + daily summary verification
+- [x] 07-01-PLAN.md — Live calorie preview + ingredient selection/weight logging flow
+- [x] 07-02-PLAN.md — Custom ingredient entry (name + calories only, no category)
+- [x] 07-03-PLAN.md — Quick-add last portion defaults + daily summary verification
 **UI hint**: yes
 
 ### Phase 8: English UI Migration
@@ -151,7 +151,7 @@ Plans:
 | 4. Food Database & Calorie Logging | 3/3 | Complete   | 2026-05-17 |
 | 5. Activity Recommendations & Polish | 4/4 | Complete   | 2026-05-17 |
 | 6. International Ingredient Database | 3/3 | Complete   | 2026-05-18 |
-| 7. Ingredient Logging & Calorie Calculation | 0/TBD | Not started | - |
+| 7. Ingredient Logging & Calorie Calculation | 3/3 | Complete    | 2026-05-18 |
 | 8. English UI Migration | 0/TBD | Not started | - |
 
 ---

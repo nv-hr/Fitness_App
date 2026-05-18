@@ -14,9 +14,9 @@
 
 ### Ingredient Logging
 
-- [ ] **LOG-07**: User can select an ingredient and enter weight in grams
-- [ ] **LOG-08**: System calculates calories automatically (weight × calories per 100g)
-- [ ] **LOG-09**: User can add custom ingredients not in database (name + calories per 100g)
+- [x] **LOG-07**: User can select an ingredient and enter weight in grams
+- [x] **LOG-08**: System calculates calories automatically (weight × calories per 100g)
+- [x] **LOG-09**: User can add custom ingredients not in database (name + calories per 100g)
 
 ### English UI
 
@@ -26,8 +26,8 @@
 
 ### Calorie Display
 
-- [ ] **CALC-01**: Daily calorie summary shows total from ingredient-based logging
-- [ ] **CALC-02**: Calorie balance against TDEE target still works with new logging model
+- [x] **CALC-01**: Daily calorie summary shows total from ingredient-based logging
+- [x] **CALC-02**: Calorie balance against TDEE target still works with new logging model
 
 ## v2 Requirements
 
@@ -73,14 +73,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INGR-02 | Phase 6 | Pending |
 | INGR-03 | Phase 6 | Pending |
 | INGR-04 | Phase 6 | Pending |
-| LOG-07 | Phase 7 | Pending |
-| LOG-08 | Phase 7 | Pending |
-| LOG-09 | Phase 7 | Pending |
+| LOG-07 | Phase 7 | Complete |
+| LOG-08 | Phase 7 | Complete |
+| LOG-09 | Phase 7 | Complete |
 | UI-04 | Phase 8 | Pending |
 | UI-05 | Phase 8 | Pending |
 | UI-06 | Phase 8 | Pending |
-| CALC-01 | Phase 7 | Pending |
-| CALC-02 | Phase 7 | Pending |
+| CALC-01 | Phase 7 | Complete |
+| CALC-02 | Phase 7 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 12 total
