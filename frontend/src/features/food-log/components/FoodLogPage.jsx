@@ -83,11 +83,11 @@ export default function FoodLogPage() {
 
   const handleLogFood = async () => {
     if (!selectedFood) {
-      setError('Pilih makanan terlebih dahulu');
+      setError('Select a food first');
       return;
     }
     if (!portion || parseInt(portion, 10) < 1 || parseInt(portion, 10) > 5000) {
-      setError('Porsi harus antara 1-5000 gram');
+      setError('Portion must be between 1-5000 grams');
       return;
     }
 
