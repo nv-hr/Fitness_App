@@ -87,7 +87,7 @@ export default function FoodSearch({ onFoodSelect, onToggleCustomForm }) {
             >
               <span>{food.name}</span>
               <span style={{ color: '#666', fontSize: '0.875rem' }}>
-                {food.calories_per_100g} kkal/100g
+                {food.calories_per_100g} kcal/100g
                 {food.category && <span style={{ marginLeft: '0.5rem', color: '#9ca3af' }}>({categoryLabels[food.category] || food.category})</span>}
               </span>
             </div>

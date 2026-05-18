@@ -14,8 +14,8 @@ export default function CalorieSummary({ totalConsumed, calorieTarget, remaining
       marginBottom: '1.5rem',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-        <span style={{ fontWeight: 'bold' }}>{t('foodLog.consumed')}: {totalConsumed} kkal</span>
-        {calorieTarget && <span>{t('foodLog.target')}: {calorieTarget} kkal</span>}
+        <span style={{ fontWeight: 'bold' }}>{t('foodLog.consumed')}: {totalConsumed} kcal</span>
+        {calorieTarget && <span>{t('foodLog.target')}: {calorieTarget} kcal</span>}
       </div>
 
       {/* Progress bar */}
@@ -40,8 +40,8 @@ export default function CalorieSummary({ totalConsumed, calorieTarget, remaining
       {calorieTarget && (
         <div style={{ fontSize: '0.875rem', color: isOverTarget ? '#dc2626' : '#16a34a' }}>
           {isOverTarget
-            ? `${t('foodLog.overTarget')} (+${totalConsumed - calorieTarget} kkal)`
-            : `${t('foodLog.remaining')}: ${remaining} kkal`
+            ? `${t('foodLog.overTarget')} (+${totalConsumed - calorieTarget} kcal)`
+            : `${t('foodLog.remaining')}: ${remaining} kcal`
           }
         </div>
       )}

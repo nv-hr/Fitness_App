@@ -180,7 +180,7 @@ export default function FoodLogPage() {
             {selectedFood.name}
             {selectedFood.calories_per_100g && (
               <span style={{ fontWeight: 'normal', color: '#666' }}>
-                {' '}— {selectedFood.calories_per_100g} kkal/100g
+                {' '}— {selectedFood.calories_per_100g} kcal/100g
               </span>
             )}
           </p>
@@ -200,7 +200,7 @@ export default function FoodLogPage() {
 
           {previewCalories !== null && (
             <p style={{ margin: '0.5rem 0', fontSize: '0.875rem', color: '#666' }}>
-              {parseInt(portion, 10)}g = {previewCalories} kkal
+              {parseInt(portion, 10)}g = {previewCalories} kcal
             </p>
           )}
 

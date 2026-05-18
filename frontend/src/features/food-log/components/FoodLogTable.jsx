@@ -57,7 +57,7 @@ export default function FoodLogTable({ logs, recentFoods, onQuickAdd }) {
               >
                 <span>{log.food_name || log.custom_food_name}</span>
                 <span style={{ color: '#666' }}>
-                  {log.portion_grams}g — {log.calories} kkal
+                  {log.portion_grams}g — {log.calories} kcal
                 </span>
               </div>
             ))}
@@ -74,7 +74,7 @@ export default function FoodLogTable({ logs, recentFoods, onQuickAdd }) {
         justifyContent: 'space-between',
       }}>
         <span>Total</span>
-        <span>{totalCalories} kkal</span>
+        <span>{totalCalories} kcal</span>
       </div>
 
       {/* Quick-add section */}
@@ -99,9 +99,9 @@ export default function FoodLogTable({ logs, recentFoods, onQuickAdd }) {
               >
                 {food.name}
                 {food.last_portion_grams && (
-                  <span style={{ fontSize: '0.65rem', color: '#888' }}> — terakhir: {food.last_portion_grams}g</span>
+                  <span style={{ fontSize: '0.65rem', color: '#888' }}> — last: {food.last_portion_grams}g</span>
                 )}
-                {' '}({food.calories} kkal)
+                {' '}({food.calories} kcal)
               </button>
             ))}
           </div>

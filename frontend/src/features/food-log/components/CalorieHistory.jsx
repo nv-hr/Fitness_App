@@ -29,9 +29,9 @@ export default function CalorieHistory({ history }) {
           fontWeight: 'bold',
           fontSize: '0.875rem',
         }}>
-          <span>Tanggal</span>
-          <span style={{ textAlign: 'right' }}>Kalori</span>
-          <span style={{ textAlign: 'right' }}>Entri</span>
+          <span>{t('foodLog.date')}</span>
+          <span style={{ textAlign: 'right' }}>{t('foodLog.calories')}</span>
+          <span style={{ textAlign: 'right' }}>{t('foodLog.entries')}</span>
         </div>
         {/* Rows */}
         {history.map((day) => (
@@ -46,7 +46,7 @@ export default function CalorieHistory({ history }) {
             }}
           >
             <span>{formatDate(day.log_date)}</span>
-            <span style={{ textAlign: 'right' }}>{day.total_calories} kkal</span>
+            <span style={{ textAlign: 'right' }}>{day.total_calories} kcal</span>
             <span style={{ textAlign: 'right' }}>{day.entry_count}</span>
           </div>
         ))}

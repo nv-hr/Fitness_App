@@ -26,6 +26,7 @@ export const translations = {
     emailExists: 'Email already registered',
     welcome: 'Welcome',
     loading: 'Loading...',
+    cancel: 'Cancel',
   },
   validation: {
     required: 'Required',
@@ -110,6 +111,9 @@ export const translations = {
     customFoodSaved: 'New food added successfully',
     customFoodError: 'Failed to add food',
     history: 'Calorie History',
+    date: 'Date',
+    calories: 'Calories',
+    entries: 'Entries',
     recentFoods: 'Recent Foods',
     quickAdd: 'Quick Add',
     todaysLog: "Today's Log",

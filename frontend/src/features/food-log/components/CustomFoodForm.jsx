@@ -6,8 +6,8 @@ import { createCustomFood } from '../api/foodLogApi.js';
 import { t } from '../../../shared/i18n/translations.js';
 
 const schema = z.object({
-  name: z.string().min(1, t('validation.required')).max(100, 'Maksimal 100 karakter'),
-  calories_per_100g: z.coerce.number().min(0, 'Minimal 0 kkal').max(5000, 'Maksimal 5000 kkal'),
+  name: z.string().min(1, t('validation.required')).max(100, 'Maximum 100 characters'),
+  calories_per_100g: z.coerce.number().min(0, 'Minimum 0 kcal').max(5000, 'Maximum 5000 kcal'),
 });
 
 export default function CustomFoodForm({ onSuccess, onCancel }) {
@@ -81,7 +81,7 @@ export default function CustomFoodForm({ onSuccess, onCancel }) {
               onClick={onCancel}
               style={{ padding: '0.5rem 1rem', cursor: 'pointer' }}
             >
-              Batal
+              {t('auth.cancel')}
             </button>
           )}
         </div>
