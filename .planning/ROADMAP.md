@@ -123,7 +123,11 @@ Plans:
   3. User can add a custom ingredient not in the database by providing a name and calories per 100g
   4. Daily calorie summary shows total calories consumed from all logged ingredient entries
   5. Calorie balance (consumed vs TDEE target) displays correctly using the new ingredient-based logging model
-**Plans:** TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 07-01-PLAN.md — Live calorie preview + ingredient selection/weight logging flow
+- [ ] 07-02-PLAN.md — Custom ingredient entry (name + calories only, no category)
+- [ ] 07-03-PLAN.md — Quick-add last portion defaults + daily summary verification
 **UI hint**: yes
 
 ### Phase 8: English UI Migration
