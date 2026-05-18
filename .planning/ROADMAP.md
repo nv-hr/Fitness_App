@@ -106,7 +106,11 @@ Plans:
   1. User can browse ingredients organized by category (proteins, grains, vegetables, fruits, dairy, oils, etc.)
   2. User can search for ingredients by name and see results with calories per 100g displayed
   3. Database contains 200+ international ingredients with accurate calorie-per-100g values
-**Plans:** TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 06-01-PLAN.md — Database migration: ENUM update + 200+ international ingredient seeds
+- [ ] 06-02-PLAN.md — Backend service: VALID_CATEGORIES update + category audit
+- [ ] 06-03-PLAN.md — Frontend: FoodSearch categoryLabels mapping update
 **UI hint**: yes
 
 ### Phase 7: Ingredient Logging & Calorie Calculation
