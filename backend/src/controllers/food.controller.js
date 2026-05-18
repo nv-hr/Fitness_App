@@ -73,8 +73,8 @@ export async function logFood(req, res, next) {
       }
       calories = calculateCalories(food.calories_per_100g, portionGrams);
     } else if (customFoodName) {
-      // Custom one-off: use client-supplied calories
-      if (!clientCalories || clientCalories < 0) {
+      // Custom one-off: use client-supplied calories (CR-03 fix: allow zero-calorie foods)
+      if (clientCalories == null || clientCalories < 0) {
         return errorResponse(res, 'Kalori wajib diisi', 400, 'VALIDATION_ERROR');
       }
       calories = clientCalories;

@@ -71,7 +71,11 @@ export default function FoodLogPage() {
   };
 
   const handleQuickAdd = (food) => {
-    setSelectedFood({ id: food.food_id, name: food.name, calories_per_100g: food.calories });
+    // Derive per-100g from total calories and last portion (CR-01 fix)
+    const per100g = food.last_portion_grams
+      ? Math.round((food.calories * 100) / food.last_portion_grams)
+      : food.calories;
+    setSelectedFood({ id: food.food_id, name: food.name, calories_per_100g: per100g });
     setPortion(String(food.last_portion_grams || 100));
     setError('');
     setSuccessMsg('');
@@ -100,11 +104,13 @@ export default function FoodLogPage() {
           mealType,
         });
       } else {
-        // Custom one-off
+        // Custom one-off — calculate total calories for the portion (CR-02 fix)
+        const portionGrams = parseInt(portion, 10);
+        const totalCalories = calculatePreviewCalories(selectedFood.calories_per_100g, portionGrams);
         await logFood({
           customFoodName: selectedFood.name,
-          calories: parseInt(selectedFood.calories_per_100g, 10),
-          portionGrams: parseInt(portion, 10),
+          calories: totalCalories,
+          portionGrams,
           logDate: today,
           mealType,
         });
