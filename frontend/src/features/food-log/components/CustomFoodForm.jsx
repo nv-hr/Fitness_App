@@ -8,15 +8,11 @@ import { t } from '../../../shared/i18n/translations.js';
 const schema = z.object({
   name: z.string().min(1, t('validation.required')).max(100, 'Maksimal 100 karakter'),
   calories_per_100g: z.coerce.number().min(0, 'Minimal 0 kkal').max(5000, 'Maksimal 5000 kkal'),
-  category: z.enum(['makanan_pokok', 'lauk', 'sayur', 'buah', 'minuman', 'snack', 'lainnya'], {
-    message: t('validation.required'),
-  }),
 });
 
 export default function CustomFoodForm({ onSuccess, onCancel }) {
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(schema),
-    defaultValues: { category: 'lainnya' },
   });
 
   const [message, setMessage] = useState('');
@@ -69,24 +65,6 @@ export default function CustomFoodForm({ onSuccess, onCancel }) {
             style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: '0.25rem', boxSizing: 'border-box' }}
           />
           {errors.calories_per_100g && <p style={{ color: 'red', fontSize: '0.875rem' }}>{errors.calories_per_100g.message}</p>}
-        </div>
-
-        <div style={{ marginBottom: '0.75rem' }}>
-          <label htmlFor="category">{t('foodLog.mealType')}</label>
-          <select
-            id="category"
-            {...register('category')}
-            style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: '0.25rem', boxSizing: 'border-box' }}
-          >
-            <option value="makanan_pokok">{t('foodLog.categories.makanan_pokok')}</option>
-            <option value="lauk">{t('foodLog.categories.lauk')}</option>
-            <option value="sayur">{t('foodLog.categories.sayur')}</option>
-            <option value="buah">{t('foodLog.categories.buah')}</option>
-            <option value="minuman">{t('foodLog.categories.minuman')}</option>
-            <option value="snack">{t('foodLog.categories.snack')}</option>
-            <option value="lainnya">{t('foodLog.categories.lainnya')}</option>
-          </select>
-          {errors.category && <p style={{ color: 'red', fontSize: '0.875rem' }}>{errors.category.message}</p>}
         </div>
 
         <div style={{ display: 'flex', gap: '0.5rem' }}>
