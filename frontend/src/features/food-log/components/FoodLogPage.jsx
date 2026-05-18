@@ -72,7 +72,7 @@ export default function FoodLogPage() {
 
   const handleQuickAdd = (food) => {
     setSelectedFood({ id: food.food_id, name: food.name, calories_per_100g: food.calories });
-    setPortion(String(food.portion_grams || 100));
+    setPortion(String(food.last_portion_grams || 100));
     setError('');
     setSuccessMsg('');
   };

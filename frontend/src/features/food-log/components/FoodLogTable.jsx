@@ -97,7 +97,11 @@ export default function FoodLogTable({ logs, recentFoods, onQuickAdd }) {
                   background: '#fff',
                 }}
               >
-                {food.name} ({food.calories} kkal)
+                {food.name}
+                {food.last_portion_grams && (
+                  <span style={{ fontSize: '0.65rem', color: '#888' }}> — terakhir: {food.last_portion_grams}g</span>
+                )}
+                {' '}({food.calories} kkal)
               </button>
             ))}
           </div>
