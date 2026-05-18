@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: International Ingredient Logging
-status: planning
+status: Awaiting next milestone
 stopped_at: Phase 8 context gathered — ready for planning
-last_updated: "2026-05-18T16:47:16.055Z"
-last_activity: 2026-05-18
+last_updated: "2026-05-18T18:21:30.990Z"
+last_activity: 2026-05-18 — Milestone v1.1 completed and archived
 progress:
   total_phases: 8
-  completed_phases: 7
-  total_plans: 20
-  completed_plans: 20
-  percent: 88
+  completed_phases: 8
+  total_plans: 23
+  completed_plans: 23
+  percent: 100
 ---
 
 # Project State
@@ -21,20 +21,29 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-18)
 
 **Core value:** Users can accurately calculate their BMI and TDEE, log daily food intake by ingredients, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
-**Current focus:** Phase 8 — english ui migration
+**Current focus:** Milestone complete — ready for v1.2 planning
+
+## Deferred Items
+
+Items acknowledged and deferred at milestone close on 2026-05-18:
+
+| Category | Item | Status |
+|----------|------|--------|
+| uat_gap | Phase 07: 07-HUMAN-UAT.md — 5 pending scenarios | deferred |
+| verification_gap | Phase 07: 07-VERIFICATION.md — human_needed | deferred |
 
 ## Current Position
 
-Phase: 8
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-05-18
+Phase: Milestone v1.1 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-05-18 — Milestone v1.1 completed and archived
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 20
+- Total plans completed: 23
 - Average duration: N/A
 - Total execution time: ~2.5 hours (v1.0 + v1.1 estimate)
 
@@ -51,6 +60,7 @@ Last activity: 2026-05-18
 | 07 | 0 | TBD | — |
 | 08 | 0 | TBD | — |
 | 7 | 3 | - | - |
+| 8 | 3 | - | - |
 
 **Recent Trend:**
 
@@ -100,3 +110,7 @@ Items acknowledged and carried forward from previous milestone close:
 Last session: 2026-05-18T16:47:16.021Z
 Stopped at: Phase 8 context gathered — ready for planning
 Resume file: .planning/phases/08-english-ui-migration/08-CONTEXT.md
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
