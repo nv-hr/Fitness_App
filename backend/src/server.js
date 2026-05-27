@@ -7,7 +7,7 @@ import { pool } from './config/database.js';
 const PORT = process.env.PORT || 3001;
 
 const server = app.listen(PORT, async () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT} (NODE_ENV=${process.env.NODE_ENV})`);
   try {
     await pool.query('SELECT 1');
     console.log('Database connected');

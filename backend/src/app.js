@@ -70,27 +70,33 @@ app.use('/api/auth/register', authLimiter);
 app.use('/api/auth', authRoutes);
 
 // Profile API routes — stricter rate limiter for user data endpoints
+const profileLimiterConfig = (process.env.NODE_ENV === 'test')
+  ? { windowMs: 1000, max: 1000 }
+  : { windowMs: 15 * 60 * 1000, max: 15 };
 const profileLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 15,
+  ...profileLimiterConfig,
   message: 'Too many profile requests',
 });
 app.use('/api/profile', profileLimiter);
 app.use('/api/profile', profileRoutes);
 
 // Food API routes — higher rate limit for search-as-you-type (T-04-08)
+const foodLimiterConfig = (process.env.NODE_ENV === 'test')
+  ? { windowMs: 1000, max: 1000 }
+  : { windowMs: 15 * 60 * 1000, max: 200 };
 const foodLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200,
+  ...foodLimiterConfig,
   message: 'Too many food requests',
 });
 app.use('/api/food', foodLimiter);
 app.use('/api/food', foodRoutes);
 
 // Activity API routes — rate limiter for ORDER BY RAND() queries (T-05-07)
+const activityLimiterConfig = (process.env.NODE_ENV === 'test')
+  ? { windowMs: 1000, max: 1000 }
+  : { windowMs: 15 * 60 * 1000, max: 60 };
 const activityLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 60,
+  ...activityLimiterConfig,
   message: 'Too many activity requests',
 });
 app.use('/api/activities', activityLimiter);
