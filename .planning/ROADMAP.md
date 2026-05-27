@@ -44,7 +44,18 @@
   2. All MySQL tables (users, profiles, foods, food_logs, activities, activity_logs, custom_foods) are recreated in PostgreSQL with matching ENUMs, constraints, and indexes
   3. 201 food ingredients and 35 activities are seeded into the PostgreSQL database via SQL script or Supabase SQL Editor
   4. Backend can establish an SSL-encrypted connection to Supabase on startup and logs success/failure to the console
-**Plans**: TBD
+**Plans**: 3 plans
+
+**Wave 1** *(parallel — no dependencies)*:
+- [ ] 09-01-PLAN.md — PostgreSQL Schema & Seed Translation (SUP-02, SUP-03)
+- [ ] 09-02-PLAN.md — Supabase CLI Setup & Connection Verify (SUP-01, SUP-04)
+
+**Wave 2** *(blocked on Wave 1 completion)*:
+- [ ] 09-03-PLAN.md — Apply Migration & Verify Connectivity (SUP-02, SUP-03, SUP-04)
+
+**Cross-cutting constraints:**
+- SUP-02 (schema) and SUP-03 (seed) are split across Wave 1 (file creation) and Wave 2 (execution)
+- SUP-04 (connection verify) is split across Wave 1 (script creation) and Wave 2 (execution)
 
 ### Phase 10: Backend Query Rewrite (pg migration)
 **Goal**: All database queries use pg (node-postgres) driver with PostgreSQL-compatible syntax; no mysql2 dependency remains
@@ -93,7 +104,7 @@
 | 6. International Ingredient Database | v1.1 | 3/3 | Complete | 2026-05-18 |
 | 7. Ingredient Logging & Calorie Calculation | v1.1 | 3/3 | Complete | 2026-05-18 |
 | 8. English UI Migration | v1.1 | 3/3 | Complete | 2026-05-18 |
-| 9. Supabase Setup & Schema Migration | v1.2 | 0/0 | Not started | - |
+| 9. Supabase Setup & Schema Migration | v1.2 | 0/3 | Planning complete | - |
 | 10. Backend Query Rewrite | v1.2 | 0/0 | Not started | - |
 | 11. Docker Restructure | v1.2 | 0/0 | Not started | - |
 | 12. Testing & Validation | v1.2 | 0/0 | Not started | - |
