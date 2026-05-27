@@ -6,11 +6,11 @@ status: planning
 last_updated: "2026-05-27T04:04:32.157Z"
 last_activity: 2026-05-27
 progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 12
+  completed_phases: 8
+  total_plans: 26
+  completed_plans: 23
+  percent: 67
 ---
 
 # Project State
@@ -20,7 +20,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-18)
 
 **Core value:** Users can accurately calculate their BMI and TDEE, log daily food intake by ingredients, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
-**Current focus:** Milestone complete — ready for v1.2 planning
+**Current focus:** v1.2 Docker Service Separation — Phase 9 planning next
 
 ## Deferred Items
 
@@ -41,10 +41,10 @@ Items acknowledged and deferred at milestone close on 2026-05-18:
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-05-27 — Milestone v1.2 started
+Phase: 9 - Database Service
+Plan: Not started
+Status: Roadmap created — ready for phase planning
+Last activity: 2026-05-27 — v1.2 roadmap created (Phases 9-12)
 
 ## Performance Metrics
 
@@ -64,15 +64,13 @@ Last activity: 2026-05-27 — Milestone v1.2 started
 | 04 | 3 | 3 | — |
 | 05 | 4 | 4 | — |
 | 06 | 3 | 3 | — |
-| 07 | 0 | TBD | — |
-| 08 | 0 | TBD | — |
-| 7 | 3 | - | - |
-| 8 | 3 | - | - |
+| 07 | 3 | 3 | — |
+| 08 | 3 | 3 | — |
 
 **Recent Trend:**
 
-- Last 5 plans: Phase 6 (3 plans), Phase 5 (4 plans)
-- Trend: v1.1 Phase 6 complete, Phase 7 planning next
+- v1.1 shipped: 8 phases, 23 plans, 28 tasks
+- v1.2 started: Docker Service Separation — Phases 9-12 planned
 
 ## Accumulated Context
 
@@ -92,14 +90,15 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- Plan Phase 7: Ingredient Logging & Calorie Calculation (weight-based logging flow, custom ingredients, calorie summary)
-- Plan Phase 8: English UI Migration (i18n replacement across all pages)
+- Plan Phase 9: Database Service (docker-compose.db.yml with MySQL + Adminer)
+- Plan Phase 10: Backend Service (docker-compose.backend.yml + dev mode)
+- Plan Phase 11: Frontend Service (docker-compose.frontend.yml + dev mode)
+- Plan Phase 12: Root Orchestration & Documentation (root compose + headers)
 
 ### Blockers/Concerns
 
-- **Database migration:** Phase 6 completed — foods table ENUM updated to English categories, 201 international ingredients seeded. Deployment requires manual TRUNCATE + reseed on production database.
-- **food_logs compatibility:** Existing food_logs entries retain their calorie values; food_id becomes NULL after TRUNCATE (ON DELETE SET NULL FK). Historical data preserved but food references lost.
-- **Translation keys:** FoodSearch.jsx now uses English category keys (proteins, carbs, etc.) but translation file still maps to Indonesian labels. Full English UI migration happens in Phase 8.
+- None currently — v1.2 Docker Service Separation is a clean infrastructure milestone with no dependency on v1.1 code changes
+- Existing Dockerfiles and initial compose files exist from previous quick task (260527-e4n) — review and restructure as needed
 
 ## Deferred Items
 
@@ -114,10 +113,10 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-18T16:47:16.021Z
-Stopped at: Phase 8 context gathered — ready for planning
-Resume file: .planning/phases/08-english-ui-migration/08-CONTEXT.md
+Last session: 2026-05-27 — v1.2 roadmap created (Phases 9-12)
+Stopped at: Roadmap approved — ready for Phase 9 planning
+Resume file: .planning/ROADMAP.md
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Plan Phase 9: Database Service with `/gsd-plan-phase 9`

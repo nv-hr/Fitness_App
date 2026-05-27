@@ -51,18 +51,18 @@ Deferred to future release.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DOCK-01 | TBD | Pending |
-| DOCK-02 | TBD | Pending |
-| DOCK-03 | TBD | Pending |
-| DOCK-04 | TBD | Pending |
-| DOCK-05 | TBD | Pending |
-| DOCK-06 | TBD | Pending |
-| DOCK-07 | TBD | Pending |
+| DOCK-01 | Phase 9 | Pending |
+| DOCK-02 | Phase 10 | Pending |
+| DOCK-03 | Phase 10 | Pending |
+| DOCK-04 | Phase 11 | Pending |
+| DOCK-05 | Phase 11 | Pending |
+| DOCK-06 | Phase 12 | Pending |
+| DOCK-07 | Phase 12 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 7 total
-- Mapped to phases: 0
-- Unmapped: 7 ⚠️
+- Mapped to phases: 7
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-05-27*
