@@ -44,17 +44,21 @@ app.use(cookieParser());
 app.use(passport.initialize());
 
 // 8. General rate limiter for /api/ routes
+const limiterConfig = (process.env.NODE_ENV === 'test')
+  ? { windowMs: 1000, max: 1000 }
+  : { windowMs: 15 * 60 * 1000, max: 100 };
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  ...limiterConfig,
   message: 'Too many requests',
 });
 app.use('/api/', limiter);
 
 // 9. Stricter rate limiter for auth endpoints (T-01-06, T-01-10)
+const authLimiterConfig = (process.env.NODE_ENV === 'test')
+  ? { windowMs: 1000, max: 100 }
+  : { windowMs: 15 * 60 * 1000, max: 10 };
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,
+  ...authLimiterConfig,
   message: 'Too many auth attempts',
 });
 app.use('/api/auth/login', authLimiter);
@@ -116,7 +120,12 @@ app.use((req, res) => {
 // Global error handler
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
-  errorResponse(res, err.message, statusCode, err.code || 'INTERNAL_ERROR');
+  // Convert camelCase error names to UPPER_SNAKE_CASE (e.g. AuthenticationError → AUTHENTICATION_ERROR)
+  const errorCode = (err.code || err.name || 'INTERNAL_ERROR')
+    .replace(/([A-Z])/g, '_$1')
+    .replace(/^_/, '')
+    .toUpperCase();
+  errorResponse(res, err.message, statusCode, errorCode);
 });
 
 export default app;

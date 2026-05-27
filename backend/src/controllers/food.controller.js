@@ -107,8 +107,9 @@ export async function getDailySummary(req, res, next) {
   try {
     const date = req.query.date || new Date().toISOString().split('T')[0];
 
-    // Get total consumed
-    const totalConsumed = await foodRepo.getDailyTotal(req.user.userId, date);
+    // Get total consumed (mysql2 returns DECIMAL as string — ensure number)
+    const rawTotal = await foodRepo.getDailyTotal(req.user.userId, date);
+    const totalConsumed = Number(rawTotal);
 
     // Get user profile for calorie target calculation
     const profile = await findProfileByUserId(req.user.userId);

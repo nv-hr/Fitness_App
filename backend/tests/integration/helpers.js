@@ -7,8 +7,12 @@
  * @module helpers
  */
 
+// Set test environment before app imports (disables aggressive rate limits)
+process.env.NODE_ENV = 'test';
+
 import { execSync } from 'child_process';
 import { setTimeout } from 'timers/promises';
+import { createConnection } from 'net';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
@@ -24,110 +28,108 @@ const COMPOSE_FILE = path.join(PROJECT_ROOT, 'docker-compose.yml');
 let composeCmd = null;
 
 /**
- * Detect available container compose command.
- * Tries `docker compose` → `docker-compose` → `podman-compose`.
- * @returns {string}
- * @throws {Error} if none found
+ * Check if MySQL port 3306 is accepting connections (in-process, no child process).
+ * @param {string} [host='127.0.0.1']
+ * @param {number} [port=3306]
+ * @param {number} [timeoutMs=3000]
+ * @returns {Promise<boolean>}
  */
-function detectCompose() {
-  if (composeCmd) return composeCmd;
+function isPortOpen(host = '127.0.0.1', port = 3306, timeoutMs = 3000) {
+  return new Promise((resolve) => {
+    const socket = createConnection({ host, port, timeout: timeoutMs }, () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.on('error', () => {
+      socket.destroy();
+      resolve(false);
+    });
+    socket.on('timeout', () => {
+      socket.destroy();
+      resolve(false);
+    });
+  });
+}
 
+/**
+ * Start MySQL via docker-compose and wait for it to become healthy.
+ *
+ * Strategy:
+ *   1. Check if MySQL port 3306 is already open → skip compose (fast path).
+ *   2. Otherwise, try to start MySQL via docker/podman-compose.
+ *   3. Wait for port to become available.
+ *
+ * @param {number} [timeoutMs=90000] — max wait time in ms
+ * @returns {Promise<void>}
+ */
+export async function startDatabase(timeoutMs = 90000) {
+  // Fast path: MySQL already running
+  if (await isPortOpen()) {
+    return;
+  }
+
+  // Compose file must exist
   if (!existsSync(COMPOSE_FILE)) {
     throw new Error(
       `docker-compose.yml not found at ${COMPOSE_FILE}. Cannot start MySQL container.`
     );
   }
 
+  // Try compose candidates
   const candidates = [
-    { cmd: 'docker compose version', name: 'docker compose' },
-    { cmd: 'docker-compose --version', name: 'docker-compose' },
-    { cmd: 'podman-compose --version', name: 'podman-compose' },
+    'docker compose',
+    'docker-compose',
+    'podman-compose',
+    'python -m podman_compose',
   ];
 
-  for (const { cmd, name } of candidates) {
+  let composeFound = false;
+  for (const cmd of candidates) {
     try {
-      execSync(cmd, { stdio: 'pipe', windowsHide: true });
-      composeCmd = name;
-      return composeCmd;
+      execSync(`${cmd} version`, { stdio: 'pipe', timeout: 10000, windowsHide: true, shell: true });
+      composeCmd = cmd;
+      composeFound = true;
+      break;
     } catch {
       // Try next candidate
     }
   }
 
-  throw new Error(
-    'No container compose tool found. Install Docker Desktop or Podman, ' +
-    'or start MySQL manually on localhost:3306.'
-  );
-}
-
-/**
- * Get the container inspect command for the current compose tool.
- * @returns {string}
- */
-function getInspectCmd() {
-  if (composeCmd === 'docker compose' || composeCmd === 'docker-compose') {
-    return 'docker';
+  if (!composeFound) {
+    // One last check — maybe MySQL started while we were trying
+    if (await isPortOpen()) {
+      return;
+    }
+    throw new Error(
+      'No container compose tool found and MySQL is not running on port 3306. ' +
+      'Install Docker Desktop or Podman, or start MySQL manually.'
+    );
   }
-  return 'podman';
-}
 
-/**
- * Start MySQL via docker-compose and wait for it to become healthy.
- * @param {number} [timeoutMs=90000] — max wait time in ms
- * @returns {Promise<void>}
- */
-export async function startDatabase(timeoutMs = 90000) {
-  const cmd = detectCompose();
-  const inspect = getInspectCmd();
-
-  // Start the MySQL container (pull image if needed)
+  // Start the MySQL container
   try {
     execSync(
-      `${cmd} -f "${COMPOSE_FILE}" up -d mysql`,
-      { stdio: 'pipe', timeout: 120000, windowsHide: true }
+      `${composeCmd} -f "${COMPOSE_FILE}" up -d mysql`,
+      { stdio: 'pipe', timeout: 120000, windowsHide: true, shell: true }
     );
   } catch (err) {
-    // If already running, that's OK — continue
-    if (!err.stderr?.toString().includes('is already running')) {
-      throw new Error(`Failed to start MySQL: ${err.stderr || err.message}`);
+    const msg = err.stderr?.toString() || err.message || '';
+    if (!msg.toLowerCase().includes('already') && !msg.includes('container exists')) {
+      throw new Error(`Failed to start MySQL: ${msg}`);
     }
   }
 
-  // Wait for MySQL to respond on port 3306
+  // Wait for MySQL to accept connections
   const start = Date.now();
-  let lastError = '';
-
   while (Date.now() - start < timeoutMs) {
-    try {
-      // Try docker/podman healthcheck first
-      const status = execSync(
-        `${inspect} inspect --format='{{.State.Health.Status}}' fitness_mysql`,
-        { encoding: 'utf8', stdio: 'pipe', windowsHide: true }
-      ).trim();
-
-      if (status === 'healthy') {
-        return;
-      }
-    } catch {
-      // Healthcheck not available — try TCP connection
-      try {
-        const { execSync: exec } = await import('child_process');
-        execSync(
-          `node -e "require('net').createConnection({host:'127.0.0.1',port:3306},()=>process.exit(0)).on('error',()=>process.exit(1))"`,
-          { stdio: 'pipe', timeout: 5000, windowsHide: true }
-        );
-        // Port is open — MySQL is accepting connections
-        return;
-      } catch {
-        lastError = 'MySQL port 3306 not yet accepting connections';
-      }
+    if (await isPortOpen()) {
+      return;
     }
-
     await setTimeout(2000);
   }
 
   throw new Error(
-    `MySQL did not become available within ${timeoutMs / 1000}s. ${lastError}`
+    `MySQL did not become available within ${timeoutMs / 1000}s.`
   );
 }
 
@@ -136,11 +138,13 @@ export async function startDatabase(timeoutMs = 90000) {
  * @returns {Promise<void>}
  */
 export async function stopDatabase() {
+  if (!composeCmd) {
+    return; // MySQL was not started by us
+  }
   try {
-    const cmd = detectCompose();
     execSync(
-      `${cmd} -f "${COMPOSE_FILE}" down`,
-      { stdio: 'pipe', timeout: 30000, windowsHide: true }
+      `${composeCmd} -f "${COMPOSE_FILE}" down`,
+      { stdio: 'pipe', timeout: 30000, windowsHide: true, shell: true }
     );
   } catch (err) {
     console.warn(

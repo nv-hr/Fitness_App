@@ -16,6 +16,16 @@ import { ValidationError, AuthenticationError } from '../utils/errors.js';
  * @returns {Promise<{user: Object, token: string}>}
  */
 export async function register({ email, password, pdpConsent }) {
+  // Validate email presence
+  if (!email) {
+    throw new ValidationError('Email is required');
+  }
+
+  // Validate password presence
+  if (!password) {
+    throw new ValidationError('Password is required');
+  }
+
   // D-02: PDP consent is required
   if (pdpConsent !== true) {
     throw new ValidationError('PDP consent is required');
