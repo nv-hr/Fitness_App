@@ -21,8 +21,9 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 ## Current State
 
 **Shipped:** v1.1 International Ingredient Logging (2026-05-18)
-**Phases:** 8 complete | **Plans:** 23 | **Tasks:** 28
+**Phases:** 9 complete | **Plans:** 26 | **Tasks:** 28
 **LOC:** ~1,228 insertions across 18 files in v1.1
+**Active:** v1.2 Supabase Migration — Phase 9 complete (2026-05-27)
 
 ## Requirements
 
@@ -48,6 +49,10 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 - ✓ Daily calorie summary shows consumed vs TDEE target with progress bar — v1.1
 - ✓ All UI text, category names, and meal labels in English — v1.1
 - ✓ Database meal_type ENUM migrated from Indonesian to English — v1.1
+- ✓ Supabase project initialized with PostgreSQL 17, config.toml, and .gitignore — v1.2 Phase 9
+- ✓ PostgreSQL schema with 6 tables, 5 ENUMs, 4 FK constraints, 5 indexes migrated from MySQL — v1.2 Phase 9
+- ✓ 201 food ingredients and 35 activities seeded into Supabase via re-runnable SQL — v1.2 Phase 9
+- ✓ Node.js can establish SSL-encrypted connection to Supabase via pg driver — v1.2 Phase 9
 
 ### Active
 
@@ -68,7 +73,7 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 - **Architecture**: Monorepo with separate `frontend/` and `backend/` directories
 - **Frontend**: React + JavaScript + NPM
 - **Backend**: Express.js + JavaScript
-- **Database**: MySQL (RDBMS)
+- **Database**: Supabase PostgreSQL (migrated from MySQL in v1.2 Phase 9)
 - **Auth**: Google OAuth2 + JWT + crypto module
 - **Infrastructure**: Docker containerization, Cloudflare Tunnel for secure network exposure
 - **Version control**: Git
@@ -97,6 +102,12 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 | English UI for international audience | Broader user base beyond Indonesia | ✓ Good — v1.1 |
 | In-place translation replacement (no i18n framework) | Simpler, faster migration for single-language switch | ✓ Good — v1.1 |
 | meal_type ENUM migration via UPDATE→ALTER | Preserve historical data during migration | ✓ Good — v1.1 |
+| Supabase PostgreSQL migration (v1.2) | Move from local MySQL to managed Supabase PostgreSQL for simplified deployment | ✓ Active — v1.2 |
+| No ORM — raw SQL with pg driver | Continue with repository pattern from v1.0/v1.1; no Prisma/Knex overhead | ✓ Good — v1.2 Phase 9 |
+| No Supabase Auth | Keep existing JWT + Google OAuth; skip Supabase Auth to avoid migration cost | ✓ Good — v1.2 Phase 9 |
+| No RLS | Keep server-side-only auth; skip RLS complexity | ✓ Good — v1.2 Phase 9 |
+| DO $$ blocks for portable ENUM creation | CREATE TYPE IF NOT EXISTS requires PG 14+; DO $$ block works on all versions | ✓ Good — v1.2 Phase 9 |
+| psql for schema/seed execution | Avoids Supabase SQL Editor 1MB limit; preferred over supabase db push | ✓ Good — v1.2 Phase 9 |
 
 ## Evolution
 
@@ -116,4 +127,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-27 after starting v1.2 milestone*
+*Last updated: 2026-05-27 after Phase 9 completion*
