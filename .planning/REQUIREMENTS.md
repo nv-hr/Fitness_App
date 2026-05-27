@@ -1,92 +1,88 @@
 # Requirements: Fitness_App
 
-**Defined:** 2026-05-18
-**Core Value:** Users can accurately calculate their BMI and TDEE, log daily food intake by ingredients, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
+**Defined:** 2026-05-27
+**Core Value:** Users can accurately calculate their BMI and TDEE, log daily food intake by selecting ingredients and entering weight in grams, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
 
-## v1.1 Requirements
+## v1.2 Requirements
 
-### Ingredient Database
+Requirements for v1.2 Supabase Migration milestone.
 
-- [ ] **INGR-01**: Database contains comprehensive international ingredients (proteins, grains, vegetables, fruits, dairy, oils, etc.)
-- [ ] **INGR-02**: Each ingredient has calories per 100g value
-- [ ] **INGR-03**: Ingredients organized by category for browsing
-- [ ] **INGR-04**: User can search ingredients by name
+### Supabase Setup & Schema Migration
 
-### Ingredient Logging
+- [ ] **SUP-01**: Supabase project is created and accessible with PostgreSQL database
+- [ ] **SUP-02**: Database schema (tables, indexes, ENUMs, constraints) is migrated from MySQL to PostgreSQL
+- [ ] **SUP-03**: Seed data (200+ foods, 35 activities) is migrated to Supabase PostgreSQL
+- [ ] **SUP-04**: Backend can establish and verify a connection to Supabase on startup
 
-- [x] **LOG-07**: User can select an ingredient and enter weight in grams
-- [x] **LOG-08**: System calculates calories automatically (weight × calories per 100g)
-- [x] **LOG-09**: User can add custom ingredients not in database (name + calories per 100g)
+### Backend Query Rewrite
 
-### English UI
+- [ ] **QRY-01**: mysql2 driver replaced with pg (node-postgres) in database.js
+- [ ] **QRY-02**: Food repository rewritten with PostgreSQL-compatible queries (RETURNING *, $1 placeholders)
+- [ ] **QRY-03**: Profile and user repositories rewritten with PostgreSQL-compatible queries
+- [ ] **QRY-04**: Activity repository rewritten with PostgreSQL-compatible queries (including JSON_OVERLAPS → ?| operator)
+- [ ] **QRY-05**: All MySQL-specific SQL patterns grepped and translated ($1, RETURNING, boolean, error codes, date functions)
 
-- [x] **UI-04**: All UI text in English — form labels, buttons, error messages, navigation
-- [x] **UI-05**: Category names in English (proteins, grains, vegetables, fruits, dairy, oils)
-- [x] **UI-06**: Meal type labels in English (breakfast, lunch, dinner, snack)
+### Docker Restructure
 
-### Calorie Display
+- [ ] **DKR-01**: Multi-stage Dockerfile builds frontend and serves via backend
+- [ ] **DKR-02**: Express serves React static files (express.static + SPA catch-all)
+- [ ] **DKR-03**: docker-compose.yml simplified to single service (backend only, no MySQL/Adminer)
 
-- [x] **CALC-01**: Daily calorie summary shows total from ingredient-based logging
-- [x] **CALC-02**: Calorie balance against TDEE target still works with new logging model
+### Testing & Validation
+
+- [ ] **TST-01**: Backend integration tests pass against Supabase PostgreSQL
+- [ ] **TST-02**: Full-stack smoke test passes (docker build, container start, API responds, frontend loads)
 
 ## v2 Requirements
 
-### Notifications
-
-- **NOTF-01**: User receives daily reminder to log meals
-- **NOTF-02**: User receives weekly progress summary
+Deferred to future release.
 
 ### Advanced Nutrition
 
-- **NUTR-01**: Display macro breakdown (protein, carbs, fat) for ingredients
-- **NUTR-02**: User can set macro targets
+- **MACRO-01**: User can view macro breakdown (protein, carbs, fat) per meal
+- **MACRO-02**: User can set macro targets
 
-### Social Features
+### Data Visualization
 
-- **SOCL-01**: User can share progress with friends
-- **SOCL-02**: Community challenges
-
-### AI Recommendations
-
-- **AI-01**: ML-based personalized activity recommendations
-- **AI-02**: Smart food suggestions based on logging history
+- **VIZ-01**: User can view weight progress over time on a chart
+- **VIZ-02**: User can view calorie history as a timeline or graph
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Barcode scanning | Poor international ingredient coverage, high complexity |
-| Macro tracking in v1 | Adds UI complexity for beginners, defer to v2 |
-| Social features | Not core to individual health tracking |
-| Mobile app (native) | Web-first, responsive design sufficient |
-| Real AI/ML in v1 | Rule-based randomization validated by research |
-| Video exercise tutorials | Storage/bandwidth costs, defer to v2+ |
-| Meal/recipe logging | Ingredient-level only for now |
+| Supabase Auth (replacing JWT) | Current JWT + Google OAuth works; auth migration would add risk with no user benefit |
+| Supabase Realtime subscriptions | No real-time features needed; REST polling is sufficient |
+| Row Level Security (RLS) | Server-side only architecture; no direct client-db access |
+| ORM (Prisma/Drizzle) | Would require learning new API; repository pattern works fine with raw SQL |
+| nginx/Caddy reverse proxy | Unnecessary complexity at this scale; Express.static() is adequate |
+| Performance tuning | Not needed until traffic justifies it |
+| Zero-downtime migration | App deployment status unknown; fresh Supabase start assumed |
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INGR-01 | Phase 6 | Pending |
-| INGR-02 | Phase 6 | Pending |
-| INGR-03 | Phase 6 | Pending |
-| INGR-04 | Phase 6 | Pending |
-| LOG-07 | Phase 7 | Complete |
-| LOG-08 | Phase 7 | Complete |
-| LOG-09 | Phase 7 | Complete |
-| UI-04 | Phase 8 | Complete |
-| UI-05 | Phase 8 | Complete |
-| UI-06 | Phase 8 | Complete |
-| CALC-01 | Phase 7 | Complete |
-| CALC-02 | Phase 7 | Complete |
+| SUP-01 | TBD | Pending |
+| SUP-02 | TBD | Pending |
+| SUP-03 | TBD | Pending |
+| SUP-04 | TBD | Pending |
+| QRY-01 | TBD | Pending |
+| QRY-02 | TBD | Pending |
+| QRY-03 | TBD | Pending |
+| QRY-04 | TBD | Pending |
+| QRY-05 | TBD | Pending |
+| DKR-01 | TBD | Pending |
+| DKR-02 | TBD | Pending |
+| DKR-03 | TBD | Pending |
+| TST-01 | TBD | Pending |
+| TST-02 | TBD | Pending |
 
 **Coverage:**
-- v1.1 requirements: 12 total
-- Mapped to phases: 12
-- Unmapped: 0 ✓
+- v1.2 requirements: 14 total
+- Mapped to phases: 0
+- Unmapped: 14 ⚠️
 
 ---
-*Requirements defined: 2026-05-18*
-*Last updated: 2026-05-18 after v1.1 roadmap created*
+*Requirements defined: 2026-05-27*
+*Last updated: 2026-05-27 after v1.2 milestone definition*
