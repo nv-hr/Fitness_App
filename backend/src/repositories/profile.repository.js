@@ -11,13 +11,14 @@ import { AppError } from '../utils/errors.js';
  * @param {string} params.gender
  * @param {string} params.fitnessGoal
  * @param {string|null} params.activityLevel
+ * @param {string|null} params.calorieRate
  * @returns {Promise<Object>} Created profile row
  */
-export async function create({ userId, weightKg, heightCm, age, gender, fitnessGoal, activityLevel }) {
+export async function create({ userId, weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate }) {
   try {
     await pool.query(
-      'INSERT INTO profiles (user_id, weight_kg, height_cm, age, gender, fitness_goal, activity_level) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [userId, weightKg, heightCm, age, gender, fitnessGoal, activityLevel]
+      'INSERT INTO profiles (user_id, weight_kg, height_cm, age, gender, fitness_goal, activity_level, calorie_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [userId, weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate]
     );
     const [rows] = await pool.query(
       'SELECT * FROM profiles WHERE id = LAST_INSERT_ID()'
@@ -58,13 +59,14 @@ export async function findByUserId(userId) {
  * @param {string} params.gender
  * @param {string} params.fitnessGoal
  * @param {string|null} params.activityLevel
+ * @param {string|null} params.calorieRate
  * @returns {Promise<{success: boolean}>}
  */
-export async function updateByUserId(userId, { weightKg, heightCm, age, gender, fitnessGoal, activityLevel }) {
+export async function updateByUserId(userId, { weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate }) {
   try {
     await pool.query(
-      'UPDATE profiles SET weight_kg = ?, height_cm = ?, age = ?, gender = ?, fitness_goal = ?, activity_level = ?, updated_at = NOW() WHERE user_id = ?',
-      [weightKg, heightCm, age, gender, fitnessGoal, activityLevel, userId]
+      'UPDATE profiles SET weight_kg = ?, height_cm = ?, age = ?, gender = ?, fitness_goal = ?, activity_level = ?, calorie_rate = ?, updated_at = NOW() WHERE user_id = ?',
+      [weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate, userId]
     );
     return { success: true };
   } catch (err) {

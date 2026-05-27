@@ -13,7 +13,8 @@ const schema = z.object({
   age: z.coerce.number().min(5, t('profile.ageMin')).max(120, t('profile.ageMax')),
   gender: z.enum(['male', 'female', 'other'], { message: t('profile.genderRequired') }),
   fitnessGoal: z.enum(['lose_weight', 'maintain', 'gain_weight'], { message: t('profile.fitnessGoalRequired') }),
-  activityLevel: z.enum(['low', 'medium', 'high']).optional(),
+  activityLevel: z.enum(['sedentary', 'light', 'moderate', 'very_active', 'extra_active']).optional(),
+  calorieRate: z.enum(['low', 'medium', 'high']).optional(),
 });
 
 export default function ProfileForm() {
@@ -27,7 +28,8 @@ export default function ProfileForm() {
     defaultValues: {
       gender: 'male',
       fitnessGoal: 'maintain',
-      activityLevel: 'medium',
+      activityLevel: 'moderate',
+      calorieRate: 'medium',
     },
   });
 
@@ -59,6 +61,7 @@ export default function ProfileForm() {
           calorieTarget: response.data.calorieTarget,
           activityLevel: data.activityLevel,
           fitnessGoal: data.fitnessGoal,
+          calorieRate: data.calorieRate,
         });
       }
         if (response.data.tdee) {
@@ -68,6 +71,7 @@ export default function ProfileForm() {
             calorieTarget: response.data.calorieTarget,
             activityLevel: profile.activity_level,
             fitnessGoal: profile.fitness_goal,
+            calorieRate: profile.calorie_rate,
           });
         }
       } catch {
@@ -176,9 +180,24 @@ export default function ProfileForm() {
             {...register('activityLevel')}
             style={{ display: 'block', width: '100%', padding: '0.75rem 0.5rem', marginTop: '0.25rem', boxSizing: 'border-box', minHeight: '44px' }}
           >
-            <option value="low">{t('profile.activityLow')}</option>
-            <option value="medium">{t('profile.activityMedium')}</option>
-            <option value="high">{t('profile.activityHigh')}</option>
+            <option value="sedentary">{t('profile.activitySedentary')}</option>
+            <option value="light">{t('profile.activityLight')}</option>
+            <option value="moderate">{t('profile.activityModerate')}</option>
+            <option value="very_active">{t('profile.activityVeryActive')}</option>
+            <option value="extra_active">{t('profile.activityExtraActive')}</option>
+          </select>
+        </div>
+
+        <div style={{ marginBottom: '1rem' }}>
+          <label htmlFor="calorieRate">{t('profile.calorieRate')}</label>
+          <select
+            id="calorieRate"
+            {...register('calorieRate')}
+            style={{ display: 'block', width: '100%', padding: '0.75rem 0.5rem', marginTop: '0.25rem', boxSizing: 'border-box', minHeight: '44px' }}
+          >
+            <option value="low">{t('profile.rateLow')}</option>
+            <option value="medium">{t('profile.rateMedium')}</option>
+            <option value="high">{t('profile.rateHigh')}</option>
           </select>
         </div>
 

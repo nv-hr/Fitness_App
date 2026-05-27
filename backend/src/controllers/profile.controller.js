@@ -17,6 +17,7 @@ export async function createProfile(req, res, next) {
       gender,
       fitnessGoal,
       activityLevel: req.body.activityLevel,
+      calorieRate: req.body.calorieRate,
     });
 
     return successResponse(res, { profile, bmi, bmiCategory, tdee, tdeeRange, calorieTarget }, 201);
@@ -64,6 +65,7 @@ export async function updateProfile(req, res, next) {
       gender,
       fitnessGoal,
       activityLevel: req.body.activityLevel,
+      calorieRate: req.body.calorieRate,
     });
 
     return successResponse(res, { profile, bmi, bmiCategory, tdee, tdeeRange, calorieTarget });

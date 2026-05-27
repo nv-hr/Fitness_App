@@ -6,9 +6,16 @@ const goalLabels = {
   gain_weight: 'Menambah Berat Badan',
 };
 
-export default function TdeeResult({ tdee, tdeeRange, calorieTarget, activityLevel, fitnessGoal }) {
+const rateLabels = {
+  low: '0.25 kg/minggu',
+  medium: '0.5 kg/minggu',
+  high: '1 kg/minggu',
+};
+
+export default function TdeeResult({ tdee, tdeeRange, calorieTarget, activityLevel, fitnessGoal, calorieRate }) {
   const activityDescription = t('tdee.activity.' + activityLevel) || activityLevel;
   const goalLabel = goalLabels[fitnessGoal] || fitnessGoal;
+  const rateLabel = calorieRate ? rateLabels[calorieRate] : null;
 
   return (
     <div style={{ marginTop: '1.5rem', padding: '1rem', border: '1px solid #E5E7EB', borderRadius: '8px' }}>
@@ -36,7 +43,7 @@ export default function TdeeResult({ tdee, tdeeRange, calorieTarget, activityLev
             fontSize: '0.875rem',
             fontWeight: '500',
           }}>
-            {calorieTarget} {t('tdee.caloriesPerDay')} — {goalLabel}
+            {calorieTarget} {t('tdee.caloriesPerDay')} — {goalLabel}{rateLabel ? ` (${rateLabel})` : ''}
           </span>
         </div>
       )}

@@ -9,23 +9,15 @@
 -- Created BEFORE any table that references them
 -- ============================================================
 
-DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'gender') THEN
-        CREATE TYPE gender AS ENUM ('male', 'female', 'other');
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'fitness_goal') THEN
-        CREATE TYPE fitness_goal AS ENUM ('lose_weight', 'maintain', 'gain_weight');
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'activity_level') THEN
-        CREATE TYPE activity_level AS ENUM ('sedentary', 'light', 'moderate', 'very_active', 'extra_active');
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'food_category') THEN
-        CREATE TYPE food_category AS ENUM ('proteins', 'carbs', 'vegetables', 'fruits', 'dairy', 'fats', 'drinks', 'other');
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'meal_type') THEN
-        CREATE TYPE meal_type AS ENUM ('breakfast', 'lunch', 'dinner', 'snack');
-    END IF;
-END $$;
+CREATE TYPE IF NOT EXISTS gender AS ENUM ('male', 'female', 'other');
+
+CREATE TYPE IF NOT EXISTS fitness_goal AS ENUM ('lose_weight', 'maintain', 'gain_weight');
+
+CREATE TYPE IF NOT EXISTS activity_level AS ENUM ('low', 'medium', 'high');
+
+CREATE TYPE IF NOT EXISTS food_category AS ENUM ('proteins', 'carbs', 'vegetables', 'fruits', 'dairy', 'fats', 'drinks', 'other');
+
+CREATE TYPE IF NOT EXISTS meal_type AS ENUM ('breakfast', 'lunch', 'dinner', 'snack');
 
 -- ============================================================
 -- Tables
@@ -54,7 +46,6 @@ CREATE TABLE IF NOT EXISTS profiles (
     gender gender NOT NULL,
     fitness_goal fitness_goal NOT NULL,
     activity_level activity_level NULL,
-    calorie_rate VARCHAR(10) NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

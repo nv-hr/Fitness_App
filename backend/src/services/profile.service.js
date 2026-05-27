@@ -60,7 +60,10 @@ export function calculateBmr(weightKg, heightCm, age, gender) {
  */
 export function calculateTdee(weightKg, heightCm, age, gender, activityLevel) {
   if (!activityLevel) return null;
-  const multipliers = { low: 1.2, medium: 1.55, high: 1.9 };
+  const multipliers = {
+    sedentary: 1.2, light: 1.375, moderate: 1.55,
+    very_active: 1.725, extra_active: 1.9,
+  };
   const multiplier = multipliers[activityLevel];
   if (!multiplier) return null;
   const bmr = calculateBmr(weightKg, heightCm, age, gender);
@@ -77,15 +80,18 @@ export function getTdeeRange(tdee) {
 }
 
 /**
- * Get calorie target adjusted for fitness goal.
- * lose_weight: -500, maintain: 0, gain_weight: +300
+ * Get calorie target adjusted for fitness goal and rate.
+ * Rate options: 'low' (0.25kg/week, ±275), 'medium' (0.5kg/week, ±550), 'high' (1kg/week, ±1100)
  * @param {number} tdee
  * @param {string} fitnessGoal
+ * @param {string|null} calorieRate
  * @returns {number}
  */
-export function getCalorieTarget(tdee, fitnessGoal) {
-  const adjustments = { lose_weight: -500, maintain: 0, gain_weight: 300 };
-  const adjustment = adjustments[fitnessGoal] || 0;
+export function getCalorieTarget(tdee, fitnessGoal, calorieRate) {
+  const rateAdjustments = { low: 275, medium: 550, high: 1100 };
+  const adjustment = fitnessGoal === 'lose_weight' ? -(rateAdjustments[calorieRate] || 550)
+    : fitnessGoal === 'gain_weight' ? (rateAdjustments[calorieRate] || 550)
+    : 0;
   return Math.round(tdee + adjustment);
 }
 
@@ -122,7 +128,7 @@ function validateProfileData(data) {
 export async function createProfile(userId, profileData) {
   validateProfileData(profileData);
 
-  const { weightKg, heightCm, age, gender, fitnessGoal, activityLevel } = profileData;
+  const { weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate } = profileData;
 
   const profile = await createProfileRepo({
     userId,
@@ -132,6 +138,7 @@ export async function createProfile(userId, profileData) {
     gender,
     fitnessGoal,
     activityLevel,
+    calorieRate,
   });
 
   const bmi = calculateBmi(weightKg, heightCm);
@@ -139,7 +146,7 @@ export async function createProfile(userId, profileData) {
 
   const tdee = calculateTdee(weightKg, heightCm, age, gender, activityLevel);
   const tdeeRange = tdee ? getTdeeRange(tdee) : null;
-  const calorieTarget = (tdee && fitnessGoal) ? getCalorieTarget(tdee, fitnessGoal) : null;
+  const calorieTarget = (tdee && fitnessGoal) ? getCalorieTarget(tdee, fitnessGoal, profileData.calorieRate) : null;
 
   return { profile, bmi, bmiCategory, tdee, tdeeRange, calorieTarget };
 }
@@ -158,7 +165,7 @@ export async function getProfile(userId) {
 
   const tdee = calculateTdee(profile.weight_kg, profile.height_cm, profile.age, profile.gender, profile.activity_level);
   const tdeeRange = tdee ? getTdeeRange(tdee) : null;
-  const calorieTarget = (tdee && profile.fitness_goal) ? getCalorieTarget(tdee, profile.fitness_goal) : null;
+  const calorieTarget = (tdee && profile.fitness_goal) ? getCalorieTarget(tdee, profile.fitness_goal, profile.calorie_rate) : null;
 
   return { profile, bmi, bmiCategory, tdee, tdeeRange, calorieTarget };
 }
@@ -172,9 +179,9 @@ export async function getProfile(userId) {
 export async function updateProfile(userId, profileData) {
   validateProfileData(profileData);
 
-  const { weightKg, heightCm, age, gender, fitnessGoal, activityLevel } = profileData;
+  const { weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate } = profileData;
 
-  await updateByUserId(userId, { weightKg, heightCm, age, gender, fitnessGoal, activityLevel });
+  await updateByUserId(userId, { weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate });
 
   return getProfile(userId);
 }

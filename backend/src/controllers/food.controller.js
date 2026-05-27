@@ -117,7 +117,7 @@ export async function getDailySummary(req, res, next) {
     if (profile) {
       const tdee = calculateTdee(profile.weight_kg, profile.height_cm, profile.age, profile.gender, profile.activity_level);
       if (tdee) {
-        calorieTarget = getCalorieTarget(tdee, profile.fitness_goal);
+        calorieTarget = getCalorieTarget(tdee, profile.fitness_goal, profile.calorie_rate);
       }
     }
 
