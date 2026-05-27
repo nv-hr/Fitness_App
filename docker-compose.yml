@@ -33,6 +33,37 @@ services:
       mysql:
         condition: service_healthy
 
+  backend:
+    build: ./backend
+    container_name: fitness_backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "3001:3001"
+    env_file:
+      - ./backend/.env
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=fitness_app
+    networks:
+      - fitness_net
+
+  frontend:
+    build: ./frontend
+    container_name: fitness_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_PROXY_TARGET=http://backend:3001
+    networks:
+      - fitness_net
+
 volumes:
   mysql_data:
 
