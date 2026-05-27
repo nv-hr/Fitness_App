@@ -8,16 +8,23 @@ A web-based health application that helps users monitor their body condition thr
 
 Users can accurately calculate their BMI and TDEE, log daily food intake by selecting ingredients and entering weight in grams, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
 
+## Current Milestone: v1.2 Docker Service Separation
+
+**Goal:** Split monolithic docker-compose.yml into per-service docker-compose files for independent service management and flexible development workflows.
+
+**Target features:**
+- docker-compose.db.yml — MySQL 8.4 + Adminer
+- docker-compose.backend.yml — Express backend (depends on db)
+- docker-compose.backend.dev.yml — Backend with nodemon hot-reload
+- docker-compose.frontend.yml — React frontend (depends on backend)
+- docker-compose.frontend.dev.yml — Frontend with HMR
+- Root docker-compose.yml orchestration for all services together
+
 ## Current State
 
 **Shipped:** v1.1 International Ingredient Logging (2026-05-18)
 **Phases:** 8 complete | **Plans:** 23 | **Tasks:** 28
 **LOC:** ~1,228 insertions across 18 files in v1.1
-
-### Next Milestone Goals
-
-- Plan v1.2 scope — what comes after ingredient logging?
-- Potential areas: data persistence improvements, advanced nutrition tracking (macros), meal planning, progress charts, export functionality
 
 ## Requirements
 
