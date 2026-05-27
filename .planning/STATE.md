@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-27)
 Phase: 10
 Plan: Not started
 Status: Ready to execute
-Last activity: 2026-05-27 -- Phase 10 planning complete
+Last activity: 2026-05-27 -- Completed quick task 260528-3eg: add unfullfilled spec as a new milestone
 
 Progress: [███████░░░] 67%
 
@@ -88,6 +88,7 @@ None yet — first v1.2 planning session.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260527-l8m | test the supabase connection | 2026-05-27 | 1fcb05c | [260527-l8m-test-the-supabase-connection](./quick/260527-l8m-test-the-supabase-connection/) |
+| 260528-3eg | add unfullfilled spec as a new milestone | 2026-05-27 | 44edebb | [260528-3eg-add-unfullfilled-spec-as-a-new-milestone](./quick/260528-3eg-add-unfullfilled-spec-as-a-new-milestone/) |
 
 ## Deferred Items
 
