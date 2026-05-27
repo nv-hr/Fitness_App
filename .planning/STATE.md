@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: Docker Service Separation
-status: milestone_complete
-stopped_at: Milestone complete (Phase 09 was final phase)
-last_updated: 2026-05-27T05:40:24.012Z
-last_activity: 2026-05-27 -- Phase 09 execution started
+milestone: v1.1
+milestone_name: International Ingredient Logging
+status: Awaiting next milestone
+stopped_at: Phase 8 context gathered — ready for planning
+last_updated: "2026-05-18T18:21:30.990Z"
+last_activity: 2026-05-18 — Milestone v1.1 completed and archived
 progress:
-  total_phases: 1
-  completed_phases: 0
-  total_plans: 1
-  completed_plans: 1
-  percent: 0
+  total_phases: 8
+  completed_phases: 8
+  total_plans: 23
+  completed_plans: 23
+  percent: 100
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-18)
 
 **Core value:** Users can accurately calculate their BMI and TDEE, log daily food intake by ingredients, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
-**Current focus:** Milestone complete
+**Current focus:** Milestone complete — ready for v1.2 planning
 
 ## Deferred Items
 
@@ -42,16 +42,16 @@ Items acknowledged and deferred at milestone close on 2026-05-18:
 
 ## Current Position
 
-Phase: 09
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-05-27
+Phase: Milestone v1.1 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-05-27 — Completed quick task 260527-e4n: create docker compose for running backedn and frontend
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 24
+- Total plans completed: 23
 - Average duration: N/A
 - Total execution time: ~2.5 hours (v1.0 + v1.1 estimate)
 
@@ -65,14 +65,15 @@ Last activity: 2026-05-27
 | 04 | 3 | 3 | — |
 | 05 | 4 | 4 | — |
 | 06 | 3 | 3 | — |
-| 07 | 3 | 3 | — |
-| 08 | 3 | 3 | — |
-| 09 | 1 | - | - |
+| 07 | 0 | TBD | — |
+| 08 | 0 | TBD | — |
+| 7 | 3 | - | - |
+| 8 | 3 | - | - |
 
 **Recent Trend:**
 
-- v1.1 shipped: 8 phases, 23 plans, 28 tasks
-- v1.2 started: Docker Service Separation — Phases 9-12 planned
+- Last 5 plans: Phase 6 (3 plans), Phase 5 (4 plans)
+- Trend: v1.1 Phase 6 complete, Phase 7 planning next
 
 ## Accumulated Context
 
@@ -92,15 +93,14 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- Plan Phase 9: Database Service (docker-compose.db.yml with MySQL + Adminer)
-- Plan Phase 10: Backend Service (docker-compose.backend.yml + dev mode)
-- Plan Phase 11: Frontend Service (docker-compose.frontend.yml + dev mode)
-- Plan Phase 12: Root Orchestration & Documentation (root compose + headers)
+- Plan Phase 7: Ingredient Logging & Calorie Calculation (weight-based logging flow, custom ingredients, calorie summary)
+- Plan Phase 8: English UI Migration (i18n replacement across all pages)
 
 ### Blockers/Concerns
 
-- None currently — v1.2 Docker Service Separation is a clean infrastructure milestone with no dependency on v1.1 code changes
-- Existing Dockerfiles and initial compose files exist from previous quick task (260527-e4n) — review and restructure as needed
+- **Database migration:** Phase 6 completed — foods table ENUM updated to English categories, 201 international ingredients seeded. Deployment requires manual TRUNCATE + reseed on production database.
+- **food_logs compatibility:** Existing food_logs entries retain their calorie values; food_id becomes NULL after TRUNCATE (ON DELETE SET NULL FK). Historical data preserved but food references lost.
+- **Translation keys:** FoodSearch.jsx now uses English category keys (proteins, carbs, etc.) but translation file still maps to Indonesian labels. Full English UI migration happens in Phase 8.
 
 ## Deferred Items
 
@@ -115,10 +115,10 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-27T04:16:50.761Z
-Stopped at: Phase 9 context gathered
-Resume file: .planning/phases/09-database-service/09-CONTEXT.md
+Last session: 2026-05-18T16:47:16.021Z
+Stopped at: Phase 8 context gathered — ready for planning
+Resume file: .planning/phases/08-english-ui-migration/08-CONTEXT.md
 
 ## Operator Next Steps
 
-- Plan Phase 9: Database Service with `/gsd-plan-phase 9`
+- Start the next milestone with /gsd-new-milestone

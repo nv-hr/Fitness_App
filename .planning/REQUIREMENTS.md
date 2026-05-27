@@ -1,69 +1,92 @@
 # Requirements: Fitness_App
 
-**Defined:** 2026-05-27
-**Core Value:** Users can accurately calculate their BMI and TDEE, log daily food intake by selecting ingredients and entering weight in grams, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
+**Defined:** 2026-05-18
+**Core Value:** Users can accurately calculate their BMI and TDEE, log daily food intake by ingredients, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
 
-## v1.2 Requirements
+## v1.1 Requirements
 
-Requirements for v1.2 milestone. Each maps to roadmap phases.
+### Ingredient Database
 
-### Docker Service Separation
+- [ ] **INGR-01**: Database contains comprehensive international ingredients (proteins, grains, vegetables, fruits, dairy, oils, etc.)
+- [ ] **INGR-02**: Each ingredient has calories per 100g value
+- [ ] **INGR-03**: Ingredients organized by category for browsing
+- [ ] **INGR-04**: User can search ingredients by name
 
-- [ ] **DOCK-01**: User can start MySQL database + Adminer independently via `docker-compose.db.yml`
-- [ ] **DOCK-02**: User can start backend independently via `docker-compose.backend.yml` with dependency on db service
-- [ ] **DOCK-03**: User can start backend in dev mode via `docker-compose.backend.dev.yml` with nodemon hot-reload
-- [ ] **DOCK-04**: User can start frontend independently via `docker-compose.frontend.yml` with dependency on backend service
-- [ ] **DOCK-05**: User can start frontend in dev mode via `docker-compose.frontend.dev.yml` with Vite HMR
-- [ ] **DOCK-06**: User can start all services together via root `docker-compose.yml` that references or includes all service files
-- [ ] **DOCK-07**: Each compose file has clear header documentation describing its purpose, usage, and dependencies
+### Ingredient Logging
+
+- [x] **LOG-07**: User can select an ingredient and enter weight in grams
+- [x] **LOG-08**: System calculates calories automatically (weight × calories per 100g)
+- [x] **LOG-09**: User can add custom ingredients not in database (name + calories per 100g)
+
+### English UI
+
+- [x] **UI-04**: All UI text in English — form labels, buttons, error messages, navigation
+- [x] **UI-05**: Category names in English (proteins, grains, vegetables, fruits, dairy, oils)
+- [x] **UI-06**: Meal type labels in English (breakfast, lunch, dinner, snack)
+
+### Calorie Display
+
+- [x] **CALC-01**: Daily calorie summary shows total from ingredient-based logging
+- [x] **CALC-02**: Calorie balance against TDEE target still works with new logging model
 
 ## v2 Requirements
 
-Deferred to future release.
+### Notifications
+
+- **NOTF-01**: User receives daily reminder to log meals
+- **NOTF-02**: User receives weekly progress summary
 
 ### Advanced Nutrition
 
-- **NUTR-01**: User can view macro breakdown (protein, carbs, fat) for logged food
-- **NUTR-02**: User can set daily macro targets (protein, carbs, fat goals)
-- **NUTR-03**: User can view macro progress against targets
+- **NUTR-01**: Display macro breakdown (protein, carbs, fat) for ingredients
+- **NUTR-02**: User can set macro targets
 
-### Progress Charts
+### Social Features
 
-- **PROG-01**: User can view weight history chart
-- **PROG-02**: User can view daily calorie trend chart (7/30 day)
-- **PROG-03**: User can view BMI history over time
+- **SOCL-01**: User can share progress with friends
+- **SOCL-02**: Community challenges
 
-### Notifications
+### AI Recommendations
 
-- **NOTF-01**: User receives daily meal reminders
-- **NOTF-02**: User receives weekly progress summary
+- **AI-01**: ML-based personalized activity recommendations
+- **AI-02**: Smart food suggestions based on logging history
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Production deployment config (nginx, SSL) | Not needed yet — focus on dev flexibility |
-| Kubernetes manifests | Overkill for current scale, Docker Compose sufficient |
-| CI/CD pipeline | Defer to deployment milestone |
-| Monitoring/logging stack | Not needed for dev workflow |
+| Barcode scanning | Poor international ingredient coverage, high complexity |
+| Macro tracking in v1 | Adds UI complexity for beginners, defer to v2 |
+| Social features | Not core to individual health tracking |
+| Mobile app (native) | Web-first, responsive design sufficient |
+| Real AI/ML in v1 | Rule-based randomization validated by research |
+| Video exercise tutorials | Storage/bandwidth costs, defer to v2+ |
+| Meal/recipe logging | Ingredient-level only for now |
 
 ## Traceability
 
+Which phases cover which requirements. Updated during roadmap creation.
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DOCK-01 | Phase 9 | Pending |
-| DOCK-02 | Phase 10 | Pending |
-| DOCK-03 | Phase 10 | Pending |
-| DOCK-04 | Phase 11 | Pending |
-| DOCK-05 | Phase 11 | Pending |
-| DOCK-06 | Phase 12 | Pending |
-| DOCK-07 | Phase 12 | Pending |
+| INGR-01 | Phase 6 | Pending |
+| INGR-02 | Phase 6 | Pending |
+| INGR-03 | Phase 6 | Pending |
+| INGR-04 | Phase 6 | Pending |
+| LOG-07 | Phase 7 | Complete |
+| LOG-08 | Phase 7 | Complete |
+| LOG-09 | Phase 7 | Complete |
+| UI-04 | Phase 8 | Complete |
+| UI-05 | Phase 8 | Complete |
+| UI-06 | Phase 8 | Complete |
+| CALC-01 | Phase 7 | Complete |
+| CALC-02 | Phase 7 | Complete |
 
 **Coverage:**
-- v1.2 requirements: 7 total
-- Mapped to phases: 7
+- v1.1 requirements: 12 total
+- Mapped to phases: 12
 - Unmapped: 0 ✓
 
 ---
-*Requirements defined: 2026-05-27*
-*Last updated: 2026-05-27 after initial definition*
+*Requirements defined: 2026-05-18*
+*Last updated: 2026-05-18 after v1.1 roadmap created*
