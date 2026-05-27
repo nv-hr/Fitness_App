@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Supabase Migration
 status: planning
-last_updated: "2026-05-27T06:27:37.331Z"
+last_updated: "2026-05-27T07:00:00.000Z"
 last_activity: 2026-05-27
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,41 +17,24 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-18)
+See: .planning/PROJECT.md (updated 2026-05-27)
 
 **Core value:** Users can accurately calculate their BMI and TDEE, log daily food intake by ingredients, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
-**Current focus:** Milestone complete — ready for v1.2 planning
-
-## Deferred Items
-
-Items acknowledged and deferred at milestone close on 2026-05-18:
-
-| Category | Item | Status |
-|----------|------|--------|
-| uat_gap | Phase 07: 07-HUMAN-UAT.md — 5 pending scenarios | deferred |
-| verification_gap | Phase 07: 07-VERIFICATION.md — human_needed | deferred |
-
-## Quick Tasks Completed
-
-- 260525-p4c `what front end do i need to create. just analyze it` (Frontend analysis complete; generated FRONTEND_ANALYSIS.md outlining needs for v1.2)
-- 260527-c04 `revert to changes before phase 9 and clear phases 9, 10, 11, 12 and its milestone` (Reverted all phase 9-12 code and planning artifacts)
-- 260527-0844 `revert to before phase 9` (No-op — already accomplished by 260527-c04)
-- 260527-cn0 `test all backend endpoint and its integration with frontend` (31 backend + 25 frontend integration tests created and passing)
-- 260527-e4n `create docker compose for running backedn and frontend` (Dockerfiles + compose with 4 services: mysql, adminer, backend, frontend)
-- 260527-hno `revert to state before phase 9` (Reverted all phase 9 and v1.2 milestone code/planning artifacts)
+**Current focus:** v1.2 Supabase Migration — Roadmap created, ready for planning
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-05-27 — Milestone v1.2 started
+Phase: 9 of 12 (Supabase Setup & Schema Migration)
+Plan: — (not yet planned)
+Status: Roadmap created — ready to plan
+Last activity: 2026-05-27 — v1.2 roadmap created with 4 phases (9-12)
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
-
-- Total plans completed: 23
+- Total plans completed: 23 (v1.0 + v1.1)
 - Average duration: N/A
 - Total execution time: ~2.5 hours (v1.0 + v1.1 estimate)
 
@@ -59,21 +42,15 @@ Last activity: 2026-05-27 — Milestone v1.2 started
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 3 | 3 | — |
-| 02 | 2 | 2 | — |
-| 03 | 2 | 2 | — |
-| 04 | 3 | 3 | — |
-| 05 | 4 | 4 | — |
-| 06 | 3 | 3 | — |
-| 07 | 0 | TBD | — |
-| 08 | 0 | TBD | — |
-| 7 | 3 | - | - |
-| 8 | 3 | - | - |
+| 01-08 | 23 | 23 | — |
+| 09 | TBD | TBD | — |
+| 10 | TBD | TBD | — |
+| 11 | TBD | TBD | — |
+| 12 | TBD | TBD | — |
 
 **Recent Trend:**
-
-- Last 5 plans: Phase 6 (3 plans), Phase 5 (4 plans)
-- Trend: v1.1 Phase 6 complete, Phase 7 planning next
+- v1.1 complete: 23 plans across 8 phases
+- v1.2 starting: 4 new phases for Supabase migration
 
 ## Accumulated Context
 
@@ -82,25 +59,23 @@ Last activity: 2026-05-27 — Milestone v1.2 started
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- Monorepo structure: Keep frontend/backend in same repo
-- Minimal styling: Focus on functionality and quality first
-- Dummy AI/ML for activities: Use randomized suggestions for v1
-- Pre-seeded + custom food database: Common foods available, custom entry for anything else
-- All 5 features in MVP: Complete health tracking from day one
-- Switch to ingredient-based logging: Users want granular control over what they eat
-- English UI for international audience: Broader user base beyond Indonesia
-- v1.0 shipped: 5 phases complete, 38/38 UAT tests passed, backend live-tested
+- v1.2 will migrate from MySQL to Supabase PostgreSQL (managed)
+- Docker will be simplified from 4 services to 1 (single full-stack container)
+- No ORM — continue with raw SQL repository pattern (pg driver)
+- No Supabase Auth — keep existing JWT + Google OAuth
+- No RLS — keep server-side-only architecture
+- 4-phase structure: Setup → Query Rewrite → Docker → Testing
 
 ### Pending Todos
 
-- Plan Phase 7: Ingredient Logging & Calorie Calculation (weight-based logging flow, custom ingredients, calorie summary)
-- Plan Phase 8: English UI Migration (i18n replacement across all pages)
+None yet — first v1.2 planning session.
 
 ### Blockers/Concerns
 
-- **Database migration:** Phase 6 completed — foods table ENUM updated to English categories, 201 international ingredients seeded. Deployment requires manual TRUNCATE + reseed on production database.
-- **food_logs compatibility:** Existing food_logs entries retain their calorie values; food_id becomes NULL after TRUNCATE (ON DELETE SET NULL FK). Historical data preserved but food references lost.
-- **Translation keys:** FoodSearch.jsx now uses English category keys (proteins, carbs, etc.) but translation file still maps to Indonesian labels. Full English UI migration happens in Phase 8.
+- Connection pool limits on Supabase free tier could cause test flakiness during Phase 12
+- Google OAuth redirect URI must be updated when container port changes
+- Seed data SQL may exceed Supabase SQL Editor 1MB limit — may need psql or split execution
+- MySQL-specific SQL patterns must be comprehensively grepped to avoid silent runtime failures
 
 ## Deferred Items
 
@@ -108,6 +83,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
+| uat_gap | Phase 07: 07-HUMAN-UAT.md — 5 pending scenarios | deferred | v1.1 close |
+| verification_gap | Phase 07: 07-VERIFICATION.md — human_needed | deferred | v1.1 close |
 | Notifications | Daily meal reminders, weekly progress summary | v2 | v1.0 complete |
 | Advanced Nutrition | Macro breakdown, macro targets | v2 | v1.0 complete |
 | Social Features | Share progress, community challenges | v2+ | v1.0 complete |
@@ -115,10 +92,11 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-18T16:47:16.021Z
-Stopped at: Phase 8 context gathered — ready for planning
-Resume file: .planning/phases/08-english-ui-migration/08-CONTEXT.md
+Last session: 2026-05-27T07:00:00.000Z
+Stopped at: v1.2 roadmap created — 4 phases defined (9-12)
+Resume file: None
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Review and approve ROADMAP.md draft
+- Start planning: `/gsd-plan-phase 9` (Supabase Setup & Schema Migration)

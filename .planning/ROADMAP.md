@@ -1,13 +1,14 @@
 # ROADMAP: Fitness_App
 
 **Created:** 2026-05-17
-**Updated:** 2026-05-18 (v1.1 milestone archived)
-**Phases:** 8 (all complete)
-**Milestones:** 1 shipped (v1.1)
+**Updated:** 2026-05-27 (v1.2 Supabase Migration roadmap created)
+**Phases:** 8 complete (v1.1) | 4 planned (v1.2)
+**Milestones:** 1 shipped (v1.1), 1 active (v1.2)
 
 ## Milestones
 
 - ✅ **v1.1 International Ingredient Logging** — Phases 1-8 (shipped 2026-05-18)
+- 🚧 **v1.2 Supabase Migration** — Phases 9-12 (planning)
 
 ## Phases
 
@@ -25,6 +26,61 @@
 
 </details>
 
+### 🚧 v1.2 Supabase Migration (Planned)
+
+- [ ] **Phase 9: Supabase Setup & Schema Migration** — Create Supabase project, migrate schema and seed data from MySQL to PostgreSQL
+- [ ] **Phase 10: Backend Query Rewrite** — Replace mysql2 with pg driver, translate all queries to PostgreSQL syntax
+- [ ] **Phase 11: Docker Restructure** — Single multi-stage container serving both frontend and backend
+- [ ] **Phase 12: Testing & Validation** — Integration tests and full-stack smoke tests against Supabase
+
+## Phase Details
+
+### Phase 9: Supabase Setup & Schema Migration
+**Goal**: Supabase PostgreSQL database is ready with migrated schema, seed data, and verified connectivity
+**Depends on**: Nothing (first v1.2 phase)
+**Requirements**: SUP-01, SUP-02, SUP-03, SUP-04
+**Success Criteria** (what must be TRUE):
+  1. Supabase project is created and its PostgreSQL connection string (with password) is obtainable and working
+  2. All MySQL tables (users, profiles, foods, food_logs, activities, activity_logs, custom_foods) are recreated in PostgreSQL with matching ENUMs, constraints, and indexes
+  3. 201 food ingredients and 35 activities are seeded into the PostgreSQL database via SQL script or Supabase SQL Editor
+  4. Backend can establish an SSL-encrypted connection to Supabase on startup and logs success/failure to the console
+**Plans**: TBD
+
+### Phase 10: Backend Query Rewrite (pg migration)
+**Goal**: All database queries use pg (node-postgres) driver with PostgreSQL-compatible syntax; no mysql2 dependency remains
+**Depends on**: Phase 9 (Supabase must be accessible for testing)
+**Requirements**: QRY-01, QRY-02, QRY-03, QRY-04, QRY-05
+**Success Criteria** (what must be TRUE):
+  1. mysql2 package is removed from package.json; pg is the only database driver
+  2. database.js is rewritten with pg Pool using Supabase connection string (SSL-enabled)
+  3. Food repository queries use $1 placeholders, RETURNING * for INSERT/UPDATE, and PostgreSQL-compatible JSON operators
+  4. Profile and user repository queries use $1 placeholders and RETURNING * where applicable
+  5. Activity repository JSON_OVERLAPS is replaced with ?| operator; all DATE_SUB and INTERVAL patterns are translated to PostgreSQL syntax
+  6. No mysql2 imports, mysql error codes (ER_DUP_ENTRY), or ? placeholders remain anywhere in the codebase
+**Plans**: TBD
+
+### Phase 11: Docker Restructure (Single Container)
+**Goal**: Single multi-stage Docker container serves both the Express backend and React frontend
+**Depends on**: Phase 10 (code must be querying Supabase correctly)
+**Requirements**: DKR-01, DKR-02, DKR-03
+**Success Criteria** (what must be TRUE):
+  1. Multi-stage Dockerfile builds frontend (npm run build) in a build stage and copies the output to the backend's public directory in the final stage
+  2. Express serves React static files via express.static() with an SPA catch-all route for client-side routing
+  3. docker-compose.yml contains only one service (backend) — no MySQL, no Adminer
+  4. Single container starts on one port and both API routes (e.g., /api/health) and frontend (e.g., /login) are accessible
+**Plans**: TBD
+
+### Phase 12: Testing & Validation
+**Goal**: Migration is validated through automated integration tests and manual full-stack smoke tests
+**Depends on**: Phase 11 (Docker image must be buildable and runnable)
+**Requirements**: TST-01, TST-02
+**Success Criteria** (what must be TRUE):
+  1. All backend integration tests pass against Supabase PostgreSQL (not MySQL) — covering food, profile, user, and activity repositories
+  2. Full Docker image builds successfully with zero errors
+  3. Container starts, /api/health returns 200, and the frontend landing page loads in the browser
+  4. End-to-end smoke test verifies: user registration, profile creation, BMI calculation, food logging, and calorie summary display all work against Supabase
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -37,7 +93,11 @@
 | 6. International Ingredient Database | v1.1 | 3/3 | Complete | 2026-05-18 |
 | 7. Ingredient Logging & Calorie Calculation | v1.1 | 3/3 | Complete | 2026-05-18 |
 | 8. English UI Migration | v1.1 | 3/3 | Complete | 2026-05-18 |
+| 9. Supabase Setup & Schema Migration | v1.2 | 0/0 | Not started | - |
+| 10. Backend Query Rewrite | v1.2 | 0/0 | Not started | - |
+| 11. Docker Restructure | v1.2 | 0/0 | Not started | - |
+| 12. Testing & Validation | v1.2 | 0/0 | Not started | - |
 
 ---
 *Roadmap created: 2026-05-17*
-*Last updated: 2026-05-18 (v1.1 milestone archived)*
+*Last updated: 2026-05-27 (v1.2 Supabase Migration phases added)*

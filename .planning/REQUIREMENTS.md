@@ -63,25 +63,25 @@ Deferred to future release.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SUP-01 | TBD | Pending |
-| SUP-02 | TBD | Pending |
-| SUP-03 | TBD | Pending |
-| SUP-04 | TBD | Pending |
-| QRY-01 | TBD | Pending |
-| QRY-02 | TBD | Pending |
-| QRY-03 | TBD | Pending |
-| QRY-04 | TBD | Pending |
-| QRY-05 | TBD | Pending |
-| DKR-01 | TBD | Pending |
-| DKR-02 | TBD | Pending |
-| DKR-03 | TBD | Pending |
-| TST-01 | TBD | Pending |
-| TST-02 | TBD | Pending |
+| SUP-01 | Phase 9 | Pending |
+| SUP-02 | Phase 9 | Pending |
+| SUP-03 | Phase 9 | Pending |
+| SUP-04 | Phase 9 | Pending |
+| QRY-01 | Phase 10 | Pending |
+| QRY-02 | Phase 10 | Pending |
+| QRY-03 | Phase 10 | Pending |
+| QRY-04 | Phase 10 | Pending |
+| QRY-05 | Phase 10 | Pending |
+| DKR-01 | Phase 11 | Pending |
+| DKR-02 | Phase 11 | Pending |
+| DKR-03 | Phase 11 | Pending |
+| TST-01 | Phase 12 | Pending |
+| TST-02 | Phase 12 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14 ⚠️
+- Mapped to phases: 14 ✓
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-05-27*
