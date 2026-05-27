@@ -9,10 +9,10 @@ Requirements for v1.2 Supabase Migration milestone.
 
 ### Supabase Setup & Schema Migration
 
-- [ ] **SUP-01**: Supabase project is created and accessible with PostgreSQL database
+- [x] **SUP-01**: Supabase project is created and accessible with PostgreSQL database
 - [x] **SUP-02**: Database schema (tables, indexes, ENUMs, constraints) is migrated from MySQL to PostgreSQL
 - [x] **SUP-03**: Seed data (200+ foods, 35 activities) is migrated to Supabase PostgreSQL
-- [ ] **SUP-04**: Backend can establish and verify a connection to Supabase on startup
+- [x] **SUP-04**: Backend can establish and verify a connection to Supabase on startup
 
 ### Backend Query Rewrite
 
@@ -63,10 +63,10 @@ Deferred to future release.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SUP-01 | Phase 9 | Pending |
+| SUP-01 | Phase 9 | Complete |
 | SUP-02 | Phase 9 | Complete |
 | SUP-03 | Phase 9 | Complete |
-| SUP-04 | Phase 9 | Pending |
+| SUP-04 | Phase 9 | Complete |
 | QRY-01 | Phase 10 | Pending |
 | QRY-02 | Phase 10 | Pending |
 | QRY-03 | Phase 10 | Pending |
