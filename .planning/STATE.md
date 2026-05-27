@@ -4,8 +4,8 @@ milestone: v1.1
 milestone_name: International Ingredient Logging
 status: Awaiting next milestone
 stopped_at: Phase 8 context gathered — ready for planning
-last_updated: "2026-05-18T18:21:30.990Z"
-last_activity: 2026-05-18 — Milestone v1.1 completed and archived
+last_updated: 2026-05-27T05:42:48.793Z
+last_activity: 2026-05-27 — Completed quick task 260527-hno: Revert to state before phase 9
 progress:
   total_phases: 8
   completed_phases: 8
@@ -39,6 +39,7 @@ Items acknowledged and deferred at milestone close on 2026-05-18:
 - 260527-0844 `revert to before phase 9` (No-op — already accomplished by 260527-c04)
 - 260527-cn0 `test all backend endpoint and its integration with frontend` (31 backend + 25 frontend integration tests created and passing)
 - 260527-e4n `create docker compose for running backedn and frontend` (Dockerfiles + compose with 4 services: mysql, adminer, backend, frontend)
+- 260527-hno `revert to state before phase 9` (Reverted all phase 9 and v1.2 milestone code/planning artifacts)
 
 ## Current Position
 
