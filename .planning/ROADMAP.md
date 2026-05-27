@@ -68,7 +68,20 @@
   4. Profile and user repository queries use $1 placeholders and RETURNING * where applicable
   5. Activity repository JSON_OVERLAPS is replaced with ?| operator; all DATE_SUB and INTERVAL patterns are translated to PostgreSQL syntax
   6. No mysql2 imports, mysql error codes (ER_DUP_ENTRY), or ? placeholders remain anywhere in the codebase
-**Plans**: TBD
+**Plans**: 4 plans
+
+**Wave 1** *(no dependencies)*:
+- [ ] 10-01-PLAN.md — Connection layer rewrite: pg Pool, error mapper, mysql2 removal (QRY-01, QRY-05)
+
+**Wave 2** *(blocked on Wave 1 completion — parallel)*:
+- [ ] 10-02-PLAN.md — Food repository + controller error handling (QRY-02)
+- [ ] 10-03-PLAN.md — Profile + user repository rewrite (QRY-03)
+- [ ] 10-04-PLAN.md — Activity repository rewrite + full grep sweep (QRY-04, QRY-05)
+
+**Cross-cutting constraints:**
+- QRY-05 (mysql2 pattern sweep) is split across Wave 1 (error mapper + .env cleanup), Wave 2 per-repo (syntax translation), and Wave 2 final sweep (Activity plan grep verification)
+- All Wave 2 plans depend on 10-01 completing first (database.js must use pg before any repo can query)
+- No file conflicts between Wave 2 plans — they can execute in parallel
 
 ### Phase 11: Docker Restructure (Single Container)
 **Goal**: Single multi-stage Docker container serves both the Express backend and React frontend
