@@ -1,9 +1,14 @@
-import dotenv from 'dotenv';
-import pg from 'pg';
+import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
 
-dotenv.config({ path: '../backend/.env' });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const require = createRequire(resolve(__dirname, '../backend/package.json'));
+const dotenv = require('dotenv');
+const { Pool } = require('pg');
 
-const { Pool } = pg;
+dotenv.config({ path: resolve(__dirname, '../backend/.env') });
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
