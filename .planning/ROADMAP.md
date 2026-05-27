@@ -50,7 +50,7 @@
 **Plans**: 1 plan
 
 Plans:
-- [ ] 09-01-PLAN.md — Create docker-compose.db.yml with MySQL 8.4 + Adminer 5.4.2
+- [x] 09-01-PLAN.md — Create docker-compose.db.yml with MySQL 8.4 + Adminer 5.4.2
 
 ### Phase 10: Backend Service
 **Goal**: Users can start backend in production or development (hot-reload) mode independently
