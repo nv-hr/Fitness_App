@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Supabase Migration
 status: executing
-stopped_at: Completed Plan 1 — PostgreSQL schema and seed files
+stopped_at: Completed Plan 2 — Supabase CLI init and connection scaffolding
 last_updated: "2026-05-27T07:28:20.578Z"
 last_activity: 2026-05-27
 progress:
@@ -99,7 +99,7 @@ Items acknowledged and carried forward from previous milestone close:
 ## Session Continuity
 
 Last session: 2026-05-27T07:28:14.716Z
-Stopped at: Completed Plan 1 — PostgreSQL schema and seed files
+Stopped at: Completed Plan 2 — Supabase CLI init and connection scaffolding
 Resume file: None
 
 ## Operator Next Steps
