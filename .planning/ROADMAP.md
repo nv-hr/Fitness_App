@@ -43,11 +43,14 @@
 **Depends on**: Nothing (first phase of v1.2)
 **Requirements**: DOCK-01
 **Success Criteria** (what must be TRUE):
-  1. User can run `docker compose -f docker-compose.db.yml up` and MySQL 8.4 starts successfully with the correct database and user
-  2. User can access Adminer at port 8080 to browse, query, and manage the fitness_app database
-  3. User can connect to the MySQL database from the backend application using the configured credentials and hostname
-  4. User can stop the database service independently via `docker compose -f docker-compose.db.yml down` without affecting any other services
-**Plans**: TBD
+   1. User can run `docker compose -f docker-compose.db.yml up` and MySQL 8.4 starts successfully with the correct database and user
+   2. User can access Adminer at port 8080 to browse, query, and manage the fitness_app database
+   3. User can connect to the MySQL database from the backend application using the configured credentials and hostname
+   4. User can stop the database service independently via `docker compose -f docker-compose.db.yml down` without affecting any other services
+**Plans**: 1 plan
+
+Plans:
+- [ ] 09-01-PLAN.md — Create docker-compose.db.yml with MySQL 8.4 + Adminer 5.4.2
 
 ### Phase 10: Backend Service
 **Goal**: Users can start backend in production or development (hot-reload) mode independently
@@ -94,7 +97,7 @@
 | 6. International Ingredient Database | v1.1 | 3/3 | Complete | 2026-05-18 |
 | 7. Ingredient Logging & Calorie Calculation | v1.1 | 3/3 | Complete | 2026-05-18 |
 | 8. English UI Migration | v1.1 | 3/3 | Complete | 2026-05-18 |
-| 9. Database Service | v1.2 | 0/0 | Not started | - |
+| 9. Database Service | v1.2 | 0/1 | Planning | - |
 | 10. Backend Service | v1.2 | 0/0 | Not started | - |
 | 11. Frontend Service | v1.2 | 0/0 | Not started | - |
 | 12. Root Orchestration & Documentation | v1.2 | 0/0 | Not started | - |
