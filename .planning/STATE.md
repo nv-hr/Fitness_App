@@ -38,13 +38,14 @@ Items acknowledged and deferred at milestone close on 2026-05-18:
 - 260527-c04 `revert to changes before phase 9 and clear phases 9, 10, 11, 12 and its milestone` (Reverted all phase 9-12 code and planning artifacts)
 - 260527-0844 `revert to before phase 9` (No-op — already accomplished by 260527-c04)
 - 260527-cn0 `test all backend endpoint and its integration with frontend` (31 backend + 25 frontend integration tests created and passing)
+- 260527-e4n `create docker compose for running backedn and frontend` (Dockerfiles + compose with 4 services: mysql, adminer, backend, frontend)
 
 ## Current Position
 
 Phase: Milestone v1.1 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-05-27 — Completed quick task 260527-cn0: test all backend endpoint and its integration with frontend
+Last activity: 2026-05-27 — Completed quick task 260527-e4n: create docker compose for running backedn and frontend
 
 ## Performance Metrics
 
