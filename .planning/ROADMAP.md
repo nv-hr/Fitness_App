@@ -28,7 +28,7 @@
 
 ### 🚧 v1.2 Supabase Migration (Planned)
 
-- [ ] **Phase 9: Supabase Setup & Schema Migration** — Create Supabase project, migrate schema and seed data from MySQL to PostgreSQL
+- [x] **Phase 9: Supabase Setup & Schema Migration** — Create Supabase project, migrate schema and seed data from MySQL to PostgreSQL (completed 2026-05-27)
 - [ ] **Phase 10: Backend Query Rewrite** — Replace mysql2 with pg driver, translate all queries to PostgreSQL syntax
 - [ ] **Phase 11: Docker Restructure** — Single multi-stage container serving both frontend and backend
 - [ ] **Phase 12: Testing & Validation** — Integration tests and full-stack smoke tests against Supabase
@@ -51,7 +51,7 @@
 - [x] 09-02-PLAN.md — Supabase CLI Setup & Connection Verify (SUP-01, SUP-04)
 
 **Wave 2** *(blocked on Wave 1 completion)*:
-- [ ] 09-03-PLAN.md — Apply Migration & Verify Connectivity (SUP-02, SUP-03, SUP-04)
+- [x] 09-03-PLAN.md — Apply Migration & Verify Connectivity (SUP-02, SUP-03, SUP-04)
 
 **Cross-cutting constraints:**
 - SUP-02 (schema) and SUP-03 (seed) are split across Wave 1 (file creation) and Wave 2 (execution)
@@ -104,7 +104,7 @@
 | 6. International Ingredient Database | v1.1 | 3/3 | Complete | 2026-05-18 |
 | 7. Ingredient Logging & Calorie Calculation | v1.1 | 3/3 | Complete | 2026-05-18 |
 | 8. English UI Migration | v1.1 | 3/3 | Complete | 2026-05-18 |
-| 9. Supabase Setup & Schema Migration | v1.2 | 2/3 | In Progress|  |
+| 9. Supabase Setup & Schema Migration | v1.2 | 3/3 | Complete   | 2026-05-27 |
 | 10. Backend Query Rewrite | v1.2 | 0/0 | Not started | - |
 | 11. Docker Restructure | v1.2 | 0/0 | Not started | - |
 | 12. Testing & Validation | v1.2 | 0/0 | Not started | - |
