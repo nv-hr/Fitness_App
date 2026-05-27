@@ -1,271 +1,213 @@
-# Domain Pitfalls: Fitness/Health Tracking Web App
+# Domain Pitfalls: Supabase Migration & Single-Container Deployment
 
-**Domain:** Fitness & health tracking (BMI, TDEE, calorie logging, food database)
-**Target market:** Indonesian users
-**Researched:** 2026-05-17
-
----
+**Domain:** Database migration (MySQL→PostgreSQL) + Infrastructure consolidation
+**Researched:** 2026-05-27
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites, regulatory exposure, or user abandonment.
+Mistakes that cause runtime failures or data loss.
 
-### Pitfall 1: Treating TDEE as Precise Instead of an Estimate
+### Pitfall 1: Uncaught MySQL-Specific Query Patterns in Repository Files
 
-**What goes wrong:** Presenting TDEE results as exact numbers (e.g., "Your TDEE is 2,173 calories") gives users false confidence. TDEE formulas (Mifflin-St Jeor, Harris-Benedict) are population-level estimates with individual error margins of +/- 200-500 calories. Research from the International Journal of Obesity found people overestimate their physical activity by an average of 51%, making the activity multiplier the single biggest source of error.
+**What goes wrong:** A query written in MySQL syntax runs against PostgreSQL and throws a database error, or silently returns wrong results.
 
-**Why it happens:** Developers copy formulas from calculators without understanding the statistical uncertainty. UI design encourages precision (exact numbers feel more "professional").
+**Why it happens:** The 4 repository files use MySQL-specific functions and syntax. A developer may miss some during translation.
 
-**Consequences:**
-- Users follow calorie targets that don't match their actual metabolism
-- When results don't match expectations, users blame the app and abandon it
-- Potential harm if users with eating disorders take the number as authoritative
+**Consequences:** Runtime errors in production; certain API endpoints fail intermittently.
 
-**Prevention:**
-- Display TDEE as a range (e.g., "2,000-2,400 calories/day")
-- Add explicit disclaimer: "This is an estimate. Track your weight for 2-3 weeks and adjust based on real results."
-- Show all activity levels side-by-side so users can self-calibrate
-- Use Mifflin-St Jeor as default (most accurate for general population per Academy of Nutrition and Dietetics)
-- Offer Katch-McArdle as an option if body fat % is known
+**Prevention — Comprehensive grep for these patterns BEFORE rewriting:**
 
-**Detection:** Users complain "the numbers are wrong" or "I'm not losing weight at my TDEE."
+| Pattern | Files to Check | MySQL | PostgreSQL |
+|---------|---------------|-------|-----------|
+| `?` placeholders | All 4 repos + tests | `WHERE id = ?` | `WHERE id = $1` |
+| `[rows]` destructuring | All 4 repos | `const [rows] = ...` | `const result = ...; result.rows` |
+| `LAST_INSERT_ID()` | user, profile, food repos | Two-query pattern | Single query with `RETURNING *` |
+| `ER_DUP_ENTRY` | user, profile, food repos | MySQL error code | PostgreSQL error code `'23505'` |
+| `DATE_SUB(CURDATE(), INTERVAL ? DAY)` | food.repository.js | Date subtraction | `CURRENT_DATE - $1::INTERVAL` |
+| `JSON_OVERLAPS(...)` | activity.repository.js | JSON array overlap | `?|` operator or `&&` on text array |
+| `NOW()` | profile, user repos | Same | Same (survives unchanged) |
+| `CURDATE()` | food.repository.js | Current date | `CURRENT_DATE` |
+| `ORDER BY RAND()` | activity.repository.js | Random sort | `ORDER BY RANDOM()` |
+| `LIMIT 1` | All repos | Same | Same (identical syntax) |
 
-**Phase to address:** Phase — BMI & TDEE Calculators
+**Detection:** Run `rg "INTERVAL|LAST_INSERT_ID|JSON_OVERLAPS|CURDATE|ORDER BY RAND|ER_DUP_ENTRY" backend/src/` before migration.
 
----
+### Pitfall 2: Supabase Free Tier Connection Pool Exhaustion
 
-### Pitfall 2: Unverified or Inaccurate Food Database Entries
+**What goes wrong:** Application gets "too many connections" errors and stops working.
 
-**What goes wrong:** A food database with wrong calorie values undermines the entire app. MyFitnessPal's database of 14+ million items is notorious for unverified user submissions — studies show database errors can skew calorie counts by 10-30%. A single wrong entry (e.g., "Nasi Goreng" listed at 150 cal instead of 400 cal) destroys user trust.
+**Why it happens:** Supabase free tier limits Supavisor to 15 pooled connections. The pg Pool default (`max: 10`) may not exhaust it with a single Express instance, but if multiple app instances run (or if connections leak), the limit is hit quickly.
 
-**Why it happens:** Developers seed databases from unreliable sources (scraped data, unverified user contributions, outdated nutrition tables) without validation. For Indonesian foods, this is amplified because most global databases (USDA, Edamam) have poor coverage of local dishes.
-
-**Consequences:**
-- Users systematically under- or over-report calorie intake
-- Research shows users already underestimate intake by up to 47% — bad data makes this worse
-- Once users discover one wrong entry, they distrust all entries
-- Custom foods with no validation multiply the problem
+**Consequences:** Complete application outage until connections are recycled. New users cannot log in or use features.
 
 **Prevention:**
-- Seed the database from authoritative sources: USDA FoodData Central (free, 400K+ items) combined with Indonesian-specific datasets (e.g., the Kaggle Indonesian Food & Drink Nutrition Dataset with 1,346 items covering local foods)
-- Mark every entry with its source (e.g., "Source: USDA", "Source: Komposisi Pangan Indonesia")
-- Implement a verification flag system — user-submitted custom foods are marked "unverified"
-- For the pre-seeded Indonesian food database, cross-reference with Indonesian Ministry of Health nutrition tables (Tabel Komposisi Pangan Indonesia / TKPI)
-- Allow users to flag incorrect entries for review
+- Set pg Pool `max: 5` — more than enough for an Express app with ~1 RPS
+- Set `idleTimeoutMillis: 30000` — release idle connections after 30s
+- Set `connectionTimeoutMillis: 5000` — fail fast if pool is exhausted
+- Monitor via Supabase dashboard → Database → `pg_stat_activity`
 
-**Detection:** Search for a known food and compare against published nutrition labels or authoritative databases. Check if custom foods have wildly different values for the same item.
+**Detection:** `SELECT * FROM pg_stat_activity WHERE state = 'idle';` — if this shows many connections, pool is too large or connections leak.
 
-**Phase to address:** Phase — Food Database & Calorie Logging
+### Pitfall 3: pg Returns Numeric Values as Strings
 
----
+**What goes wrong:** Sum, count, or decimal values come back as strings instead of numbers. Frontend that expects `total: 1200` gets `total: "1200"`.
 
-### Pitfall 3: High Friction Food Logging Drives Abandonment
+**Why it happens:** PostgreSQL's binary protocol returns numeric types (DECIMAL, NUMERIC, BIGINT) as strings by default in `pg` to avoid precision loss. MySQL's client library returns them as numbers.
 
-**What goes wrong:** 80% of fitness app users abandon within 3 months. The #1 reason: logging food becomes tedious. Manual entry of every ingredient in a homemade meal (e.g., a stir-fry with oil, vegetables, protein, sauces entered individually) takes 5-10 minutes per meal. Users quit within 2-8 weeks.
+**Consequences:** Type errors in frontend; progress bars showing wrong values; comparing `total < 1200` returning `true` for `"900" < 1200` (string comparison).
 
-**Why it happens:** Developers design for completeness (log every ingredient) rather than speed. Search interfaces return hundreds of conflicting results for common foods, causing decision fatigue. No quick-add or recent-favorites features.
+**Affected queries in food.repository.js:**
+```javascript
+// Line 116 — SUM(calories)
+const result = await pool.query(
+  'SELECT COALESCE(SUM(calories), 0) as total FROM food_logs WHERE ...'
+);
+// result.rows[0].total is a STRING like "1200"
+```
 
-**Consequences:**
-- Users stop logging entirely after the initial enthusiasm period
-- App becomes a "guilt machine" — users feel bad about not logging
-- The calorie balance feature becomes useless without consistent data
+**Prevention:** Wrap all aggregate values with `Number()`:
+```javascript
+const totalCalories = Number(result.rows[0].total);
+```
 
-**Prevention:**
-- Implement quick-add: "Add 300 cal" in one tap for users who just want a rough estimate
-- Show recent foods and favorites at the top of search
-- Limit search results to the most relevant 5-10 items (not hundreds)
-- Support meal templates: save "Breakfast" as a group of foods to log in one tap
-- For v1 (calories only), keep the interface minimal — food name + calorie number, nothing more
-- Add a "custom food" shortcut that doesn't require navigating away from the logging screen
+**Detection:** Check all queries that use `SUM()`, `COUNT()`, or return `DECIMAL` columns. In the current schema: `weight_kg`, `height_cm` (DECIMAL), `SUM(calories)`, `COUNT(*)`.
 
-**Detection:** Track time-to-log-a-meal metric. If average logging time exceeds 60 seconds per meal, friction is too high. Monitor day-7 and day-30 retention rates.
+### Pitfall 4: Google OAuth Redirect URI Mismatch After Single-Container Deployment
 
-**Phase to address:** Phase — Food Database & Calorie Logging
+**What goes wrong:** Google OAuth login flow breaks with "redirect_uri_mismatch" error.
 
----
+**Why it happens:** The backend's Google OAuth callback is at `/api/auth/google/callback`. When frontend and backend are on the same origin (port 3001), the callback URL changes from `http://localhost:5173/api/auth/google/callback` (via Vite proxy) to `http://localhost:3001/api/auth/google/callback` (direct). Google Cloud Console has the old URI registered.
 
-### Pitfall 4: Ignoring Indonesia's PDP Law for Health Data
+**Consequences:** Users cannot log in with Google OAuth. Regular email/password login still works.
 
-**What goes wrong:** Indonesia's Personal Data Protection Law (Law No. 27 of 2022, fully effective October 2024) classifies health data as **sensitive personal data** requiring explicit consent, stronger safeguards, and specific processing purposes. Health data under the PDP Law includes body weight, height, BMI category, calorie intake, and activity level — everything this app collects. The law is GDPR-inspired with penalties up to 6% of annual revenue.
+**Prevention:** Update the Google Cloud Console → APIs & Services → Credentials → Authorized redirect URIs to include the new callback URL.
 
-**Why it happens:** Developers assume health apps are exempt from data protection laws (they're not), or that Indonesian law doesn't apply to small apps (it does — applies to all entities processing Indonesian citizens' data). Many also assume HIPAA applies (it doesn't — that's US-only).
+**Current redirect URI:** `http://localhost:5173/api/auth/google/callback`
+**New redirect URI:** `http://localhost:3001/api/auth/google/callback`
 
-**Consequences:**
-- Legal liability for processing sensitive health data without proper consent
-- Data breach exposure: weight, BMI, and eating patterns are sensitive information
-- Cross-border data transfer restrictions if using cloud providers outside Indonesia
-- Users lose trust if they discover their health data isn't protected
+(Or just add both during transition.)
 
-**Prevention:**
-- Obtain explicit consent for processing health data during onboarding (separate from general terms of service)
-- Encrypt health data at rest (AES-256 in MySQL) and in transit (HTTPS/TLS)
-- Implement data minimization: only collect what's needed (weight, height, age, gender, food logs — nothing more)
-- Provide data export and deletion capabilities (PDP Law grants data subjects the right to access and delete their data)
-- Hash passwords using bcrypt (not MD5/SHA1) — the project spec mentions `crypto module` which should be used for hashing, not encryption
-- Store JWT tokens securely (httpOnly cookies, not localStorage)
-- Write a privacy policy in Bahasa Indonesia explaining what data is collected and why
-- If using Docker with external cloud providers, verify data residency considerations
+### Pitfall 5: Supavisor Transaction Mode Limitation with Session-Level Features
 
-**Detection:** Audit: can you answer "what health data do we store, where, and who can access it?" If not, you're at risk.
+**What goes wrong:** Prepared statements or session variables fail silently or throw errors.
 
-**Phase to address:** Phase — Authentication & User Management (consent + data handling) and all subsequent phases
+**Why it happens:** Supavisor (port 6543) operates in transaction mode by default. This means connections are released back to the pool after each transaction. Features that require session persistence (prepared statements, `LISTEN/NOTIFY`, session variables, advisory locks) don't work in this mode.
 
----
+**Consequences:** Runtime errors if code uses prepared statements. The current codebase uses `pool.query(text, values)` — which sends unnamed queries (not prepared statements) — so this should NOT be affected. But if future code adds prepared statements, they will fail.
 
-### Pitfall 5: BMI Presented Without Context or Limitations
+**Prevention:** 
+- Continue using `pool.query(text, values)` (unnamed queries) — **no change needed**
+- NEVER add `pool.connect()` + `client.query()` pattern for prepared statements
+- If prepared statements are absolutely needed, use direct connection (port 5432) instead of pooled (port 6543)
 
-**What goes wrong:** Displaying BMI category (underweight/normal/overweight/obese) as a definitive health assessment is misleading. BMI doesn't distinguish between muscle mass and fat mass, doesn't account for fat distribution, and has known limitations for athletes, elderly, and certain ethnic groups. For Southeast Asian populations, WHO recommends lower BMI cutoffs for overweight (>=23) and obese (>=25) categories compared to global standards (>=25 and >=30).
-
-**Why it happens:** Developers use the standard WHO global cutoffs without considering regional variations. The UI presents BMI as a diagnosis rather than a screening tool.
-
-**Consequences:**
-- Muscular users get classified as "overweight" and feel discouraged
-- Southeast Asian users with "normal" global BMI may actually be at health risk (higher body fat at lower BMI)
-- Users with eating disorders may fixate on the number
-- App appears unprofessional to informed users
-
-**Prevention:**
-- Use WHO Asian-Pacific cutoffs for Indonesian users:
-  - Underweight: < 18.5
-  - Normal: 18.5 - 22.9
-  - Overweight: 23.0 - 24.9
-  - Obese I: 25.0 - 29.9
-  - Obese II: >= 30.0
-- Add context: "BMI is a screening tool, not a diagnosis. It doesn't measure body fat directly."
-- Never use stigmatizing language — use neutral category names
-- If possible, allow users to see both global and Asian-Pacific classifications
-- Include a brief explanation of what BMI measures and what it doesn't
-
-**Detection:** Review the BMI result screen — does it look like a medical diagnosis or an informative estimate?
-
-**Phase to address:** Phase — BMI & TDEE Calculators
+**Detection:** Any code that uses `{ name: 'myQuery', text: '...' }` pattern with `pg` will break.
 
 ---
 
 ## Moderate Pitfalls
 
-### Pitfall 6: No Calorie Deficit Safety Warnings
+### Pitfall 1: `updated_at` Column Not Auto-Updating
 
-**What goes wrong:** Allowing users to set arbitrary calorie targets without warnings enables dangerous behavior. A TDEE of 2,000 cal with a target of 800 cal is a 1,200-calorie deficit — potentially harmful.
+**What goes wrong:** The `updated_at` column in `users` and `profiles` tables stops updating on row modification.
 
-**Prevention:** Flag deficits exceeding 35% of TDEE with a warning. Never recommend below 1,200 cal/day for women or 1,500 cal/day for men without a medical disclaimer.
+**Why it happens:** MySQL's `ON UPDATE CURRENT_TIMESTAMP` is a column-level feature. PostgreSQL has no equivalent — it requires a trigger function.
 
-**Phase to address:** Phase — Calorie Balance Dashboard
+**Prevention:** Create a PL/pgSQL trigger:
+```sql
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
----
+CREATE TRIGGER update_users_updated_at
+  BEFORE UPDATE ON users
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+```
 
-### Pitfall 7: JWT Stored in localStorage (XSS Vulnerability)
+**Detection:** After migration, check if `updated_at` changes after an UPDATE query.
 
-**What goes wrong:** The project spec mentions JWT for session persistence. Storing JWT in localStorage makes it accessible to any JavaScript running on the page — including malicious scripts from XSS attacks. An attacker who injects script can steal the token and impersonate the user.
+### Pitfall 2: CORS Configuration Breaking After Same-Origin Deployment
 
-**Prevention:** Store JWT in httpOnly, secure cookies instead of localStorage. This prevents JavaScript access. Set SameSite=Strict or Lax to prevent CSRF. Use short-lived access tokens with refresh tokens.
+**What goes wrong:** Frontend running on same origin as backend still has restrictive CORS settings that block requests.
 
-**Phase to address:** Phase — Authentication & User Management
+**Why it happens:** Production uses same-origin (port 3001 serves both frontend and backend), so CORS is not needed. But if CORS middleware is still configured with a specific origin (e.g., `http://localhost:5173`), it shouldn't cause issues for same-origin requests (same-origin bypasses CORS entirely). However, the configuration may be confusing.
 
----
+**Prevention:** In production mode (`NODE_ENV=production`), either:
+- Set `origin: true` (echo request origin) — safe for same-origin
+- Or set `origin: process.env.FRONTEND_URL || 'http://localhost:3001'`
+- Keep existing config for development (Vite proxy handles cross-origin)
 
-### Pitfall 8: Password Hashing with Weak Algorithms
+**No action strictly required** — existing CORS config will work for same-origin. Just ensure `FRONTEND_URL` env var points to the correct origin.
 
-**What goes wrong:** The project spec mentions using Node.js `crypto` module for auth. Using MD5, SHA1, or even plain SHA256 for password hashing is insecure — these are fast hashes vulnerable to brute-force and rainbow table attacks.
+### Pitfall 3: Docker Image Size Bloat
 
-**Prevention:** Use `crypto.scrypt()` or `crypto.pbkdf2()` from the Node.js crypto module with appropriate parameters (scrypt: N=16384, r=8, p=1; pbkdf2: 100,000+ iterations with SHA-256). Better yet, use bcrypt via the `bcrypt` npm package.
+**What goes wrong:** Final Docker image is 1.5+ GB instead of ~200MB.
 
-**Phase to address:** Phase — Authentication & User Management
+**Why it happens:** Without multi-stage build, the production image includes Node.js build toolchain, dev dependencies, and source files.
 
----
+**Prevention:** Use multi-stage build:
+- Stage 1 (builder): `node:20-alpine`, install all deps, build frontend via Vite
+- Stage 2 (runtime): `node:20-alpine`, install only production deps, copy built assets
 
-### Pitfall 9: Food Database Search Returns Duplicates and Conflicts
+Expected sizes: ~180MB (multi-stage) vs ~1.2GB (single-stage).
 
-**What goes wrong:** When a user searches "nasi goreng," they get 15 different entries with calorie values ranging from 200 to 600. This causes decision fatigue and undermines trust. This is the #1 complaint about MyFitnessPal's search experience.
+**Detection:** `docker images` — if image > 500MB, multi-stage is not working correctly.
 
-**Prevention:**
-- Deduplicate entries: keep only the best-sourced version of each food
-- Group similar items (e.g., "Nasi Goreng" as one entry with a representative value)
-- Sort results by relevance and data quality (verified sources first)
-- Show the source for each entry so users can judge reliability
-- For v1, limit the database to ~200-300 well-curated Indonesian foods rather than thousands of unverified entries
+### Pitfall 4: ENUM Column Behavior Difference
 
-**Phase to address:** Phase — Food Database & Calorie Logging
+**What goes wrong:** MySQL ENUM columns store invalid values as `''` (empty string) silently. PostgreSQL rejects them with an error.
 
----
+**Why it happens:** MySQL's ENUM is permissive by default; PostgreSQL's is strict. The CHECK constraint approach (recommended) will also reject invalid values.
 
-### Pitfall 10: No Offline or Degraded Mode
+**Prevention:** Use `VARCHAR` with `CHECK` constraint instead of native PostgreSQL ENUM. This preserves the validation behavior while being more flexible. Ensure all application code only sends valid enum values.
 
-**What goes wrong:** Users want to log meals on the go, often in areas with poor connectivity (restaurants, gyms, commuting). If the app requires a server round-trip for every action, it becomes unusable offline.
-
-**Prevention:** For v1, at minimum cache the food database locally (IndexedDB) so search works offline. Queue food log entries locally and sync when connectivity returns.
-
-**Phase to address:** Phase — Food Database & Calorie Logging (can be deferred to v2 if scope is tight)
+**Columns affected:** `gender`, `fitness_goal`, `activity_level`, `meal_type`, `category`
 
 ---
 
 ## Minor Pitfalls
 
-### Pitfall 11: Unit Confusion (Metric vs Imperial)
+### Pitfall 1: Case Sensitivity in Object Properties
 
-**What goes wrong:** Indonesian users expect metric (kg, cm), but if the app accidentally uses imperial units or mixes them, BMI and TDEE calculations will be wildly wrong.
+**What goes wrong:** PostgreSQL returns column names as-is (lowercase by default), which matches MySQL behavior, so this should be fine. But if queries use mixed-case aliases, behavior differs.
 
-**Prevention:** Default to metric units for Indonesian users. Clearly label all input fields with units. Validate input ranges (e.g., weight 20-300 kg, height 50-250 cm) to catch unit errors early.
+**Prevention:** Keep column names lowercase with underscores (`snake_case`), matching current convention.
 
-**Phase to address:** Phase — BMI & TDEE Calculators
+### Pitfall 2: Seed Data Execution Timeout in Supabase SQL Editor
 
----
+**What goes wrong:** Inserting 200+ food rows in a single INSERT statement times out or exceeds the query size limit.
 
-### Pitfall 12: Activity Level Labels Are Misleading
+**Prevention:** Split seed data into batches of 25-50 rows per INSERT, or use the Supabase dashboard's "Import from CSV" feature.
 
-**What goes wrong:** Users consistently overestimate their activity level. "Moderately active" to one person means 3 gym sessions per week; to another it means walking to the warung. The activity multiplier directly determines TDEE, so this choice has outsized impact.
+### Pitfall 3: Docker Compose Named Volume for Database No Longer Needed
 
-**Prevention:** Use concrete descriptions instead of vague labels:
-- "Sedentary" -> "Kantor, jarang olahraga" (desk job, rarely exercises)
-- "Light" -> "Olahraga ringan 1-3 hari/minggu"
-- "Moderate" -> "Olahraga 3-5 hari/minggu"
-- "Active" -> "Olahraga berat 6-7 hari/minggu"
-- "Very Active" -> "Olahraga sangat berat setiap hari"
+**What goes wrong:** The `mysql_data` volume definition remains in `docker-compose.yml` and creates an orphaned volume.
 
-Show the multiplier value (1.2, 1.375, 1.55, 1.725, 1.9) so users understand the impact.
-
-**Phase to address:** Phase — BMI & TDEE Calculators
-
----
-
-### Pitfall 13: Randomized Activity Recommendations Feel Irrelevant
-
-**What goes wrong:** If activity recommendations are truly random, users will get suggestions that don't match their fitness level, goals, or available equipment. This feels like the app doesn't "understand" them.
-
-**Prevention:** Use rule-based filtering (not pure random):
-- Filter by user's stated goal (lose weight, maintain, gain)
-- Filter by activity level (don't suggest advanced workouts to sedentary users)
-- Rotate through a curated pool of 20-30 activities so it feels varied but relevant
-- Label them as "suggestions" not "personalized recommendations"
-
-**Phase to address:** Phase — Activity Recommendations
+**Prevention:** Remove the `volumes:` section from `docker-compose.yml` entirely (or keep empty for future use). Remove dangling volume: `docker volume rm fitness_app_mysql_data`.
 
 ---
 
 ## Phase-Specific Warnings
 
-| Phase Topic | Likely Pitfall | Mitigation |
-|-------------|---------------|------------|
-| Authentication & User Registration | Weak password hashing, JWT in localStorage, no PDP consent | Use bcrypt/scrypt, httpOnly cookies, explicit health data consent |
-| BMI & TDEE Calculators | Presenting estimates as precise numbers, wrong BMI cutoffs for Asian population | Show ranges, use Asian-Pacific cutoffs, add disclaimers |
-| Food Database & Calorie Logging | Inaccurate entries, high friction logging, search duplicates | Curate from authoritative sources, quick-add feature, deduplicate |
-| Calorie Balance Dashboard | No safety warnings for extreme deficits | Flag deficits >35% of TDEE, minimum calorie floors |
-| Activity Recommendations | Irrelevant random suggestions | Rule-based filtering by goal and activity level |
-| All Phases | Indonesia PDP Law non-compliance | Explicit consent, encryption, data minimization, privacy policy in Bahasa Indonesia |
-
----
+| Phase | Likely Pitfall | Mitigation |
+|-------|---------------|------------|
+| **Phase 1: Supabase Setup** | Connection string port selection (5432 vs 6543) | Use 6543 (pooled) for app traffic; 5432 (direct) for migrations only |
+| **Phase 1: Schema Migration** | PostgreSQL ENUM vs MySQL ENUM difference | Use VARCHAR + CHECK instead of native ENUM |
+| **Phase 2: Query Rewrite** | Missed MySQL-specific patterns (`LAST_INSERT_ID`, `JSON_OVERLAPS`) | Run comprehensive grep BEFORE changing any file |
+| **Phase 2: Query Rewrite** | `ER_DUP_ENTRY` error code not updated | Replace with `'23505'` in all repository files |
+| **Phase 2: Query Rewrite** | `[rows]` destructuring still used with pg | All 4 repos must use `result.rows` pattern |
+| **Phase 3: Docker Restructure** | `express.static()` path wrong in production | Use `path.join(__dirname, '../../dist')` from `backend/src/app.js` |
+| **Phase 3: Docker Restructure** | Vite proxy still pointing to `localhost:3001` in production | Vite proxy is development-only; production uses same-origin |
+| **Phase 4: Testing** | Integration tests fail because Supabase connection not configured for test env | Add `DATABASE_URL` to test env; or use `pg-mem` for in-memory testing |
 
 ## Sources
 
-- **TDEE accuracy:** Legion Athletics TDEE Calculator (legionathletics.com/tdee-calculator), Kalo Health TDEE Guide (getkalohealth.com/blog/how-to-calculate-tdee) — research showing 51% activity overestimation from International Journal of Obesity
-- **BMI Asian cutoffs:** WHO Expert Consultation on BMI for Asian populations (2004)
-- **Food database accuracy:** Nutrient Metrics AI Calorie Tracking Audit (nutrientmetrics.com/en/guides/ai-calorie-tracking-common-mistakes-audit, 2026-04-24) — 10-30% database error variance
-- **Calorie tracking abandonment:** YOMP Blog (yomp.fit/blog/why-calorie-tracking-apps-dont-work, 2024-12-15) — 80% abandonment within 3 months
-- **Food logging accuracy study:** PubMed research on MyFitnessPal naturalistic use (2018) — 18% food item omission, 20% would continue use
-- **Fitness app retention:** ProductGrowth.in (productgrowth.in/insights/healthtech/fitness-app-retention, 2025-11) — streak mechanics, social accountability, motivation decay curve
-- **Calorie counting app retention:** Welling.ai (welling.ai/articles/stop-giving-up-calorie-counting-apps, 2026-05-06) — 23% consistent logging after 3 months, decision fatigue from search results
-- **Indonesia PDP Law:** ICLG Data Protection Indonesia 2025-2026 (iclg.com/practice-areas/data-protection-laws-and-regulations/indonesia), Fortra PDP Guide (fortra.com/blog/navigating-indonesias-personal-data-protection-law, 2024-09-16), CookieChimp PDP Guide (cookiechimp.com/guides/regulations/id_pdp, 2026-05-15)
-- **Indonesian food dataset:** Kaggle Indonesian Food & Drink Nutrition Dataset (kaggle.com/datasets/anasfikrihanif/indonesian-food-and-drink-nutrition-dataset) — 1,346 items
-- **USDA FoodData Central:** fdc.nal.usda.gov — free, 400K+ food items
-- **FTC Health App Best Practices:** ftc.gov/business-guidance/resources/mobile-health-app-developers-ftc-best-practices
-- **HIPAA compliance lessons (applicable principles):** Digital Scientists (digitalscientists.com/blog/why-most-healthcare-apps-fail-hipaa-compliance, 2026-02-03) — PHI misunderstanding, logging/analytics exposure
+- **Supabase connection pool limits**: https://supabase.com/docs/guides/database/connection-pooling — Free tier: 15 pooled connections — **HIGH confidence**
+- **PostgreSQL error codes**: https://www.postgresql.org/docs/current/errcodes-appendix.html — `23505` for unique_violation — **HIGH confidence**
+- **pg numerics as strings**: https://github.com/brianc/node-postgres/issues/811 — Known behavior: DECIMAL/NUMERIC returned as strings — **HIGH confidence**
+- **Supavisor transaction mode limitations**: https://supabase.com/docs/guides/database/supavisor — Prepared statements, LISTEN/NOTIFY limitations — **HIGH confidence**
+- **PostgreSQL updated_at trigger pattern**: https://x-team.com/blog/automatic-timestamps-with-postgresql/ — Standard PL/pgSQL trigger — **MEDIUM confidence**
+- **Docker multi-stage build best practices**: https://docs.docker.com/build/building/multi-stage/ — Official Docker guide — **HIGH confidence**
