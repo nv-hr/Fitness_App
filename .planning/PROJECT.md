@@ -8,16 +8,21 @@ A web-based health application that helps users monitor their body condition thr
 
 Users can accurately calculate their BMI and TDEE, log daily food intake by selecting ingredients and entering weight in grams, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
 
+## Current Milestone: v1.2 Supabase Migration
+
+**Goal:** Migrate application database from local MySQL to Supabase (managed PostgreSQL), create Supabase project, and simplify Docker infrastructure to a single full-stack container.
+
+**Target features:**
+- Create and configure Supabase project
+- Migrate database schema from MySQL to PostgreSQL
+- Rewrite backend database layer from mysql2 to PostgreSQL driver
+- Build and deploy single container serving both backend and frontend
+
 ## Current State
 
 **Shipped:** v1.1 International Ingredient Logging (2026-05-18)
 **Phases:** 8 complete | **Plans:** 23 | **Tasks:** 28
 **LOC:** ~1,228 insertions across 18 files in v1.1
-
-### Next Milestone Goals
-
-- Plan v1.2 scope — what comes after ingredient logging?
-- Potential areas: data persistence improvements, advanced nutrition tracking (macros), meal planning, progress charts, export functionality
 
 ## Requirements
 
@@ -46,7 +51,7 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 
 ### Active
 
-(None — all v1.1 requirements shipped)
+(TBD — define during milestone scoping)
 
 ### Out of Scope
 
@@ -111,4 +116,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-18 after v1.1 milestone complete*
+*Last updated: 2026-05-27 after starting v1.2 milestone*
