@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-27)
 Phase: 9 (supabase-setup-schema-migration) — EXECUTING
 Plan: 3 of 3
 Status: Ready to execute
-Last activity: 2026-05-27
+Last activity: 2026-05-27 — Completed quick task 260527-l8m: test the supabase connection
 
 Progress: [███████░░░] 67%
 
@@ -82,6 +82,12 @@ None yet — first v1.2 planning session.
 - Google OAuth redirect URI must be updated when container port changes
 - Seed data SQL may exceed Supabase SQL Editor 1MB limit — may need psql or split execution
 - MySQL-specific SQL patterns must be comprehensively grepped to avoid silent runtime failures
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260527-l8m | test the supabase connection | 2026-05-27 | 1fcb05c | [260527-l8m-test-the-supabase-connection](./quick/260527-l8m-test-the-supabase-connection/) |
 
 ## Deferred Items
 
