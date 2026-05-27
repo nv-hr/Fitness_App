@@ -47,7 +47,7 @@
 **Plans**: 3 plans
 
 **Wave 1** *(parallel — no dependencies)*:
-- [ ] 09-01-PLAN.md — PostgreSQL Schema & Seed Translation (SUP-02, SUP-03)
+- [x] 09-01-PLAN.md — PostgreSQL Schema & Seed Translation (SUP-02, SUP-03)
 - [ ] 09-02-PLAN.md — Supabase CLI Setup & Connection Verify (SUP-01, SUP-04)
 
 **Wave 2** *(blocked on Wave 1 completion)*:
@@ -104,7 +104,7 @@
 | 6. International Ingredient Database | v1.1 | 3/3 | Complete | 2026-05-18 |
 | 7. Ingredient Logging & Calorie Calculation | v1.1 | 3/3 | Complete | 2026-05-18 |
 | 8. English UI Migration | v1.1 | 3/3 | Complete | 2026-05-18 |
-| 9. Supabase Setup & Schema Migration | v1.2 | 0/3 | Planning complete | - |
+| 9. Supabase Setup & Schema Migration | v1.2 | 1/3 | In Progress|  |
 | 10. Backend Query Rewrite | v1.2 | 0/0 | Not started | - |
 | 11. Docker Restructure | v1.2 | 0/0 | Not started | - |
 | 12. Testing & Validation | v1.2 | 0/0 | Not started | - |
