@@ -1,5 +1,6 @@
 import * as foodRepo from '../repositories/food.repository.js';
 import { successResponse, errorResponse } from '../utils/response.js';
+import { normalizeDbError } from '../utils/dbErrors.js';
 import { ValidationError } from '../utils/errors.js';
 import { calculateCalories, validateFoodData, validateCustomFoodData } from '../services/food.service.js';
 import { findByUserId as findProfileByUserId } from '../repositories/profile.repository.js';
@@ -107,7 +108,7 @@ export async function getDailySummary(req, res, next) {
   try {
     const date = req.query.date || new Date().toISOString().split('T')[0];
 
-    // Get total consumed (mysql2 returns DECIMAL as string — ensure number)
+    // Get total consumed (pg returns DECIMAL as string — ensure number)
     const rawTotal = await foodRepo.getDailyTotal(req.user.userId, date);
     const totalConsumed = Number(rawTotal);
 
