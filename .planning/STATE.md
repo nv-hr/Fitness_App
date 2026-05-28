@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-27)
 
 **Core value:** Users can accurately calculate their BMI and TDEE, log daily food intake by ingredients, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
-**Current focus:** Phase 12 — Testing & Validation
+**Current focus:** Phase 12 — Testing & Validation (planned, pending execution)
 
 ## Current Position
 
-Phase: 11 (docker-restructure-single-container) — COMPLETE
-Plan: 2 of 2 (complete)
-Status: Complete — ready for Phase 12
+Phase: 12 (testing-validation) — PLANS CREATED
+Plans: 4 of 4 created, 0 of 4 executed
+Status: Ready for execution
 Last activity: 2026-05-28
 
 Progress: [██████████] 100%
@@ -48,7 +48,7 @@ Progress: [██████████] 100%
 | 09 | 3 | - | - |
 | 10 | 4 | - | - |
 | 11 | 2 | 2 | — |
-| 12 | TBD | TBD | — |
+ | 12 | 4 | 0 | — |
 
 **Recent Trend:**
 
