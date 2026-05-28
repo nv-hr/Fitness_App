@@ -121,10 +121,10 @@ app.get(
 // Serve React static build artifacts (built by Docker multi-stage, copied to ./public/)
 app.use(express.static('public'));
 
-// SPA catch-all — return index.html for non-API routes (client-side routing)
+// SPA catch-all — return index.html for non-API GET requests (client-side routing)
 // Must go AFTER all /api/* routes but BEFORE the 404 handler
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api')) {
+app.use((req, res, next) => {
+  if (req.method !== 'GET' || req.path.startsWith('/api')) {
     return next();
   }
   res.sendFile('index.html', { root: 'public' });
