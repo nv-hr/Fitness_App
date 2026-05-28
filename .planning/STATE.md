@@ -205,7 +205,7 @@ None yet — first v1.2 planning session.
 |---|-------------|------|--------|-----------|
 | 260527-l8m | test the supabase connection | 2026-05-27 | 1fcb05c | [260527-l8m-test-the-supabase-connection](./quick/260527-l8m-test-the-supabase-connection/) |
 | 260528-3eg | add unfullfilled spec as a new milestone | 2026-05-27 | 44edebb | [260528-3eg-add-unfullfilled-spec-as-a-new-milestone](./quick/260528-3eg-add-unfullfilled-spec-as-a-new-milestone/) |
-| 260528-849 | fix SPA catch-all ENOENT on backend "/" routes | 2026-05-28 | pending | [260528-849-spa-catchall-enoent](./quick/260528-849-spa-catchall-enoent/) |
+| 260528-849 | fix SPA catch-all ENOENT on backend "/" routes | 2026-05-28 | 4532ce5 | [260528-849-spa-catchall-enoent](./quick/260528-849-spa-catchall-enoent/) |
 
 ## Deferred Items
 
