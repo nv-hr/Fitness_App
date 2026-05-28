@@ -134,7 +134,7 @@ export async function getLogHistory(userId, days = 7) {
        ORDER BY log_date DESC`,
       [userId, cutoffStr]
     );
-    return rows.map(r => ({ ...r, log_date: r.log_date.toISOString().split('T')[0] }));
+    return rows.map(r => ({ ...r, log_date: r.log_date.toLocaleDateString('en-CA') }));
   } catch (err) {
     throw new AppError('DatabaseError', `Failed to get log history: ${err.message}`, 500);
   }
