@@ -62,7 +62,10 @@ export async function updateByUserId(userId, { weightKg, heightCm, age, gender, 
       'UPDATE profiles SET weight_kg = $1, height_cm = $2, age = $3, gender = $4, fitness_goal = $5, activity_level = $6, calorie_rate = $7, updated_at = NOW() WHERE user_id = $8 RETURNING *',
       [weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate, userId]
     );
-    return { success: true, profile: rows[0] || null };
+    if (!rows[0]) {
+      return { success: false, profile: null };
+    }
+    return { success: true, profile: rows[0] };
   } catch (err) {
     throw new AppError('DatabaseError', `Failed to update profile: ${err.message}`, 500);
   }
