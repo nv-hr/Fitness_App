@@ -1,0 +1,72 @@
+import { pool } from '../config/database.js';
+import { AppError } from '../utils/errors.js';
+
+/**
+ * Create a new profile for a user.
+ * @param {Object} params
+ * @param {number} params.userId
+ * @param {number} params.weightKg
+ * @param {number} params.heightCm
+ * @param {number} params.age
+ * @param {string} params.gender
+ * @param {string} params.fitnessGoal
+ * @param {string|null} params.activityLevel
+ * @param {string|null} params.calorieRate
+ * @returns {Promise<Object>} Created profile row
+ */
+export async function create({ userId, weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate }) {
+  try {
+    const { rows } = await pool.query(
+      'INSERT INTO profiles (user_id, weight_kg, height_cm, age, gender, fitness_goal, activity_level, calorie_rate) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+      [userId, weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate]
+    );
+    return rows[0] || null;
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to create profile: ${err.message}`, 500);
+  }
+}
+
+/**
+ * Find a profile by user ID.
+ * @param {number} userId
+ * @returns {Promise<Object|null>} Profile row or null
+ */
+export async function findByUserId(userId) {
+  try {
+    const { rows } = await pool.query(
+      'SELECT * FROM profiles WHERE user_id = $1 LIMIT 1',
+      [userId]
+    );
+    return rows[0] || null;
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to find profile: ${err.message}`, 500);
+  }
+}
+
+/**
+ * Update a profile by user ID.
+ * @param {number} userId
+ * @param {Object} params
+ * @param {number} params.weightKg
+ * @param {number} params.heightCm
+ * @param {number} params.age
+ * @param {string} params.gender
+ * @param {string} params.fitnessGoal
+ * @param {string|null} params.activityLevel
+ * @param {string|null} params.calorieRate
+ * @returns {Promise<{success: boolean}>}
+ */
+export async function updateByUserId(userId, { weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate }) {
+  try {
+    const { rows } = await pool.query(
+      'UPDATE profiles SET weight_kg = $1, height_cm = $2, age = $3, gender = $4, fitness_goal = $5, activity_level = $6, calorie_rate = $7, updated_at = NOW() WHERE user_id = $8 RETURNING *',
+      [weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate, userId]
+    );
+    if (!rows[0]) {
+      return { success: false, profile: null };
+    }
+    return { success: true, profile: rows[0] };
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to update profile: ${err.message}`, 500);
+  }
+}

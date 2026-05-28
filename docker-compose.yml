@@ -1,0 +1,11 @@
+services:
+  app:
+    build:
+      context: .
+      target: production
+    container_name: fitness_app
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    env_file:
+      - ./backend/.env
