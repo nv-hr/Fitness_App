@@ -121,6 +121,7 @@ export async function getDailyTotal(userId, logDate) {
  * @returns {Promise<Array>}
  */
 export async function getLogHistory(userId, days = 7) {
+  days = Math.min(Math.max(1, Math.floor(days)), 365);
   try {
     const { rows } = await pool.query(
       `SELECT log_date, SUM(calories) as total_calories, COUNT(*) as entry_count
