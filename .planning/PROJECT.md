@@ -23,7 +23,7 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 **Shipped:** v1.1 International Ingredient Logging (2026-05-18)
 **Phases:** 9 complete | **Plans:** 26 | **Tasks:** 28
 **LOC:** ~1,228 insertions across 18 files in v1.1
-**Active:** v1.2 Supabase Migration — Phase 9 complete (2026-05-27)
+**Active:** v1.2 Supabase Migration — Phase 9 complete (2026-05-27) | Phase 10 complete (2026-05-28)
 
 ## Requirements
 
@@ -53,6 +53,12 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 - ✓ PostgreSQL schema with 6 tables, 5 ENUMs, 4 FK constraints, 5 indexes migrated from MySQL — v1.2 Phase 9
 - ✓ 201 food ingredients and 35 activities seeded into Supabase via re-runnable SQL — v1.2 Phase 9
 - ✓ Node.js can establish SSL-encrypted connection to Supabase via pg driver — v1.2 Phase 9
+- ✓ Backend database.js rewritten from mysql2/promise to pg Pool with Supabase SSL config — v1.2 Phase 10
+- ✓ normalizeDbError() maps PostgreSQL SQLSTATE codes (23505, 23503, 23502, 23514) for controller error handling — v1.2 Phase 10
+- ✓ mysql2 dependency removed from package.json; pg is the only database driver — v1.2 Phase 10
+- ✓ Food, profile, user, and activity repositories use PostgreSQL syntax ($1 placeholders, RETURNING *, RANDOM(), ?| operator) — v1.2 Phase 10
+- ✓ All pdp_consent boolean comparisons use `=== true` for PostgreSQL BOOLEAN type — v1.2 Phase 10
+- ✓ Zero MySQL patterns remain in backend/src/ source files — v1.2 Phase 10
 
 ### Active
 
@@ -86,7 +92,7 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 
 - **Quality**: Build it right — proper code structure, error handling, and testing over speed
 - **Styling**: Minimal — function over form, clean but not elaborate
-- **Tech stack**: React + Express + MySQL (already decided)
+- **Tech stack**: React + Express + Supabase PostgreSQL (migrated from MySQL in v1.2)
 - **Language**: English UI (switched from Indonesian in v1.1)
 
 ## Key Decisions
@@ -105,6 +111,9 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 | Supabase PostgreSQL migration (v1.2) | Move from local MySQL to managed Supabase PostgreSQL for simplified deployment | ✓ Active — v1.2 |
 | No ORM — raw SQL with pg driver | Continue with repository pattern from v1.0/v1.1; no Prisma/Knex overhead | ✓ Good — v1.2 Phase 9 |
 | No Supabase Auth | Keep existing JWT + Google OAuth; skip Supabase Auth to avoid migration cost | ✓ Good — v1.2 Phase 9 |
+| pg Pool with connectionString and strict SSL | Supabase requires SSL connection; connectionString simplifies config | ✓ Good — v1.2 Phase 10 |
+| normalizeDbError utility (no AppError coupling) | Decouples error codes from controllers; keeps AppError as controller-level concern | ✓ Good — v1.2 Phase 10 |
+| Sequential per-repository rewrite with file granularity | Each repository rewritten independently for targeted git revert per file (D-13) | ✓ Good — v1.2 Phase 10 |
 | No RLS | Keep server-side-only auth; skip RLS complexity | ✓ Good — v1.2 Phase 9 |
 | DO $$ blocks for portable ENUM creation | CREATE TYPE IF NOT EXISTS requires PG 14+; DO $$ block works on all versions | ✓ Good — v1.2 Phase 9 |
 | psql for schema/seed execution | Avoids Supabase SQL Editor 1MB limit; preferred over supabase db push | ✓ Good — v1.2 Phase 9 |
@@ -127,4 +136,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-27 after Phase 9 completion*
+*Last updated: 2026-05-28 after Phase 10 execution*
