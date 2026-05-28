@@ -116,6 +116,20 @@ app.get(
   authController.googleCallback
 );
 
+// === Static Files & SPA Catch-all (Phase 11: Docker Restructure) ===
+
+// Serve React static build artifacts (built by Docker multi-stage, copied to ./public/)
+app.use(express.static('public'));
+
+// SPA catch-all — return index.html for non-API routes (client-side routing)
+// Must go AFTER all /api/* routes but BEFORE the 404 handler
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+  res.sendFile('index.html', { root: 'public' });
+});
+
 // === Error Handling ===
 
 // 404 handler
