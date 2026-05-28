@@ -56,7 +56,7 @@ export async function updatePdpConsent(userId, consent) {
       'UPDATE users SET pdp_consent = $1, pdp_consent_date = NOW() WHERE id = $2 RETURNING id, pdp_consent, pdp_consent_date',
       [consent, userId]
     );
-    return { success: true };
+    return { success: rows.length > 0 };
   } catch (err) {
     throw new AppError('DatabaseError', `Failed to update PDP consent: ${err.message}`, 500);
   }
