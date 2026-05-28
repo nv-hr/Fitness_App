@@ -1,22 +1,133 @@
-# Fitness_App
-Deskripsi: Aplikasi yang diciptakan untuk membantu membuat workout planner dan berbagai kalkulator untuk menjaga pola kehidupan yang sehat bagi penggunanya.
+# Fitness App
 
-Cara Menggunaka: Akses aplikasi di google, buka fitur yang diinginkan, ikuti.
+A full-stack web application for monitoring body condition through BMI and TDEE calculation, tracking daily food intake and calories, and receiving personalized physical activity recommendations.
 
-# Tujuan
-Agar seseorang dapat menciptakan suatu habbit yg lebih sehat dengan mengatur pola asupan dengan megetahui batasan kalori serta menambahkan kegiatan olah raga.
+Built with React 19, Express 5, and Supabase PostgreSQL.
 
-## BMI Calculator
-Menghitum index BMI
+## Features
 
-## KCAL Calculator
-Meenghitung kalori makana yang akana di konsumsi
+- **BMI Calculator** — Calculate Body Mass Index from height and weight with health category classification.
+- **TDEE Calculator** — Estimate Total Daily Energy Expenditure based on BMR (Mifflin-St Jeor) and activity level.
+- **Food Logging** — Search a database of 200+ ingredients, log by ingredient and weight, calculate exact calorie and macronutrient values.
+- **Calorie Tracking** — Daily summary with caloric balance, history view, and progress bar toward your TDEE goal.
+- **Activity Recommendations** — Get simple physical activity suggestions tailored to your profile.
 
-## TDEE Calculator
-Menghitung batas kalori harian
+## Tech Stack
 
-## Workout Planner
-Membuat rancangan olahraga sesua kebutuhan
+| Layer       | Technology                                                                 |
+|-------------|---------------------------------------------------------------------------|
+| Frontend    | React 19, Vite 8, React Router 7, TanStack React Query, React Hook Form, Zod |
+| Backend     | Express 5 (ESM), Passport (JWT + Google OAuth), Helmet, express-rate-limit |
+| Database    | Supabase PostgreSQL 17 (pg driver, no ORM)                                |
+| Auth        | Email/password registration + login, Google OAuth, httpOnly JWT cookies   |
+| Deployment  | Docker multi-stage build (single container, Express serves built frontend) |
+| Testing     | Jest (backend), Vitest (frontend)                                         |
 
-## Workout Progress
-Melihat progess yang sudah kita lakukan
+## Quick Start
+
+### Prerequisites
+
+- Node.js 20+
+- npm
+- A Supabase PostgreSQL database (free tier works)
+
+### 1. Configure environment
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+Edit `backend/.env` with your settings:
+
+| Variable               | Description                            |
+|------------------------|----------------------------------------|
+| `NODE_ENV`             | `development`                          |
+| `PORT`                 | Backend port (default: `3001`)         |
+| `FRONTEND_URL`         | Frontend origin (dev: `http://localhost:5173`) |
+| `JWT_SECRET`           | Secret key for signing JWT tokens      |
+| `GOOGLE_CLIENT_ID`     | Google OAuth 2.0 client ID             |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth 2.0 client secret         |
+| `GOOGLE_CALLBACK_URL`  | OAuth callback URL                     |
+| `DATABASE_URL`         | Supabase PostgreSQL connection string  |
+
+### 2. Install dependencies
+
+```bash
+cd backend
+npm install
+
+cd ../frontend
+npm install
+```
+
+### 3. Start development servers
+
+**Terminal 1 — Backend:**
+
+```bash
+cd backend
+npm run dev
+```
+
+**Terminal 2 — Frontend:**
+
+```bash
+cd frontend
+npm run dev
+```
+
+The frontend dev server (port 5173) proxies `/api` requests to the backend (port 3001). Open `http://localhost:5173`.
+
+## Docker Deployment
+
+```bash
+# Build and start the production container
+docker compose up --build -d
+```
+
+This builds a multi-stage Docker image:
+
+1. **Builder stage** — Installs all dependencies and builds the React frontend with Vite.
+2. **Production stage** — Installs only production dependencies, copies the built frontend to `./public`, and serves both the Express API and static frontend on port 80.
+
+The container includes a health check at `GET /api/health`.
+
+## API Documentation
+
+The REST API provides 20+ endpoints for auth, calculations, food logging, and activity data.
+
+- **In-app docs:** Visit `GET /api/docs` when the server is running.
+- **Full reference:** See [`backend/docs/API.md`](./backend/docs/API.md).
+
+## Project Structure
+
+```
+fitness-app/
+├── backend/                  # Express 5 API server
+│   ├── src/
+│   │   ├── config/           # Database, Passport configuration
+│   │   ├── controllers/      # Request handlers
+│   │   ├── middlewares/       # Auth, validation, error handling
+│   │   ├── repositories/     # Database queries (pg)
+│   │   ├── routes/           # Route definitions
+│   │   ├── services/         # Business logic
+│   │   └── utils/            # Error helpers, response formatting
+│   ├── tests/                # Jest test suites
+│   └── docs/API.md           # API reference
+├── frontend/                 # React 19 + Vite SPA
+│   ├── src/
+│   │   ├── app/              # App root, providers, router
+│   │   ├── features/         # Feature modules (auth, food-log, activities, profile)
+│   │   ├── shared/           # Shared components and utilities
+│   │   └── __tests__/        # Vitest test suites
+│   └── vite.config.js        # Vite config (dev proxy included)
+├── supabase/                 # Database configuration and migrations
+├── scripts/                  # Utility scripts
+├── Dockerfile                # Multi-stage production build
+├── docker-compose.yml        # Production container setup
+└── LICENSE                   # GNU General Public License v3
+```
+
+## License
+
+This project is licensed under the GNU General Public License v3. See [LICENSE](./LICENSE) for details.
