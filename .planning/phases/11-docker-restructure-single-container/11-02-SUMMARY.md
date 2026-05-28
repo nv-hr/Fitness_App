@@ -95,6 +95,14 @@ None - no external service configuration required.
 - The middleware stack order is: security → CORS → compression → logging → body parsing → cookie → passport → rate limiters → API routes → Google OAuth → express.static → SPA catch-all → 404 handler → global error handler
 - Ready for Plan 03 (or phase-level verification) to test the combined container build
 
+## Self-Check: PASSED
+
+- [x] `[ -f "backend/src/app.js" ]` — file exists with `express.static('public')` (line 122) and SPA catch-all (line 126)
+- [x] `[ ! -f "frontend/Dockerfile" ]` — file deleted
+- [x] `0213213` — feat(11-02): add Express static serving and SPA catch-all route
+- [x] `d6bfac8` — chore(11-02): remove obsolete frontend/Dockerfile
+- [x] `3353741` — docs(11-02): complete plan 02
+
 ---
 *Phase: 11-docker-restructure-single-container*
 *Completed: 2026-05-28*
