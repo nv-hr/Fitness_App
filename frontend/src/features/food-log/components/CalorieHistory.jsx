@@ -6,7 +6,7 @@ export default function CalorieHistory({ history }) {
   }
 
   function formatDate(dateStr) {
-    const date = new Date(dateStr + 'T00:00:00');
+    const date = dateStr.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00');
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     return `${day}/${month}`;
