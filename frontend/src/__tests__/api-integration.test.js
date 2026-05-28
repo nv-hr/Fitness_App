@@ -75,9 +75,10 @@ function killPort(port) {
       );
       for (const line of stdout.split('\n')) {
         const parts = line.trim().split(/\s+/);
-        if (parts[3] === `0.0.0.0:${port}` || parts[3] === `127.0.0.1:${port}`) {
-          const pid = parts[4];
-          if (pid && pid !== '0') {
+        if (parts.length >= 5) {
+          const address = parts[1]; // Local Address column
+          const pid = parts[parts.length - 1]; // PID is last column
+          if ((address === `0.0.0.0:${port}` || address === `127.0.0.1:${port}`) && pid && pid !== '0') {
             try { execSync(`taskkill /F /PID ${pid}`, { timeout: 2000 }); } catch { /* ok */ }
           }
         }
