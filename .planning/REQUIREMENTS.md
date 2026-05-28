@@ -25,7 +25,7 @@ Requirements for v1.2 Supabase Migration milestone.
 ### Docker Restructure
 
 - [x] **DKR-01**: Multi-stage Dockerfile builds frontend and serves via backend
-- [ ] **DKR-02**: Express serves React static files (express.static + SPA catch-all)
+- [x] **DKR-02**: Express serves React static files (express.static + SPA catch-all)
 - [x] **DKR-03**: docker-compose.yml simplified to single service (backend only, no MySQL/Adminer)
 
 ### Testing & Validation
@@ -73,7 +73,7 @@ Deferred to future release.
 | QRY-04 | Phase 10 | Complete |
 | QRY-05 | Phase 10 | Complete |
 | DKR-01 | Phase 11 | Complete |
-| DKR-02 | Phase 11 | Pending |
+| DKR-02 | Phase 11 | Complete |
 | DKR-03 | Phase 11 | Complete |
 | TST-01 | Phase 12 | Pending |
 | TST-02 | Phase 12 | Pending |
