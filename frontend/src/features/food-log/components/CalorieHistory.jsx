@@ -1,4 +1,4 @@
-import { t } from '../../../shared/i18n/translations.js';
+
 
 export default function CalorieHistory({ history }) {
   if (!history || history.length === 0) {
@@ -14,7 +14,7 @@ export default function CalorieHistory({ history }) {
 
   return (
     <div style={{ marginTop: '1.5rem' }}>
-      <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem' }}>{t('foodLog.history')}</h3>
+      <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem' }}>{'Calorie History'}</h3>
       <div style={{
         border: '1px solid #e5e7eb',
         borderRadius: '4px',
@@ -29,9 +29,9 @@ export default function CalorieHistory({ history }) {
           fontWeight: 'bold',
           fontSize: '0.875rem',
         }}>
-          <span>{t('foodLog.date')}</span>
-          <span style={{ textAlign: 'right' }}>{t('foodLog.calories')}</span>
-          <span style={{ textAlign: 'right' }}>{t('foodLog.entries')}</span>
+          <span>{'Date'}</span>
+          <span style={{ textAlign: 'right' }}>{'Calories'}</span>
+          <span style={{ textAlign: 'right' }}>{'Entries'}</span>
         </div>
         {/* Rows */}
         {history.map((day) => (

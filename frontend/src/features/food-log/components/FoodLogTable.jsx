@@ -1,10 +1,8 @@
-import { t } from '../../../shared/i18n/translations.js';
-
 const mealTypeLabels = {
-  breakfast: t('foodLog.sarapan'),
-  lunch: t('foodLog.makanSiang'),
-  dinner: t('foodLog.makanMalam'),
-  snack: t('foodLog.camilan'),
+  breakfast: 'Breakfast',
+  lunch: 'Lunch',
+  dinner: 'Dinner',
+  snack: 'Snack',
 };
 
 const mealTypeOrder = ['breakfast', 'lunch', 'dinner', 'snack'];
@@ -26,14 +24,14 @@ export default function FoodLogTable({ logs, recentFoods, onQuickAdd }) {
   if (logs.length === 0 && (!recentFoods || recentFoods.length === 0)) {
     return (
       <div style={{ padding: '1rem', textAlign: 'center', color: '#666' }}>
-        {t('foodLog.noLogsToday')}
+        {'No food logged today'}
       </div>
     );
   }
 
   return (
     <div style={{ marginBottom: '1rem' }}>
-      <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem' }}>{t('foodLog.todaysLog')}</h3>
+      <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem' }}>{"Today's Log"}</h3>
 
       {mealTypeOrder.map((mealType) => {
         const entries = grouped[mealType];
@@ -81,7 +79,7 @@ export default function FoodLogTable({ logs, recentFoods, onQuickAdd }) {
       {recentFoods && recentFoods.length > 0 && (
         <div style={{ marginTop: '1rem' }}>
           <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', color: '#666' }}>
-            {t('foodLog.quickAdd')}
+            {'Quick Add'}
           </h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
             {recentFoods.map((food, idx) => (

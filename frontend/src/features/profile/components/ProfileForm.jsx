@@ -5,14 +5,15 @@ import { z } from 'zod';
 import { createProfile, getProfile, updateProfile } from '../api/profileApi.js';
 import BmiResult from './BmiResult.jsx';
 import TdeeResult from './TdeeResult.jsx';
-import { t } from '../../../shared/i18n/translations.js';
+
+
 
 const schema = z.object({
-  weightKg: z.coerce.number().min(2, t('profile.weightMin')).max(300, t('profile.weightMax')),
-  heightCm: z.coerce.number().min(50, t('profile.heightMin')).max(250, t('profile.heightMax')),
-  age: z.coerce.number().min(5, t('profile.ageMin')).max(120, t('profile.ageMax')),
-  gender: z.enum(['male', 'female', 'other'], { message: t('profile.genderRequired') }),
-  fitnessGoal: z.enum(['lose_weight', 'maintain', 'gain_weight'], { message: t('profile.fitnessGoalRequired') }),
+  weightKg: z.coerce.number().min(2, 'Weight must be at least 2 kg').max(300, 'Weight must be at most 300 kg'),
+  heightCm: z.coerce.number().min(50, 'Height must be at least 50 cm').max(250, 'Height must be at most 250 cm'),
+  age: z.coerce.number().min(5, 'Age must be at least 5 years').max(120, 'Age must be at most 120 years'),
+  gender: z.enum(['male', 'female', 'other'], { message: 'Gender is required' }),
+  fitnessGoal: z.enum(['lose_weight', 'maintain', 'gain_weight'], { message: 'Fitness goal is required' }),
   activityLevel: z.enum(['sedentary', 'light', 'moderate', 'very_active', 'extra_active']).optional(),
   calorieRate: z.enum(['low', 'medium', 'high']).optional(),
 });
@@ -95,23 +96,23 @@ export default function ProfileForm() {
         setExistingProfile(response.data.profile);
       }
     } catch (err) {
-      setError(err.message || t('profile.profileError'));
+      setError(err.message || 'Failed to save profile');
     }
   };
 
   if (loading) {
-    return <div style={{ maxWidth: '400px', margin: '0 auto', padding: '1rem' }}>{t('auth.loading')}</div>;
+    return <div style={{ maxWidth: '400px', margin: '0 auto', padding: '1rem' }}>{'Loading...'}</div>;
   }
 
   const isUpdate = !!existingProfile;
 
   return (
     <div style={{ maxWidth: '400px', margin: '0 auto', padding: '1rem' }}>
-      <h2>{t('profile.title')}</h2>
+      <h2>{'Profile, BMI & TDEE'}</h2>
       {error && <p style={{ color: 'red' }}>{error}</p>}
       <form onSubmit={handleSubmit(onSubmit)}>
         <div style={{ marginBottom: '1rem' }}>
-          <label htmlFor="weightKg">{t('profile.weight')}</label>
+          <label htmlFor="weightKg">{'Weight (kg)'}</label>
           <input
             id="weightKg"
             type="number"
@@ -123,7 +124,7 @@ export default function ProfileForm() {
         </div>
 
         <div style={{ marginBottom: '1rem' }}>
-          <label htmlFor="heightCm">{t('profile.height')}</label>
+          <label htmlFor="heightCm">{'Height (cm)'}</label>
           <input
             id="heightCm"
             type="number"
@@ -135,7 +136,7 @@ export default function ProfileForm() {
         </div>
 
         <div style={{ marginBottom: '1rem' }}>
-          <label htmlFor="age">{t('profile.age')}</label>
+          <label htmlFor="age">{'Age'}</label>
           <input
             id="age"
             type="number"
@@ -146,58 +147,58 @@ export default function ProfileForm() {
         </div>
 
         <div style={{ marginBottom: '1rem' }}>
-          <label htmlFor="gender">{t('profile.gender')}</label>
+          <label htmlFor="gender">{'Gender'}</label>
           <select
             id="gender"
             {...register('gender')}
             style={{ display: 'block', width: '100%', padding: '0.75rem 0.5rem', marginTop: '0.25rem', boxSizing: 'border-box', minHeight: '44px' }}
           >
-            <option value="male">{t('profile.male')}</option>
-            <option value="female">{t('profile.female')}</option>
-            <option value="other">{t('profile.other')}</option>
+            <option value="male">{'Male'}</option>
+            <option value="female">{'Female'}</option>
+            <option value="other">{'Other'}</option>
           </select>
           {errors.gender && <p style={{ color: 'red', fontSize: '0.875rem' }}>{errors.gender.message}</p>}
         </div>
 
         <div style={{ marginBottom: '1rem' }}>
-          <label htmlFor="fitnessGoal">{t('profile.fitnessGoal')}</label>
+          <label htmlFor="fitnessGoal">{'Fitness Goal'}</label>
           <select
             id="fitnessGoal"
             {...register('fitnessGoal')}
             style={{ display: 'block', width: '100%', padding: '0.75rem 0.5rem', marginTop: '0.25rem', boxSizing: 'border-box', minHeight: '44px' }}
           >
-            <option value="lose_weight">{t('profile.loseWeight')}</option>
-            <option value="maintain">{t('profile.maintain')}</option>
-            <option value="gain_weight">{t('profile.gainWeight')}</option>
+            <option value="lose_weight">{'Lose Weight'}</option>
+            <option value="maintain">{'Maintain Weight'}</option>
+            <option value="gain_weight">{'Gain Weight'}</option>
           </select>
           {errors.fitnessGoal && <p style={{ color: 'red', fontSize: '0.875rem' }}>{errors.fitnessGoal.message}</p>}
         </div>
 
         <div style={{ marginBottom: '1rem' }}>
-          <label htmlFor="activityLevel">{t('profile.activityLevel')}</label>
+          <label htmlFor="activityLevel">{'Activity Level'}</label>
           <select
             id="activityLevel"
             {...register('activityLevel')}
             style={{ display: 'block', width: '100%', padding: '0.75rem 0.5rem', marginTop: '0.25rem', boxSizing: 'border-box', minHeight: '44px' }}
           >
-            <option value="sedentary">{t('profile.activitySedentary')}</option>
-            <option value="light">{t('profile.activityLight')}</option>
-            <option value="moderate">{t('profile.activityModerate')}</option>
-            <option value="very_active">{t('profile.activityVeryActive')}</option>
-            <option value="extra_active">{t('profile.activityExtraActive')}</option>
+            <option value="sedentary">{'Sedentary (Rarely exercise, desk job)'}</option>
+            <option value="light">{'Light (Exercise 1-3x/week)'}</option>
+            <option value="moderate">{'Moderate (Exercise 3-5x/week)'}</option>
+            <option value="very_active">{'Very Active (Exercise 6-7x/week)'}</option>
+            <option value="extra_active">{'Extra Active (Daily intense exercise)'}</option>
           </select>
         </div>
 
         <div style={{ marginBottom: '1rem' }}>
-          <label htmlFor="calorieRate">{t('profile.calorieRate')}</label>
+          <label htmlFor="calorieRate">{'Weight Change Rate'}</label>
           <select
             id="calorieRate"
             {...register('calorieRate')}
             style={{ display: 'block', width: '100%', padding: '0.75rem 0.5rem', marginTop: '0.25rem', boxSizing: 'border-box', minHeight: '44px' }}
           >
-            <option value="low">{t('profile.rateLow')}</option>
-            <option value="medium">{t('profile.rateMedium')}</option>
-            <option value="high">{t('profile.rateHigh')}</option>
+            <option value="low">{'0.25 kg/week (Gentle)'}</option>
+            <option value="medium">{'0.5 kg/week (Recommended)'}</option>
+            <option value="high">{'1 kg/week (Extreme)'}</option>
           </select>
         </div>
 
@@ -206,7 +207,7 @@ export default function ProfileForm() {
           disabled={isSubmitting}
           style={{ width: '100%', padding: '0.75rem 1rem', marginBottom: '1rem', minHeight: '44px', cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
         >
-          {isSubmitting ? t('auth.loading') : (isUpdate ? t('profile.updateProfile') : t('profile.saveProfile'))}
+          {isSubmitting ? 'Loading...' : (isUpdate ? 'Update Profile' : 'Save Profile')}
         </button>
       </form>
 

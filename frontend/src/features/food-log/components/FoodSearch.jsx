@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
 import { searchFoods } from '../api/foodLogApi.js';
-import { t } from '../../../shared/i18n/translations.js';
-
 const categoryLabels = {
-  proteins: t('foodLog.categories.proteins'),
-  carbs: t('foodLog.categories.carbs'),
-  vegetables: t('foodLog.categories.vegetables'),
-  fruits: t('foodLog.categories.fruits'),
-  dairy: t('foodLog.categories.dairy'),
-  fats: t('foodLog.categories.fats'),
-  drinks: t('foodLog.categories.drinks'),
-  other: t('foodLog.categories.other'),
+  proteins: 'Proteins',
+  carbs: 'Carbs',
+  vegetables: 'Vegetables',
+  fruits: 'Fruits',
+  dairy: 'Dairy',
+  fats: 'Fats',
+  drinks: 'Drinks',
+  other: 'Other',
 };
 
 export default function FoodSearch({ onFoodSelect, onToggleCustomForm }) {
@@ -43,7 +41,7 @@ export default function FoodSearch({ onFoodSelect, onToggleCustomForm }) {
     <div style={{ marginBottom: '1rem' }}>
       <input
         type="text"
-        placeholder={t('foodLog.searchPlaceholder')}
+        placeholder={'Search food...'}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         style={{
@@ -55,10 +53,10 @@ export default function FoodSearch({ onFoodSelect, onToggleCustomForm }) {
         }}
       />
 
-      {loading && <div style={{ padding: '0.5rem', color: '#666' }}>{t('auth.loading')}</div>}
+      {loading && <div style={{ padding: '0.5rem', color: '#666' }}>{'Loading...'}</div>}
 
       {query.length >= 2 && !loading && results.length === 0 && (
-        <div style={{ padding: '0.5rem', color: '#666' }}>{t('foodLog.noResults')}</div>
+        <div style={{ padding: '0.5rem', color: '#666' }}>{'No food found'}</div>
       )}
 
       {results.length > 0 && (
@@ -105,7 +103,7 @@ export default function FoodSearch({ onFoodSelect, onToggleCustomForm }) {
           minHeight: '44px',
         }}
       >
-        + {t('foodLog.addCustomFood')}
+        + {'Add New Food'}
       </button>
     </div>
   );

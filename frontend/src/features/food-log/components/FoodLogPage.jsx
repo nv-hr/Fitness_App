@@ -6,7 +6,7 @@ import CustomFoodForm from './CustomFoodForm.jsx';
 import FoodLogTable from './FoodLogTable.jsx';
 import CalorieHistory from './CalorieHistory.jsx';
 import { calculatePreviewCalories } from './previewCalories.js';
-import { t } from '../../../shared/i18n/translations.js';
+
 
 export default function FoodLogPage() {
   const [summary, setSummary] = useState(null);
@@ -116,12 +116,12 @@ export default function FoodLogPage() {
         });
       }
 
-      setSuccessMsg(t('foodLog.foodLogged'));
+      setSuccessMsg('Food logged successfully');
       setSelectedFood(null);
       setPortion('');
       await refreshData();
     } catch (err) {
-      setError(err.message || t('foodLog.logError'));
+      setError(err.message || 'Failed to log food');
     }
   };
 
@@ -131,14 +131,14 @@ export default function FoodLogPage() {
   };
 
   if (loading) {
-    return <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1rem' }}>{t('auth.loading')}</div>;
+    return <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1rem' }}>{'Loading...'}</div>;
   }
 
   const previewCalories = calculatePreviewCalories(selectedFood?.calories_per_100g, portion);
 
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1rem' }}>
-      <h2>{t('foodLog.title')}</h2>
+      <h2>{'Log Food'}</h2>
 
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {successMsg && <p style={{ color: '#16a34a' }}>{successMsg}</p>}
@@ -186,7 +186,7 @@ export default function FoodLogPage() {
           </p>
 
           <div style={{ marginBottom: '0.75rem' }}>
-            <label htmlFor="portion">{t('foodLog.portion')}</label>
+            <label htmlFor="portion">{'Portion (grams)'}</label>
             <input
               id="portion"
               type="number"
@@ -205,17 +205,17 @@ export default function FoodLogPage() {
           )}
 
           <div style={{ marginBottom: '0.75rem' }}>
-            <label htmlFor="mealType">{t('foodLog.mealType')}</label>
+            <label htmlFor="mealType">{'Meal Type'}</label>
             <select
               id="mealType"
               value={mealType}
               onChange={(e) => setMealType(e.target.value)}
               style={{ display: 'block', width: '100%', padding: '0.5rem', marginTop: '0.25rem', boxSizing: 'border-box' }}
             >
-              <option value="breakfast">{t('foodLog.sarapan')}</option>
-              <option value="lunch">{t('foodLog.makanSiang')}</option>
-              <option value="dinner">{t('foodLog.makanMalam')}</option>
-              <option value="snack">{t('foodLog.camilan')}</option>
+              <option value="breakfast">{'Breakfast'}</option>
+              <option value="lunch">{'Lunch'}</option>
+              <option value="dinner">{'Dinner'}</option>
+              <option value="snack">{'Snack'}</option>
             </select>
           </div>
 
@@ -223,7 +223,7 @@ export default function FoodLogPage() {
             onClick={handleLogFood}
             style={{ width: '100%', padding: '0.75rem 1rem', cursor: 'pointer', minHeight: '44px' }}
           >
-            {t('foodLog.logFood')}
+            {'Log Food'}
           </button>
         </div>
       )}

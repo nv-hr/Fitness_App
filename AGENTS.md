@@ -3,16 +3,16 @@
 
 **Fitness_App**
 
-A web-based health application that helps Indonesian users monitor their body condition through BMI calculation and daily calorie estimation (TDEE), track food consumption, and receive simple physical activity recommendations. It's designed for both general public and fitness enthusiasts who want to build healthier habits through digital tools.
+A web-based health application that helps users monitor their body condition through BMI calculation and daily calorie estimation (TDEE), track food consumption, and receive simple physical activity recommendations. It's designed for both general public and fitness enthusiasts who want to build healthier habits through digital tools.
 
-**Core Value:** Users can accurately calculate their BMI and TDEE, log daily food intake, and understand their calorie balance — all in one integrated, easy-to-use Indonesian-language health tool.
+**Core Value:** Users can accurately calculate their BMI and TDEE, log daily food intake, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
 
 ### Constraints
 
 - **Quality**: Build it right — proper code structure, error handling, and testing over speed
 - **Styling**: Minimal — function over form, clean but not elaborate
 - **Tech stack**: React + Express + MySQL (already decided)
-- **Language**: Indonesian UI required
+- **Language**: English UI required
 <!-- GSD:project-end -->
 
 <!-- GSD:stack-start source:codebase/STACK.md -->
@@ -21,10 +21,10 @@ A web-based health application that helps Indonesian users monitor their body co
 ## Overview
 ## Languages
 - **None yet** — No source code files exist in the repository.
-- Planned features are described in Indonesian (Bahasa Indonesia) in `README.md`.
+- Planned features are described in English in `README.md`.
 ## Runtime / Platform
 - **Not applicable** — No runtime configuration files exist (no `package.json`, `requirements.txt`, `Cargo.toml`, `go.mod`, etc.).
-- The `README.md` mentions "Akses aplikasi di google" (access the app on Google), suggesting a planned **web-based** deployment.
+- The `README.md` mentions "Access the app on Google", suggesting a planned **web-based** deployment.
 ## Frameworks
 - **None** — No framework dependencies declared.
 ## Dependencies
@@ -57,8 +57,8 @@ A web-based health application that helps Indonesian users monitor their body co
 | README sections | Title Case with `##` headers | `## BMI Calculator` |
 | Git commits | Imperative mood | `Create Workout Planner`, `Update README.md` |
 ## Documentation Language
-- **Indonesian (Bahasa Indonesia)** — All feature descriptions and README content are written in Indonesian.
-- Example: "Menghitung berat badan ideal seseorang, sesuai dengan umur dan tinggi badannya."
+- **English** — All feature descriptions and README content are written in English.
+- Example: "Calculate ideal body weight based on age and height."
 ## Error Handling
 - **Not applicable** — No code exists.
 ## Patterns

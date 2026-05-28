@@ -1,4 +1,4 @@
-import { t } from '../../../shared/i18n/translations.js';
+
 
 export default function CalorieSummary({ totalConsumed, calorieTarget, remaining, isExtremeDeficit }) {
   const progressPercent = calorieTarget > 0 ? Math.min((totalConsumed / calorieTarget) * 100, 100) : 0;
@@ -14,8 +14,8 @@ export default function CalorieSummary({ totalConsumed, calorieTarget, remaining
       marginBottom: '1.5rem',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-        <span style={{ fontWeight: 'bold' }}>{t('foodLog.consumed')}: {totalConsumed} kcal</span>
-        {calorieTarget && <span>{t('foodLog.target')}: {calorieTarget} kcal</span>}
+        <span style={{ fontWeight: 'bold' }}>{'Consumed'}: {totalConsumed} kcal</span>
+        {calorieTarget && <span>{'Target'}: {calorieTarget} kcal</span>}
       </div>
 
       {/* Progress bar */}
@@ -40,8 +40,8 @@ export default function CalorieSummary({ totalConsumed, calorieTarget, remaining
       {calorieTarget && (
         <div style={{ fontSize: '0.875rem', color: isOverTarget ? '#dc2626' : '#16a34a' }}>
           {isOverTarget
-            ? `${t('foodLog.overTarget')} (+${totalConsumed - calorieTarget} kcal)`
-            : `${t('foodLog.remaining')}: ${remaining} kcal`
+            ? `${'Over Target'} (+${totalConsumed - calorieTarget} kcal)`
+            : `${'Remaining'}: ${remaining} kcal`
           }
         </div>
       )}
@@ -49,7 +49,7 @@ export default function CalorieSummary({ totalConsumed, calorieTarget, remaining
       {/* Extreme deficit warning */}
       {isExtremeDeficit && totalConsumed > 0 && (
         <div style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.5rem', fontWeight: 'bold' }}>
-          ⚠ {t('foodLog.extremeDeficit')}
+          ⚠ {'Warning: Very low calorie intake (<1200 kcal)'}
         </div>
       )}
     </div>

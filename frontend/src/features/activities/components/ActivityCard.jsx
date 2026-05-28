@@ -1,4 +1,4 @@
-import { t } from '../../../shared/i18n/translations.js';
+
 
 export default function ActivityCard({ activity }) {
   return (
@@ -17,17 +17,17 @@ export default function ActivityCard({ activity }) {
       </p>
       <div style={{ display: 'flex', gap: '1rem', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
         <span>
-          {t('activities.duration')}: {activity.duration_min} {t('activities.minutes')}
+          {'Duration'}: {activity.duration_min} {'minutes'}
         </span>
         <span>
-          {t('activities.estimatedCalories')}: {activity.estimated_calories} {t('activities.calories')}
+          {'Estimated Calories'}: {activity.estimated_calories} {'kcal'}
         </span>
       </div>
       <div style={{ fontSize: '0.875rem', color: '#666' }}>
-        {t('activities.equipment')}: {
+        {'Equipment Needed'}: {
           activity.equipment_needed && activity.equipment_needed.length === 0
-            ? t('activities.noEquipment')
-            : activity.equipment_needed?.join(', ') || t('activities.noEquipment')
+            ? 'No equipment'
+            : activity.equipment_needed?.join(', ') || 'No equipment'
         }
       </div>
     </div>

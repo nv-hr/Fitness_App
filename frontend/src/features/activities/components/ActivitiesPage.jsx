@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { getRecommendations, getAllActivities } from '../api/activityApi.js';
 import ActivityCard from './ActivityCard.jsx';
 import ActivityPool from './ActivityPool.jsx';
-import { t } from '../../../shared/i18n/translations.js';
+
 
 export default function ActivitiesPage() {
   const [recommendations, setRecommendations] = useState([]);
@@ -22,7 +22,7 @@ export default function ActivitiesPage() {
         setRecommendations(recRes.data?.activities || []);
         setAllActivities(allRes.data?.activities || []);
       } catch (err) {
-        setError(err.message || t('activities.error'));
+        setError(err.message || 'Failed to load activities');
       } finally {
         setLoading(false);
       }
@@ -37,7 +37,7 @@ export default function ActivitiesPage() {
       const recRes = await getRecommendations();
       setRecommendations(recRes.data?.activities || []);
     } catch (err) {
-      setError(err.message || t('activities.error'));
+      setError(err.message || 'Failed to load activities');
     } finally {
       setReshuffling(false);
     }
@@ -46,16 +46,16 @@ export default function ActivitiesPage() {
   if (loading) {
     return (
       <div style={{ maxWidth: '600px', margin: '2rem auto', padding: '1rem' }}>
-        {t('auth.loading')}
+        {'Loading...'}
       </div>
     );
   }
 
   return (
     <div style={{ maxWidth: '600px', margin: '2rem auto', padding: '1rem' }}>
-      <h2>{t('activities.title')}</h2>
+      <h2>{'Activity Recommendations'}</h2>
       <p style={{ color: '#666', marginBottom: '1.5rem' }}>
-        {t('activities.subtitle')}
+        {'Suggested activities for your fitness goal'}
       </p>
 
       {error && <p style={{ color: 'red' }}>{error}</p>}
@@ -63,11 +63,11 @@ export default function ActivitiesPage() {
       {/* Recommendations Section */}
       <div style={{ marginBottom: '1.5rem' }}>
         <h3 style={{ marginBottom: '0.75rem' }}>
-          {t('activities.yourRecommendations')}
+          {"Today's Recommendations"}
         </h3>
 
         {recommendations.length === 0 ? (
-          <p style={{ color: '#666' }}>{t('activities.noRecommendations')}</p>
+          <p style={{ color: '#666' }}>{'No recommendations available'}</p>
         ) : (
           recommendations.map((activity) => (
             <ActivityCard key={activity.id} activity={activity} />
@@ -86,7 +86,7 @@ export default function ActivitiesPage() {
             opacity: reshuffling ? 0.6 : 1,
           }}
         >
-          {reshuffling ? t('auth.loading') : t('activities.reshuffle')}
+          {reshuffling ? 'Loading...' : 'Shuffle'}
         </button>
       </div>
 
