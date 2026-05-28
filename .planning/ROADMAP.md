@@ -107,7 +107,13 @@
   2. Full Docker image builds successfully with zero errors
   3. Container starts, /api/health returns 200, and the frontend landing page loads in the browser
   4. End-to-end smoke test verifies: user registration, profile creation, BMI calculation, food logging, and calorie summary display all work against Supabase
-**Plans**: TBD
+**Plans**: 4 plans
+
+**Wave 1** *(all parallel — no file conflicts)*:
+- [ ] 12-01-PLAN.md — Backend integration test helpers rewrite + assertion fixes (TST-01)
+- [ ] 12-02-PLAN.md — Frontend test fixes + DATABASE_URL_TEST config (TST-01)
+- [ ] 12-03-PLAN.md — Unit test expansion: dbErrors, profile, auth, activity (TST-01)
+- [ ] 12-04-PLAN.md — Docker smoke test script (TST-02)
 
 ## Progress
 
@@ -124,7 +130,7 @@
 | 9. Supabase Setup & Schema Migration | v1.2 | 3/3 | Complete   | 2026-05-27 |
 | 10. Backend Query Rewrite | v1.2 | 4/4 | Complete    | 2026-05-28 |
 | 11. Docker Restructure | v1.2 | 2/2 | Complete   | 2026-05-28 |
-| 12. Testing & Validation | v1.2 | 0/0 | Not started | - |
+| 12. Testing & Validation | v1.2 | 0/4 | Not started | - |
 
 ---
 *Roadmap created: 2026-05-17*
