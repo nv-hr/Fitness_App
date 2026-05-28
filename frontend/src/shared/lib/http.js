@@ -12,7 +12,19 @@ export async function apiFetch(path, options = {}) {
     credentials: 'include',
   });
 
-  const data = await response.json();
+  // Handle both JSON and non-JSON responses defensively
+  let data;
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    data = await response.json();
+  } else {
+    // Non-JSON response (e.g., rate limiter text/plain, server error HTML)
+    const text = await response.text();
+    if (!response.ok) {
+      throw new Error(text || 'Request failed');
+    }
+    data = text;
+  }
 
   if (!response.ok) {
     throw new Error(data.error?.message || 'Request failed');
