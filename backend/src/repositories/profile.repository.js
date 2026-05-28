@@ -16,18 +16,12 @@ import { AppError } from '../utils/errors.js';
  */
 export async function create({ userId, weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate }) {
   try {
-    await pool.query(
-      'INSERT INTO profiles (user_id, weight_kg, height_cm, age, gender, fitness_goal, activity_level, calorie_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    const { rows } = await pool.query(
+      'INSERT INTO profiles (user_id, weight_kg, height_cm, age, gender, fitness_goal, activity_level, calorie_rate) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
       [userId, weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate]
-    );
-    const [rows] = await pool.query(
-      'SELECT * FROM profiles WHERE id = LAST_INSERT_ID()'
     );
     return rows[0] || null;
   } catch (err) {
-    if (err.code === 'ER_DUP_ENTRY') {
-      throw new AppError('DuplicateError', 'Profile already exists', 409);
-    }
     throw new AppError('DatabaseError', `Failed to create profile: ${err.message}`, 500);
   }
 }
@@ -39,8 +33,8 @@ export async function create({ userId, weightKg, heightCm, age, gender, fitnessG
  */
 export async function findByUserId(userId) {
   try {
-    const [rows] = await pool.query(
-      'SELECT * FROM profiles WHERE user_id = ? LIMIT 1',
+    const { rows } = await pool.query(
+      'SELECT * FROM profiles WHERE user_id = $1 LIMIT 1',
       [userId]
     );
     return rows[0] || null;
@@ -64,11 +58,11 @@ export async function findByUserId(userId) {
  */
 export async function updateByUserId(userId, { weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate }) {
   try {
-    await pool.query(
-      'UPDATE profiles SET weight_kg = ?, height_cm = ?, age = ?, gender = ?, fitness_goal = ?, activity_level = ?, calorie_rate = ?, updated_at = NOW() WHERE user_id = ?',
+    const { rows } = await pool.query(
+      'UPDATE profiles SET weight_kg = $1, height_cm = $2, age = $3, gender = $4, fitness_goal = $5, activity_level = $6, calorie_rate = $7, updated_at = NOW() WHERE user_id = $8 RETURNING *',
       [weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate, userId]
     );
-    return { success: true };
+    return { success: true, profile: rows[0] || null };
   } catch (err) {
     throw new AppError('DatabaseError', `Failed to update profile: ${err.message}`, 500);
   }
