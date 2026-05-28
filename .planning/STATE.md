@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Supabase Migration
-status: planning
-stopped_at: Phase 11 context gathered
-last_updated: "2026-05-28T04:20:50.444Z"
-last_activity: 2026-05-28
+status: executing
+stopped_at: Phase 11 Plan 01 complete - ready for Plan 02
+last_updated: "2026-05-28T04:35:01.000Z"
+last_activity: 2026-05-28 -- Phase 11 Plan 01 complete
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
-  percent: 50
+  total_plans: 10
+  completed_plans: 8
+  percent: 56
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-27)
 
 **Core value:** Users can accurately calculate their BMI and TDEE, log daily food intake by ingredients, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
-**Current focus:** Phase 11 — docker restructure (single container)
+**Current focus:** Phase 11 — docker-restructure-single-container
 
 ## Current Position
 
-Phase: 11
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-05-28
+Phase: 11 (docker-restructure-single-container) — EXECUTING
+Plan: 1 of 2 (complete)
+Status: Executing Phase 11 Plan 01 complete
+Last activity: 2026-05-28 -- Phase 11 Plan 01 complete
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 78%
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [███████░░░] 67%
 
 | Phase 09 P01 | 3 min | 2 tasks | 2 files |
 | Phase 09-supabase-setup-schema-migration P02 | 2 min | 2 tasks | 5 files |
+| Phase 11 P01 | 2 min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,10 @@ Recent decisions affecting current work:
 - No Supabase Auth — keep existing JWT + Google OAuth
 - No RLS — keep server-side-only architecture
 - 4-phase structure: Setup → Query Rewrite → Docker → Testing
+- Retained restart: unless-stopped in docker-compose — pairs with HEALTHCHECK for auto-recovery
+- Removed networks: from docker-compose — single service uses Docker default bridge
+- Builder stage uses npm ci (no --omit=dev) because Vite is a frontend devDep
+- Production stage uses npm start per D-03
 
 ### Pending Todos
 
@@ -105,9 +110,9 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-28T04:20:50.432Z
-Stopped at: Phase 11 context gathered
-Resume file: .planning/phases/11-docker-restructure-single-container/11-CONTEXT.md
+Last session: 2026-05-28T04:35:01.000Z
+Stopped at: Completed 11-01-PLAN.md
+Resume file: .planning/phases/11-docker-restructure-single-container/11-01-SUMMARY.md
 
 ## Operator Next Steps
 

@@ -95,7 +95,7 @@
 **Plans**: 2 plans
 
 **Wave 1** *(parallel — no dependencies)*:
-- [ ] 11-01-PLAN.md — Container infrastructure: .dockerignore, multi-stage Dockerfile, simplified compose (DKR-01, DKR-03)
+- [x] 11-01-PLAN.md — Container infrastructure: .dockerignore, multi-stage Dockerfile, simplified compose (DKR-01, DKR-03) — completed 2026-05-28
 - [ ] 11-02-PLAN.md — Application integration: Express static serving + SPA catch-all, remove frontend/Dockerfile (DKR-02)
 
 ### Phase 12: Testing & Validation
@@ -123,7 +123,7 @@
 | 8. English UI Migration | v1.1 | 3/3 | Complete | 2026-05-18 |
 | 9. Supabase Setup & Schema Migration | v1.2 | 3/3 | Complete   | 2026-05-27 |
 | 10. Backend Query Rewrite | v1.2 | 4/4 | Complete    | 2026-05-28 |
-| 11. Docker Restructure | v1.2 | 0/2 | Not started | - |
+| 11. Docker Restructure | v1.2 | 1/2 | In Progress | - |
 | 12. Testing & Validation | v1.2 | 0/0 | Not started | - |
 
 ---
