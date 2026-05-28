@@ -144,6 +144,16 @@ None — all three modified files are production-ready.
 - Phase complete; remaining MySQL references are in Docker and test infrastructure (Plans 11-12)
 - Next: Phase 11 — Docker simplification (remove MySQL service)
 
+## Self-Check: PASSED
+
+- [x] All 3 modified files exist: activity.repository.js, auth.service.js, auth.controller.js
+- [x] All 3 commits visible in git log: 267a0b1 (Task 1), fed5b79 (Task 2), 117d1f1 (metadata)
+- [x] Zero MySQL patterns in backend/src/ — all sweep patterns clean
+- [x] activity.repository.js: JSON_OVERLAPS free, ?| operator present, RANDOM() present, { rows } destructuring
+- [x] auth.service.js: 3 occurrences of === true, zero occurrences of === 1
+- [x] auth.controller.js: 1 occurrence of === true, zero occurrences of === 1
+- [x] All 3 modified files pass Node.js syntax check
+
 ---
 
 *Phase: 10-backend-query-rewrite-pg-migration*
