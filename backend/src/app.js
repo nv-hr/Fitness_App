@@ -145,10 +145,12 @@ app.use((req, res) => {
 // Global error handler
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
-  // Convert camelCase error names to UPPER_SNAKE_CASE (e.g. AuthenticationError → AUTHENTICATION_ERROR)
+  // Convert camelCase error names to UPPER_SNAKE_CASE (e.g. HTTPServerError → HTTP_SERVER_ERROR)
   const errorCode = (err.code || err.name || 'INTERNAL_ERROR')
-    .replace(/([A-Z])/g, '_$1')
-    .replace(/^_/, '')
+    // Insert underscore between lowercase/number and uppercase
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    // Insert underscore between consecutive uppercase and lowercase (e.g., HTTPServer → HTTP_Server)
+    .replace(/([A-Z])([A-Z][a-z])/g, '$1_$2')
     .toUpperCase();
   errorResponse(res, err.message, statusCode, errorCode);
 });
