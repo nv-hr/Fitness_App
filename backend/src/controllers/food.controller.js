@@ -11,7 +11,7 @@ const VALID_MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 /**
  * GET /api/food/search?q= — Search foods by name (FOOD-01, FOOD-02).
  */
-export async function searchFoods(req, res) {
+export async function searchFoods(req, res, next) {
   try {
     const q = req.query.q;
     if (!q || q.length < 2) {
@@ -23,8 +23,7 @@ export async function searchFoods(req, res) {
     if (err instanceof ValidationError) {
       return errorResponse(res, err.message, 400, 'VALIDATION_ERROR');
     }
-    // Pass database errors to global handler
-    res.status(500).json({ success: false, error: { message: err.message, code: err.name } });
+    next(err);
   }
 }
 
