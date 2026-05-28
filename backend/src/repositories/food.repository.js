@@ -123,13 +123,16 @@ export async function getDailyTotal(userId, logDate) {
 export async function getLogHistory(userId, days = 7) {
   days = Math.min(Math.max(1, Math.floor(days)), 365);
   try {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    const cutoffStr = cutoffDate.toISOString().split('T')[0];
     const { rows } = await pool.query(
       `SELECT log_date, SUM(calories) as total_calories, COUNT(*) as entry_count
        FROM food_logs
-       WHERE user_id = $1 AND log_date >= CURRENT_DATE - $2
+       WHERE user_id = $1 AND log_date >= $2::date
        GROUP BY log_date
        ORDER BY log_date DESC`,
-      [userId, days]
+      [userId, cutoffStr]
     );
     return rows;
   } catch (err) {

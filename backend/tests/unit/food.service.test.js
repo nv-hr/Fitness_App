@@ -1,5 +1,5 @@
-import { validateCustomFoodData, validateFoodData } from '../src/services/food.service.js';
-import { ValidationError } from '../src/utils/errors.js';
+import { validateCustomFoodData, validateFoodData } from '../../src/services/food.service.js';
+import { ValidationError } from '../../src/utils/errors.js';
 
 describe('validateCustomFoodData (Phase 7: D-09)', () => {
   describe('valid input', () => {

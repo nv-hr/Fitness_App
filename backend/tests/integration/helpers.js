@@ -1,157 +1,75 @@
 /**
- * Integration test helpers — MySQL lifecycle + test data seeding.
+ * Integration test helpers — Supabase test schema lifecycle + test data seeding.
  *
- * Starts MySQL via docker-compose, creates test users, and seeds profile/food data
- * so that every backend endpoint can be exercised against a real database.
- *
- * NODE_ENV=test is now set in jest.setup.js (setupFiles), which runs before any
- * module imports are evaluated, so rate limiters are created with test settings.
+ * Creates a fresh 'fitness_test' schema in the existing Supabase project,
+ * runs schema.sql + seed.sql to populate it. The DATABASE_URL override
+ * and NODE_ENV=test are handled by jest.setup.js (setupFiles), which
+ * runs before any module imports are evaluated.
  *
  * @module helpers
  */
 
-import { execSync } from 'child_process';
 import { setTimeout } from 'timers/promises';
-import { createConnection } from 'net';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { existsSync } from 'fs';
+import { readFile } from 'fs/promises';
+import { Pool } from 'pg';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Project root (where docker-compose.yml lives)
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
-const COMPOSE_FILE = path.join(PROJECT_ROOT, 'docker-compose.yml');
+const SCHEMA_SQL_PATH = path.join(PROJECT_ROOT, 'backend', 'db', 'schema.sql');
+const SEED_SQL_PATH = path.join(PROJECT_ROOT, 'backend', 'db', 'seed.sql');
+const TEST_SCHEMA = 'fitness_test';
 
-/** @type {string|null} */
-let composeCmd = null;
+function getTestConnectionString() {
+  return process.env.DATABASE_URL_TEST || process.env.DATABASE_URL;
+}
+
+async function withTempPool(fn) {
+  const connStr = getTestConnectionString();
+  const tempPool = new Pool({
+    connectionString: connStr,
+    ssl: { rejectUnauthorized: false },
+    max: 1,
+    connectionTimeoutMillis: 10000,
+  });
+  try {
+    await fn(tempPool);
+  } finally {
+    await tempPool.end();
+  }
+}
+
+async function executeSqlFile(pool, filePath) {
+  const sql = await readFile(filePath, 'utf8');
+  await pool.query(sql);
+}
 
 /**
- * Check if MySQL port 3306 is accepting connections (in-process, no child process).
- * @param {string} [host='127.0.0.1']
- * @param {number} [port=3306]
- * @param {number} [timeoutMs=3000]
- * @returns {Promise<boolean>}
+ * Create the test schema, run schema.sql + seed.sql.
+ * @param {number} [timeoutMs=30000] — max wait time in ms
+ * @returns {Promise<void>}
  */
-function isPortOpen(host = '127.0.0.1', port = 3306, timeoutMs = 3000) {
-  return new Promise((resolve) => {
-    const socket = createConnection({ host, port, timeout: timeoutMs }, () => {
-      socket.destroy();
-      resolve(true);
-    });
-    socket.on('error', () => {
-      socket.destroy();
-      resolve(false);
-    });
-    socket.on('timeout', () => {
-      socket.destroy();
-      resolve(false);
-    });
+export async function startDatabase(timeoutMs = 30000) {
+  await withTempPool(async (pool) => {
+    await pool.query(`DROP SCHEMA IF EXISTS ${TEST_SCHEMA} CASCADE`);
+    await pool.query(`CREATE SCHEMA ${TEST_SCHEMA}`);
+    await pool.query(`SET search_path TO ${TEST_SCHEMA}, public`);
+    await executeSqlFile(pool, SCHEMA_SQL_PATH);
+    await executeSqlFile(pool, SEED_SQL_PATH);
   });
 }
 
 /**
- * Start MySQL via docker-compose and wait for it to become healthy.
- *
- * Strategy:
- *   1. Check if MySQL port 3306 is already open → skip compose (fast path).
- *   2. Otherwise, try to start MySQL via docker/podman-compose.
- *   3. Wait for port to become available.
- *
- * @param {number} [timeoutMs=90000] — max wait time in ms
- * @returns {Promise<void>}
- */
-export async function startDatabase(timeoutMs = 90000) {
-  // Fast path: MySQL already running
-  if (await isPortOpen()) {
-    return;
-  }
-
-  // Compose file must exist
-  if (!existsSync(COMPOSE_FILE)) {
-    throw new Error(
-      `docker-compose.yml not found at ${COMPOSE_FILE}. Cannot start MySQL container.`
-    );
-  }
-
-  // Try compose candidates
-  const candidates = [
-    'docker compose',
-    'docker-compose',
-    'podman-compose',
-    'python -m podman_compose',
-  ];
-
-  let composeFound = false;
-  for (const cmd of candidates) {
-    try {
-      execSync(`${cmd} version`, { stdio: 'pipe', timeout: 10000, windowsHide: true, shell: true });
-      composeCmd = cmd;
-      composeFound = true;
-      break;
-    } catch {
-      // Try next candidate
-    }
-  }
-
-  if (!composeFound) {
-    // One last check — maybe MySQL started while we were trying
-    if (await isPortOpen()) {
-      return;
-    }
-    throw new Error(
-      'No container compose tool found and MySQL is not running on port 3306. ' +
-      'Install Docker Desktop or Podman, or start MySQL manually.'
-    );
-  }
-
-  // Start the MySQL container
-  try {
-    execSync(
-      `${composeCmd} -f "${COMPOSE_FILE}" up -d mysql`,
-      { stdio: 'pipe', timeout: 120000, windowsHide: true, shell: true }
-    );
-  } catch (err) {
-    const msg = err.stderr?.toString() || err.message || '';
-    if (!msg.toLowerCase().includes('already') && !msg.includes('container exists')) {
-      throw new Error(`Failed to start MySQL: ${msg}`);
-    }
-  }
-
-  // Wait for MySQL to accept connections
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    if (await isPortOpen()) {
-      return;
-    }
-    await setTimeout(2000);
-  }
-
-  throw new Error(
-    `MySQL did not become available within ${timeoutMs / 1000}s.`
-  );
-}
-
-/**
- * Stop MySQL via docker-compose.
+ * Drop the test schema.
  * @returns {Promise<void>}
  */
 export async function stopDatabase() {
-  if (!composeCmd) {
-    return; // MySQL was not started by us
-  }
-  try {
-    execSync(
-      `${composeCmd} -f "${COMPOSE_FILE}" down`,
-      { stdio: 'pipe', timeout: 30000, windowsHide: true, shell: true }
-    );
-  } catch (err) {
-    console.warn(
-      'Warning: failed to stop MySQL container:',
-      err.stderr?.toString().trim() || err.message
-    );
-  }
+  await withTempPool(async (pool) => {
+    await pool.query(`DROP SCHEMA IF EXISTS ${TEST_SCHEMA} CASCADE`);
+  });
 }
 
 /**
@@ -199,7 +117,7 @@ export async function seedTestData(agent) {
     age: 30,
     gender: 'male',
     fitnessGoal: 'maintain',
-    activityLevel: 'medium',
+    activityLevel: 'moderate',
   });
 
   const profile = profileRes.body.data?.profile || null;

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthProvider } from '../features/auth/hooks/useAuth.js';
+import { AuthProvider } from '../features/auth/hooks/useAuth.jsx';
 
 const queryClient = new QueryClient({
   defaultOptions: {

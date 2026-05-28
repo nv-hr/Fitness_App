@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useAuth } from '../hooks/useAuth.js';
+import { useAuth } from '../hooks/useAuth.jsx';
 import { t } from '../../../shared/i18n/translations.js';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';

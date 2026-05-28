@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
-import { useAuth } from '../features/auth/hooks/useAuth.js';
+import { useAuth } from '../features/auth/hooks/useAuth.jsx';
 import LoginForm from '../features/auth/components/LoginForm.jsx';
 import RegisterForm from '../features/auth/components/RegisterForm.jsx';
 import ProfileForm from '../features/profile/components/ProfileForm.jsx';

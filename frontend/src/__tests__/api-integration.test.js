@@ -434,7 +434,7 @@ describe('Frontend API Integration — Food / Calorie Log', () => {
     // Backend returns the food object directly in data (not wrapped in { food: {} })
     expect(data).toMatchObject({
       success: true,
-      data: { name: 'Test Custom Meal', is_custom: 1 },
+      data: { name: 'Test Custom Meal', is_custom: true },
     });
   });
 

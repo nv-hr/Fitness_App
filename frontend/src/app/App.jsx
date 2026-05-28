@@ -1,5 +1,5 @@
-import Providers from './app/Providers.jsx';
-import Router from './app/Router.jsx';
+import Providers from './Providers.jsx';
+import Router from './Router.jsx';
 
 export default function App() {
   return (

@@ -1,15 +1,15 @@
 /**
- * Backend integration tests — all 16 endpoints against a real MySQL database.
+ * Backend integration tests — all 16 endpoints against Supabase test schema.
  *
  * Prerequisites:
- *   1. Docker Desktop or Podman (for MySQL container)
- *   2. .env file with JWT_SECRET, DB_USER, DB_PASSWORD
+ *   1. Supabase project running with DATABASE_URL in .env
+ *   2. .env file with JWT_SECRET
  *
  * Usage:
  *   cd backend
  *   node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern=integration
  *
- * @see PLAN.md — 260527-cn0-test-all-backend-endpoint-and-its-integration
+ * @see .planning/phases/12-testing-validation/12-01-PLAN.md
  */
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
@@ -25,7 +25,7 @@ let seededFoodId;
 let today;
 
 beforeAll(async () => {
-  // 1. Start MySQL via docker-compose
+  // 1. Set up Supabase test schema
   await startDatabase();
 
   // 2. Create a fresh authenticated agent for protected routes
@@ -43,7 +43,7 @@ beforeAll(async () => {
   }
 
   today = new Date().toISOString().split('T')[0];
-}, 120000); // 2-minute timeout for DB startup
+}, 60000); // 60s timeout for test schema setup
 
 afterAll(async () => {
   await stopDatabase();
@@ -69,7 +69,7 @@ describe('Auth Endpoints', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data.user).toBeDefined();
       expect(res.body.data.user.email).toBeDefined();
-      expect(res.body.data.user.pdpConsent).toBe(true);
+      expect(res.body.data.user.pdp_consent).toBe(true);
       // Cookie should be set
       expect(res.headers['set-cookie']).toBeDefined();
       const cookieHeader = Array.isArray(res.headers['set-cookie'])
@@ -247,9 +247,9 @@ describe('Profile Endpoints', () => {
         age: 30,
         gender: 'male',
         fitnessGoal: 'maintain',
-        activityLevel: 'medium',
+        activityLevel: 'moderate',
       });
-
+ 
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
       expect(res.body.data.profile).toBeDefined();
@@ -324,9 +324,9 @@ describe('Profile Endpoints', () => {
         age: 25,
         gender: 'female',
         fitnessGoal: 'lose_weight',
-        activityLevel: 'high',
+        activityLevel: 'very_active',
       });
-
+ 
       const res = await getAgent.get('/api/profile');
 
       expect(res.status).toBe(200);
@@ -355,10 +355,10 @@ describe('Profile Endpoints', () => {
         age: 35,
         gender: 'male',
         fitnessGoal: 'gain_weight',
-        activityLevel: 'low',
+        activityLevel: 'sedentary',
       });
     });
-
+ 
     it('should update profile and recalculate bmi/tdee → 200', async () => {
       const res = await updateAgent.put('/api/profile').send({
         weightKg: 75,
@@ -366,7 +366,7 @@ describe('Profile Endpoints', () => {
         age: 35,
         gender: 'male',
         fitnessGoal: 'maintain',
-        activityLevel: 'medium',
+        activityLevel: 'moderate',
       });
 
       expect(res.status).toBe(200);
@@ -450,7 +450,7 @@ describe('Food Endpoints', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data).toBeDefined();
       expect(res.body.data.name).toBe('Test Protein Shake');
-      expect(res.body.data.is_custom).toBe(1);
+      expect(res.body.data.is_custom).toBe(true);
       expect(res.body.data.calories_per_100g).toBe(120);
     });
 
@@ -564,9 +564,9 @@ describe('Food Endpoints', () => {
         age: 28,
         gender: 'female',
         fitnessGoal: 'maintain',
-        activityLevel: 'medium',
+        activityLevel: 'moderate',
       });
-
+ 
       // Log some food so totalConsumed > 0
       const searchRes = await summaryAgent.get('/api/food/search?q=banana');
       if (searchRes.body.data?.length) {
@@ -736,10 +736,10 @@ describe('Activity Endpoints', () => {
       age: 32,
       gender: 'male',
       fitnessGoal: 'lose_weight',
-      activityLevel: 'high',
+      activityLevel: 'very_active',
     });
   });
-
+ 
   describe('GET /api/activities/recommendations', () => {
     it('should return goal-based activity recommendations → 200 + { activities, count }', async () => {
       const res = await activityAgent.get('/api/activities/recommendations');

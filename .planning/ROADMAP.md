@@ -2,13 +2,13 @@
 
 **Created:** 2026-05-17
 **Updated:** 2026-05-27 (v1.2 Supabase Migration roadmap created)
-**Phases:** 8 complete (v1.1) | 4 planned (v1.2)
+**Phases:** 12 complete (v1.1 + v1.2)
 **Milestones:** 1 shipped (v1.1), 1 active (v1.2)
 
 ## Milestones
 
 - ✅ **v1.1 International Ingredient Logging** — Phases 1-8 (shipped 2026-05-18)
-- 🚧 **v1.2 Supabase Migration** — Phases 9-12 (planning)
+- ✅ **v1.2 Supabase Migration** — Phases 9-12 (shipped 2026-05-28)
 
 ## Phases
 
@@ -26,12 +26,12 @@
 
 </details>
 
-### 🚧 v1.2 Supabase Migration (Planned)
+### ✅ v1.2 Supabase Migration (Shipped 2026-05-28)
 
 - [x] **Phase 9: Supabase Setup & Schema Migration** — Create Supabase project, migrate schema and seed data from MySQL to PostgreSQL (completed 2026-05-27)
 - [x] **Phase 10: Backend Query Rewrite** — Replace mysql2 with pg driver, translate all queries to PostgreSQL syntax (completed 2026-05-28)
 - [x] **Phase 11: Docker Restructure** — Single multi-stage container serving both frontend and backend (completed 2026-05-28)
-- [ ] **Phase 12: Testing & Validation** — Integration tests and full-stack smoke tests against Supabase
+- [x] **Phase 12: Testing & Validation** — Integration tests and full-stack smoke tests against Supabase (completed 2026-05-28)
 
 ## Phase Details
 
@@ -110,10 +110,10 @@
 **Plans**: 4 plans
 
 **Wave 1** *(all parallel — no file conflicts)*:
-- [ ] 12-01-PLAN.md — Backend integration test helpers rewrite + assertion fixes (TST-01)
-- [ ] 12-02-PLAN.md — Frontend test fixes + DATABASE_URL_TEST config (TST-01)
-- [ ] 12-03-PLAN.md — Unit test expansion: dbErrors, profile, auth, activity (TST-01)
-- [ ] 12-04-PLAN.md — Docker smoke test script (TST-02)
+- [x] 12-01-PLAN.md — Backend integration test helpers rewrite + assertion fixes (TST-01) — completed 2026-05-28
+- [x] 12-02-PLAN.md — Frontend test fixes + DATABASE_URL_TEST config (TST-01) — completed 2026-05-28
+- [x] 12-03-PLAN.md — Unit test expansion: dbErrors, profile, auth, activity (TST-01) — completed 2026-05-28
+- [x] 12-04-PLAN.md — Docker smoke test script (TST-02) — completed 2026-05-28
 
 ## Progress
 
@@ -130,8 +130,8 @@
 | 9. Supabase Setup & Schema Migration | v1.2 | 3/3 | Complete   | 2026-05-27 |
 | 10. Backend Query Rewrite | v1.2 | 4/4 | Complete    | 2026-05-28 |
 | 11. Docker Restructure | v1.2 | 2/2 | Complete   | 2026-05-28 |
-| 12. Testing & Validation | v1.2 | 0/4 | Not started | - |
+| 12. Testing & Validation | v1.2 | 4/4 | Complete | 2026-05-28 |
 
 ---
 *Roadmap created: 2026-05-17*
-*Last updated: 2026-05-27 (v1.2 Supabase Migration phases added)*
+*Last updated: 2026-05-28 (v1.2 Supabase Migration shipped)*
