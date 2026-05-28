@@ -72,6 +72,8 @@ export async function login({ email, password }) {
   const user = await findByEmail(email);
   if (!user) {
     // Same message for both cases to prevent email enumeration (T-01-06)
+    // Dummy bcrypt compare to eliminate timing side-channel (WR-08)
+    await bcrypt.compare(password, '$2b$10$' + 'a'.repeat(53));
     throw new AuthenticationError('Invalid email or password');
   }
 
