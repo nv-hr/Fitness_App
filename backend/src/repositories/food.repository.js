@@ -11,13 +11,13 @@ import { AppError } from '../utils/errors.js';
  */
 export async function searchFoods(userId, query, limit = 20) {
   try {
-    const [rows] = await pool.query(
+    const { rows } = await pool.query(
       `SELECT id, name, calories_per_100g, category
        FROM foods
-       WHERE (is_custom = FALSE OR user_id = ?)
-         AND name LIKE ?
+       WHERE (is_custom = FALSE OR user_id = $1)
+         AND name ILIKE $2
        ORDER BY CASE WHEN is_custom = FALSE THEN 0 ELSE 1 END, name
-       LIMIT ?`,
+       LIMIT $3`,
       [userId, `%${query}%`, limit]
     );
     return rows;
@@ -37,18 +37,13 @@ export async function searchFoods(userId, query, limit = 20) {
  */
 export async function createCustomFood(userId, { name, calories_per_100g, category }) {
   try {
-    await pool.query(
-      'INSERT INTO foods (user_id, name, calories_per_100g, category, is_custom) VALUES (?, ?, ?, ?, TRUE)',
+    const { rows } = await pool.query(
+      'INSERT INTO foods (user_id, name, calories_per_100g, category, is_custom) VALUES ($1, $2, $3, $4, TRUE) RETURNING *',
       [userId, name, calories_per_100g, category]
-    );
-    const [rows] = await pool.query(
-      'SELECT * FROM foods WHERE id = LAST_INSERT_ID()'
     );
     return rows[0] || null;
   } catch (err) {
-    if (err.code === 'ER_DUP_ENTRY') {
-      throw new AppError('DuplicateError', 'Makanan sudah ada', 409);
-    }
+    // Error code handling moved to food.controller.js via normalizeDbError()
     throw new AppError('DatabaseError', `Failed to create custom food: ${err.message}`, 500);
   }
 }
@@ -68,13 +63,10 @@ export async function createCustomFood(userId, { name, calories_per_100g, catego
  */
 export async function createFoodLog(userId, { foodId, customFoodName, calories, portionGrams, logDate, mealType }) {
   try {
-    await pool.query(
+    const { rows } = await pool.query(
       `INSERT INTO food_logs (user_id, food_id, custom_food_name, calories, portion_grams, log_date, meal_type)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       [userId, foodId || null, customFoodName || null, calories, portionGrams, logDate, mealType]
-    );
-    const [rows] = await pool.query(
-      'SELECT * FROM food_logs WHERE id = LAST_INSERT_ID()'
     );
     return rows[0] || null;
   } catch (err) {
@@ -90,11 +82,11 @@ export async function createFoodLog(userId, { foodId, customFoodName, calories, 
  */
 export async function getDailyLogs(userId, logDate) {
   try {
-    const [rows] = await pool.query(
+    const { rows } = await pool.query(
       `SELECT fl.*, f.name as food_name, f.calories_per_100g
        FROM food_logs fl
        LEFT JOIN foods f ON fl.food_id = f.id
-       WHERE fl.user_id = ? AND fl.log_date = ?
+       WHERE fl.user_id = $1 AND fl.log_date = $2
        ORDER BY fl.meal_type, fl.created_at`,
       [userId, logDate]
     );
@@ -112,11 +104,11 @@ export async function getDailyLogs(userId, logDate) {
  */
 export async function getDailyTotal(userId, logDate) {
   try {
-    const [rows] = await pool.query(
-      'SELECT COALESCE(SUM(calories), 0) as total FROM food_logs WHERE user_id = ? AND log_date = ?',
+    const { rows } = await pool.query(
+      'SELECT COALESCE(SUM(calories), 0) as total FROM food_logs WHERE user_id = $1 AND log_date = $2',
       [userId, logDate]
     );
-    return rows[0].total || 0;
+    return Number(rows[0].total) || 0;
   } catch (err) {
     throw new AppError('DatabaseError', `Failed to get daily total: ${err.message}`, 500);
   }
@@ -130,10 +122,10 @@ export async function getDailyTotal(userId, logDate) {
  */
 export async function getLogHistory(userId, days = 7) {
   try {
-    const [rows] = await pool.query(
+    const { rows } = await pool.query(
       `SELECT log_date, SUM(calories) as total_calories, COUNT(*) as entry_count
        FROM food_logs
-       WHERE user_id = ? AND log_date >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+       WHERE user_id = $1 AND log_date >= CURRENT_DATE - $2::interval
        GROUP BY log_date
        ORDER BY log_date DESC`,
       [userId, days]
@@ -153,17 +145,17 @@ export async function getLogHistory(userId, days = 7) {
  */
 export async function getRecentFoods(userId, limit = 10) {
   try {
-    const [rows] = await pool.query(
+    const { rows } = await pool.query(
       `SELECT COALESCE(f.name, fl.custom_food_name) as name,
               fl.food_id,
               fl.calories,
               MAX(fl.portion_grams) as last_portion_grams
        FROM food_logs fl
        LEFT JOIN foods f ON fl.food_id = f.id
-       WHERE fl.user_id = ?
+       WHERE fl.user_id = $1
        GROUP BY COALESCE(f.name, fl.custom_food_name), fl.food_id, fl.calories
        ORDER BY MAX(fl.log_date) DESC, MAX(fl.created_at) DESC
-       LIMIT ?`,
+       LIMIT $2`,
       [userId, limit]
     );
     return rows;
@@ -180,11 +172,11 @@ export async function getRecentFoods(userId, limit = 10) {
  */
 export async function countFoods({ is_custom }) {
   try {
-    const [rows] = await pool.query(
-      'SELECT COUNT(*) as count FROM foods WHERE is_custom = ?',
-      [is_custom ? 1 : 0]
+    const { rows } = await pool.query(
+      'SELECT COUNT(*) as count FROM foods WHERE is_custom = $1',
+      [is_custom]
     );
-    return rows[0].count || 0;
+    return Number(rows[0].count) || 0;
   } catch (err) {
     throw new AppError('DatabaseError', `Failed to count foods: ${err.message}`, 500);
   }
@@ -199,14 +191,14 @@ export async function countFoods({ is_custom }) {
  */
 export async function findByCategory(category, { is_custom } = {}) {
   try {
-    let query = 'SELECT COUNT(*) as count FROM foods WHERE category = ?';
+    let query = 'SELECT COUNT(*) as count FROM foods WHERE category = $1';
     const params = [category];
     if (is_custom !== undefined) {
-      query += ' AND is_custom = ?';
-      params.push(is_custom ? 1 : 0);
+      query += ' AND is_custom = $2';
+      params.push(is_custom);
     }
-    const [rows] = await pool.query(query, params);
-    return rows[0].count || 0;
+    const { rows } = await pool.query(query, params);
+    return Number(rows[0].count) || 0;
   } catch (err) {
     throw new AppError('DatabaseError', `Failed to find foods by category: ${err.message}`, 500);
   }
@@ -219,8 +211,8 @@ export async function findByCategory(category, { is_custom } = {}) {
  */
 export async function getFoodById(foodId) {
   try {
-    const [rows] = await pool.query(
-      'SELECT * FROM foods WHERE id = ? LIMIT 1',
+    const { rows } = await pool.query(
+      'SELECT * FROM foods WHERE id = $1 LIMIT 1',
       [foodId]
     );
     return rows[0] || null;
