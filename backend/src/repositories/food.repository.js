@@ -125,7 +125,7 @@ export async function getLogHistory(userId, days = 7) {
     const { rows } = await pool.query(
       `SELECT log_date, SUM(calories) as total_calories, COUNT(*) as entry_count
        FROM food_logs
-       WHERE user_id = $1 AND log_date >= CURRENT_DATE - $2::interval
+       WHERE user_id = $1 AND log_date >= CURRENT_DATE - $2
        GROUP BY log_date
        ORDER BY log_date DESC`,
       [userId, days]
