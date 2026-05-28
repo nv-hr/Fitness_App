@@ -160,6 +160,18 @@ const TEST_PROFILE = {
 };
 
 /**
+ * Extract only the name=value portion from a Set-Cookie header.
+ * Cookie attributes (HttpOnly, Path=/, Max-Age=..., SameSite=...) are not
+ * valid in Cookie request headers per RFC 6265.
+ * @param {string|null} setCookieHeader
+ * @returns {string|null}
+ */
+function extractCookieValue(setCookieHeader) {
+  if (!setCookieHeader) return null;
+  return setCookieHeader.split(';')[0]; // "token=abc123"
+}
+
+/**
  * Sends a JSON request and returns parsed body + response metadata.
  */
 async function jsonRequest(path, { method = 'GET', body, cookie } = {}) {
@@ -189,7 +201,7 @@ async function registerAndGetCookie(overrides = {}) {
     method: 'POST',
     body: user,
   });
-  return { cookie: setCookie, user };
+  return { cookie: extractCookieValue(setCookie), user };
 }
 
 // ──────────────────────────────────────────────
@@ -259,7 +271,7 @@ describe('Frontend API Integration — Auth', () => {
       body: { ...TEST_USER, email: `${UNIQUE}-getme@test.dev` },
     });
 
-    const { status, data } = await jsonRequest('/api/auth/me', { cookie: setCookie });
+    const { status, data } = await jsonRequest('/api/auth/me', { cookie: extractCookieValue(setCookie) });
     expect(status).toBe(200);
     // Backend returns user fields directly in `data`, not nested under `data.user`
     expect(data).toMatchObject({ success: true, data: { id: expect.any(Number), email: expect.any(String) } });
@@ -272,23 +284,22 @@ describe('Frontend API Integration — Auth', () => {
   });
 
   it('logout() clears cookie', async () => {
-    const { setCookie: authCookie } = await jsonRequest('/api/auth/register', {
+    const { setCookie } = await jsonRequest('/api/auth/register', {
       method: 'POST',
       body: { ...TEST_USER, email: `${UNIQUE}-logout@test.dev` },
     });
 
-    const { status, data, setCookie } = await jsonRequest('/api/auth/logout', {
+    const { status, data, setCookie: logoutCookie } = await jsonRequest('/api/auth/logout', {
       method: 'POST',
-      cookie: authCookie,
+      cookie: extractCookieValue(setCookie),
     });
     expect(status).toBe(200);
     expect(data).toMatchObject({ success: true });
 
     // Verify cookie cleared (empty or expired)
-    if (setCookie) {
-      expect(setCookie).toContain('token=');
-      expect(setCookie).toMatch(/Max-Age=0|expires=Thu, 01 Jan 1970/i);
-    }
+    expect(logoutCookie).toBeTruthy();
+    expect(logoutCookie).toContain('token=');
+    expect(logoutCookie).toMatch(/Max-Age=0|expires=Thu, 01 Jan 1970/i);
   });
 });
 
