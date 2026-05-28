@@ -77,7 +77,7 @@ export async function getMe(req, res, next) {
     return successResponse(res, {
       id: user.id,
       email: user.email,
-      pdp_consent: user.pdp_consent === 1,
+      pdp_consent: user.pdp_consent === true,
       created_at: user.created_at,
     });
   } catch (err) {
