@@ -4,7 +4,7 @@ milestone: v1.2
 milestone_name: Supabase Migration
 status: completed
 stopped_at: Milestone v1.2 complete — all phases executed
-last_updated: "2026-05-28T12:45:00.000Z"
+last_updated: "2026-05-28T12:50:00.000Z"
 last_activity: 2026-05-28
 progress:
   total_phases: 5
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-27)
 Phase: 12 (testing-validation) — COMPLETE
 Plans: 4 of 4 created, 4 of 4 executed
 Status: Executed
-Last activity: 2026-05-28 - Completed quick task 260528-k79: fix JSON parse error when saving profile from frontend with Google OAuth
+Last activity: 2026-05-28 - Completed quick task 260528-kj4: fix calorie history date returning NaN after inserting new food log
 
 Progress: [██████████] 100%
 
@@ -207,6 +207,7 @@ None yet — first v1.2 planning session.
 | 260528-3eg | add unfullfilled spec as a new milestone | 2026-05-27 | 44edebb | [260528-3eg-add-unfullfilled-spec-as-a-new-milestone](./quick/260528-3eg-add-unfullfilled-spec-as-a-new-milestone/) |
 | 260528-849 | fix SPA catch-all ENOENT on backend "/" routes | 2026-05-28 | 4532ce5 | [260528-849-spa-catchall-enoent](./quick/260528-849-spa-catchall-enoent/) |
 | 260528-k79 | fix JSON parse error when saving profile from frontend with Google OAuth | 2026-05-28 | cd519af, 0218ac9 | [260528-k79-fix-json-parse-error-when-saving-profile](./quick/260528-k79-fix-json-parse-error-when-saving-profile/) |
+| 260528-kj4 | fix calorie history date returning NaN after inserting new food log | 2026-05-28 | eee8d3a, 7e8bd70 | [260528-kj4-fix-calorie-history-date-returning-nan-a](./quick/260528-kj4-fix-calorie-history-date-returning-nan-a/) |
 
 ## Deferred Items
 
