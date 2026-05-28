@@ -12,6 +12,7 @@ import authController from './controllers/auth.controller.js';
 import profileRoutes from './routes/profile.routes.js';
 import foodRoutes from './routes/food.routes.js';
 import activityRoutes from './routes/activity.routes.js';
+import docsRoutes from './routes/docs.routes.js';
 import { errorResponse } from './utils/response.js';
 
 const app = express();
@@ -90,6 +91,9 @@ app.use('/api/auth/register', authLimiter);
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// API documentation — no auth or rate limiting required
+app.use('/api/docs', docsRoutes);
 
 // === Routes ===
 
