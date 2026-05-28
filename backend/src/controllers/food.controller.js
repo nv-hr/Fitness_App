@@ -1,6 +1,5 @@
 import * as foodRepo from '../repositories/food.repository.js';
 import { successResponse, errorResponse } from '../utils/response.js';
-import { normalizeDbError } from '../utils/dbErrors.js';
 import { ValidationError } from '../utils/errors.js';
 import { calculateCalories, validateFoodData, validateCustomFoodData } from '../services/food.service.js';
 import { findByUserId as findProfileByUserId } from '../repositories/profile.repository.js';
