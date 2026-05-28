@@ -29,7 +29,7 @@
 ### 🚧 v1.2 Supabase Migration (Planned)
 
 - [x] **Phase 9: Supabase Setup & Schema Migration** — Create Supabase project, migrate schema and seed data from MySQL to PostgreSQL (completed 2026-05-27)
-- [ ] **Phase 10: Backend Query Rewrite** — Replace mysql2 with pg driver, translate all queries to PostgreSQL syntax
+- [x] **Phase 10: Backend Query Rewrite** — Replace mysql2 with pg driver, translate all queries to PostgreSQL syntax (completed 2026-05-28)
 - [ ] **Phase 11: Docker Restructure** — Single multi-stage container serving both frontend and backend
 - [ ] **Phase 12: Testing & Validation** — Integration tests and full-stack smoke tests against Supabase
 
@@ -71,12 +71,12 @@
 **Plans**: 4 plans
 
 **Wave 1** *(no dependencies)*:
-- [ ] 10-01-PLAN.md — Connection layer rewrite: pg Pool, error mapper, mysql2 removal (QRY-01, QRY-05)
+- [x] 10-01-PLAN.md — Connection layer rewrite: pg Pool, error mapper, mysql2 removal (QRY-01, QRY-05)
 
 **Wave 2** *(blocked on Wave 1 completion — parallel)*:
-- [ ] 10-02-PLAN.md — Food repository + controller error handling (QRY-02)
-- [ ] 10-03-PLAN.md — Profile + user repository rewrite (QRY-03)
-- [ ] 10-04-PLAN.md — Activity repository rewrite + full grep sweep (QRY-04, QRY-05)
+- [x] 10-02-PLAN.md — Food repository + controller error handling (QRY-02)
+- [x] 10-03-PLAN.md — Profile + user repository rewrite (QRY-03)
+- [x] 10-04-PLAN.md — Activity repository rewrite + full grep sweep (QRY-04, QRY-05)
 
 **Cross-cutting constraints:**
 - QRY-05 (mysql2 pattern sweep) is split across Wave 1 (error mapper + .env cleanup), Wave 2 per-repo (syntax translation), and Wave 2 final sweep (Activity plan grep verification)
@@ -118,7 +118,7 @@
 | 7. Ingredient Logging & Calorie Calculation | v1.1 | 3/3 | Complete | 2026-05-18 |
 | 8. English UI Migration | v1.1 | 3/3 | Complete | 2026-05-18 |
 | 9. Supabase Setup & Schema Migration | v1.2 | 3/3 | Complete   | 2026-05-27 |
-| 10. Backend Query Rewrite | v1.2 | 0/0 | Not started | - |
+| 10. Backend Query Rewrite | v1.2 | 4/4 | Complete    | 2026-05-28 |
 | 11. Docker Restructure | v1.2 | 0/0 | Not started | - |
 | 12. Testing & Validation | v1.2 | 0/0 | Not started | - |
 

@@ -16,11 +16,11 @@ Requirements for v1.2 Supabase Migration milestone.
 
 ### Backend Query Rewrite
 
-- [ ] **QRY-01**: mysql2 driver replaced with pg (node-postgres) in database.js
-- [ ] **QRY-02**: Food repository rewritten with PostgreSQL-compatible queries (RETURNING *, $1 placeholders)
-- [ ] **QRY-03**: Profile and user repositories rewritten with PostgreSQL-compatible queries
-- [ ] **QRY-04**: Activity repository rewritten with PostgreSQL-compatible queries (including JSON_OVERLAPS → ?| operator)
-- [ ] **QRY-05**: All MySQL-specific SQL patterns grepped and translated ($1, RETURNING, boolean, error codes, date functions)
+- [x] **QRY-01**: mysql2 driver replaced with pg (node-postgres) in database.js
+- [x] **QRY-02**: Food repository rewritten with PostgreSQL-compatible queries (RETURNING *, $1 placeholders)
+- [x] **QRY-03**: Profile and user repositories rewritten with PostgreSQL-compatible queries
+- [x] **QRY-04**: Activity repository rewritten with PostgreSQL-compatible queries (including JSON_OVERLAPS → ?| operator)
+- [x] **QRY-05**: All MySQL-specific SQL patterns grepped and translated ($1, RETURNING, boolean, error codes, date functions)
 
 ### Docker Restructure
 
@@ -67,11 +67,11 @@ Deferred to future release.
 | SUP-02 | Phase 9 | Complete |
 | SUP-03 | Phase 9 | Complete |
 | SUP-04 | Phase 9 | Complete |
-| QRY-01 | Phase 10 | Pending |
-| QRY-02 | Phase 10 | Pending |
-| QRY-03 | Phase 10 | Pending |
-| QRY-04 | Phase 10 | Pending |
-| QRY-05 | Phase 10 | Pending |
+| QRY-01 | Phase 10 | Complete |
+| QRY-02 | Phase 10 | Complete |
+| QRY-03 | Phase 10 | Complete |
+| QRY-04 | Phase 10 | Complete |
+| QRY-05 | Phase 10 | Complete |
 | DKR-01 | Phase 11 | Pending |
 | DKR-02 | Phase 11 | Pending |
 | DKR-03 | Phase 11 | Pending |
