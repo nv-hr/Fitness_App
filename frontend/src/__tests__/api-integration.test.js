@@ -19,7 +19,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { fork } from 'child_process';
+import { fork, execSync } from 'child_process';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import net from 'net';
@@ -68,7 +68,6 @@ function waitForBackend(timeout = STARTUP_TIMEOUT) {
  */
 function killPort(port) {
   return new Promise((resolve_) => {
-    const { execSync } = require('child_process');
     try {
       const stdout = execSync(
         `netstat -ano | findstr :${port}`,
