@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Supabase Migration
 status: completed
-stopped_at: Phase 12 context gathered
-last_updated: "2026-05-28T05:34:19.295Z"
+stopped_at: Milestone v1.2 complete — all phases executed
+last_updated: "2026-05-28T12:45:00.000Z"
 last_activity: 2026-05-28
 progress:
-  total_phases: 4
-  completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
-  percent: 75
+  total_phases: 5
+  completed_phases: 5
+  total_plans: 13
+  completed_plans: 13
+  percent: 100
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-27)
 
 **Core value:** Users can accurately calculate their BMI and TDEE, log daily food intake by ingredients, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
-**Current focus:** Phase 12 — Testing & Validation (planned, pending execution)
+**Current focus:** Milestone v1.2 complete — Supabase migration finished
 
 ## Current Position
 
-Phase: 12 (testing-validation) — PLANS CREATED
-Plans: 4 of 4 created, 0 of 4 executed
-Status: Ready for execution
-Last activity: 2026-05-28
+Phase: 12 (testing-validation) — COMPLETE
+Plans: 4 of 4 created, 4 of 4 executed
+Status: Executed
+Last activity: 2026-05-28 - Completed quick task 260528-849: fix SPA catch-all ENOENT on backend "/" routes
 
 Progress: [██████████] 100%
 
@@ -48,12 +48,13 @@ Progress: [██████████] 100%
 | 09 | 3 | - | - |
 | 10 | 4 | - | - |
 | 11 | 2 | 2 | — |
- | 12 | 4 | 0 | — |
+ | 12 | 4 | 4 | — |
 
 **Recent Trend:**
 
 - v1.1 complete: 23 plans across 8 phases
-- v1.2 starting: 4 new phases for Supabase migration
+- v1.2 complete: 5 phases for Supabase migration
+- Total plans: 13 (9 existing v1.1 + 4 Phase 12)
 
 | Phase 09 P01 | 3 min | 2 tasks | 2 files |
 | Phase 09-supabase-setup-schema-migration P02 | 2 min | 2 tasks | 5 files |
@@ -204,6 +205,7 @@ None yet — first v1.2 planning session.
 |---|-------------|------|--------|-----------|
 | 260527-l8m | test the supabase connection | 2026-05-27 | 1fcb05c | [260527-l8m-test-the-supabase-connection](./quick/260527-l8m-test-the-supabase-connection/) |
 | 260528-3eg | add unfullfilled spec as a new milestone | 2026-05-27 | 44edebb | [260528-3eg-add-unfullfilled-spec-as-a-new-milestone](./quick/260528-3eg-add-unfullfilled-spec-as-a-new-milestone/) |
+| 260528-849 | fix SPA catch-all ENOENT on backend "/" routes | 2026-05-28 | pending | [260528-849-spa-catchall-enoent](./quick/260528-849-spa-catchall-enoent/) |
 
 ## Deferred Items
 

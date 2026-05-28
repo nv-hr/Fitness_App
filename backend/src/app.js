@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import compression from 'compression';
+import fs from 'fs';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import passport from './config/passport.js';
@@ -131,8 +132,13 @@ app.use(express.static('public'));
 
 // SPA catch-all — return index.html for non-API GET requests (client-side routing)
 // Must go AFTER all /api/* routes but BEFORE the 404 handler
+// Gracefully skip if frontend hasn't been built (dev mode)
 app.use((req, res, next) => {
   if (req.method !== 'GET' || req.path.startsWith('/api')) {
+    return next();
+  }
+  const indexPath = 'public/index.html';
+  if (!fs.existsSync(indexPath)) {
     return next();
   }
   res.sendFile('index.html', { root: 'public' });
