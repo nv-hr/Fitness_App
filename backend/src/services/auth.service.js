@@ -76,6 +76,10 @@ export async function login({ email, password }) {
   }
 
   // Compare password
+  if (!user.password_hash) {
+    // OAuth user has no password — can't log in via email/password
+    throw new AuthenticationError('Invalid email or password');
+  }
   const isMatch = await bcrypt.compare(password, user.password_hash);
   if (!isMatch) {
     throw new AuthenticationError('Invalid email or password');
