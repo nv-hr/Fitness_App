@@ -54,7 +54,7 @@ export async function register({ email, password, pdpConsent }) {
     user: {
       id: user.id,
       email: user.email,
-      pdpConsent: user.pdp_consent === true,
+      pdp_consent: user.pdp_consent === true,
     },
     token,
   };
@@ -92,7 +92,7 @@ export async function login({ email, password }) {
     user: {
       id: user.id,
       email: user.email,
-      pdpConsent: user.pdp_consent === true,
+      pdp_consent: user.pdp_consent === true,
     },
     token,
   };
@@ -128,7 +128,7 @@ export async function handleGoogleOAuth({ googleId, email, displayName }) {
     user: {
       id: user.id,
       email: user.email,
-      pdpConsent: user.pdp_consent === true,
+      pdp_consent: user.pdp_consent === true,
     },
     token,
   };
