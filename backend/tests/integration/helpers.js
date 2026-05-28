@@ -4,11 +4,11 @@
  * Starts MySQL via docker-compose, creates test users, and seeds profile/food data
  * so that every backend endpoint can be exercised against a real database.
  *
+ * NODE_ENV=test is now set in jest.setup.js (setupFiles), which runs before any
+ * module imports are evaluated, so rate limiters are created with test settings.
+ *
  * @module helpers
  */
-
-// Set test environment before app imports (disables aggressive rate limits)
-process.env.NODE_ENV = 'test';
 
 import { execSync } from 'child_process';
 import { setTimeout } from 'timers/promises';
