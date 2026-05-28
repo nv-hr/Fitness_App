@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Supabase Migration
-status: completed
-stopped_at: Milestone v1.2 complete — all phases executed
-last_updated: "2026-05-28T12:50:00.000Z"
+status: shipped
+stopped_at: Milestone v1.2 shipped — archived and tagged
+last_updated: "2026-05-28T15:00:00.000Z"
 last_activity: 2026-05-28
 progress:
   total_phases: 5

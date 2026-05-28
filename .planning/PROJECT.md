@@ -8,22 +8,14 @@ A web-based health application that helps users monitor their body condition thr
 
 Users can accurately calculate their BMI and TDEE, log daily food intake by selecting ingredients and entering weight in grams, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
 
-## Current Milestone: v1.2 Supabase Migration
+## Current Milestone: TBD (Next)
 
-**Goal:** Migrate application database from local MySQL to Supabase (managed PostgreSQL), create Supabase project, and simplify Docker infrastructure to a single full-stack container.
-
-**Target features:**
-- Create and configure Supabase project
-- Migrate database schema from MySQL to PostgreSQL
-- Rewrite backend database layer from mysql2 to PostgreSQL driver
-- Build and deploy single container serving both backend and frontend
+**Goal:** Define next milestone scope.
 
 ## Current State
 
-**Shipped:** v1.1 International Ingredient Logging (2026-05-18)
-**Phases:** 9 complete | **Plans:** 26 | **Tasks:** 28
-**LOC:** ~1,228 insertions across 18 files in v1.1
-**Active:** v1.2 Supabase Migration — Phase 9 complete (2026-05-27) | Phase 10 complete (2026-05-28)
+**Shipped:** v1.2 Supabase Migration (2026-05-28)
+**Phases:** 12 complete (v1.1: Phases 1-8, v1.2: Phases 9-12) | **Plans:** 39 | **Commits:** 87
 
 ## Requirements
 
@@ -59,10 +51,16 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 - ✓ Food, profile, user, and activity repositories use PostgreSQL syntax ($1 placeholders, RETURNING *, RANDOM(), ?| operator) — v1.2 Phase 10
 - ✓ All pdp_consent boolean comparisons use `=== true` for PostgreSQL BOOLEAN type — v1.2 Phase 10
 - ✓ Zero MySQL patterns remain in backend/src/ source files — v1.2 Phase 10
+- ✓ Supabase PostgreSQL connection via pg Pool with SSL — v1.2 Phase 10
+- ✓ normalizeDbError() maps PostgreSQL SQLSTATE (23505, 23503, 23502, 23514) — v1.2 Phase 10
+- ✓ mysql2 dependency removed; pg is the only database driver — v1.2 Phase 10
+- ✓ Docker: single multi-stage container, Express serves React — v1.2 Phase 11
+- ✓ Integration tests pass against Supabase PostgreSQL — v1.2 Phase 12
+- ✓ Full-stack smoke test script validates build + API + frontend — v1.2 Phase 12
 
 ### Active
 
-(TBD — define during milestone scoping)
+(TBD — define during next milestone scoping)
 
 ### Out of Scope
 
@@ -71,6 +69,12 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 - Social features (sharing, community) — not core to individual health tracking
 - Advanced nutrition data (macros, vitamins) — calories only
 - Meal/recipe logging — ingredient-level only for now
+- Supabase Auth (replacing JWT) — current auth works, migration adds risk
+- Supabase Realtime subscriptions — no real-time features needed
+- Row Level Security (RLS) — server-side-only architecture
+- ORM (Prisma/Drizzle) — repository pattern with raw SQL is sufficient
+- nginx/Caddy reverse proxy — unnecessary at this scale
+- Zero-downtime migration — fresh Supabase start assumed
 
 ## Context
 
@@ -87,6 +91,7 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 - **Food database**: 201 international ingredients across 8 English categories + custom ingredient entry
 - **v1.0 shipped**: 5 phases complete, 38/38 UAT tests passed, backend live-tested
 - **v1.1 shipped**: 3 phases complete (6-8), 23 total plans, 1,228 insertions across 18 files
+- **v1.2 shipped**: 4 phases complete (9-12), 13 plans, 87 commits, 62 files changed (+4419 / −428)
 
 ## Constraints
 
@@ -117,6 +122,9 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 | No RLS | Keep server-side-only auth; skip RLS complexity | ✓ Good — v1.2 Phase 9 |
 | DO $$ blocks for portable ENUM creation | CREATE TYPE IF NOT EXISTS requires PG 14+; DO $$ block works on all versions | ✓ Good — v1.2 Phase 9 |
 | psql for schema/seed execution | Avoids Supabase SQL Editor 1MB limit; preferred over supabase db push | ✓ Good — v1.2 Phase 9 |
+| Multi-stage Dockerfile with final stage Node image | Single container reduces infra complexity; no nginx needed for SPA | ✓ Good — v1.2 Phase 11 |
+| Express.static() + SPA catch-all for frontend serving | Keeps stack simple; no separate frontend server needed | ✓ Good — v1.2 Phase 11 |
+| DATABASE_URL_TEST for integration test isolation | Tests use dedicated test schema; no collision with dev/prod data | ✓ Good — v1.2 Phase 12 |
 
 ## Evolution
 
@@ -136,4 +144,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-28 after Phase 10 execution*
+*Last updated: 2026-05-28 after v1.2 Supabase Migration shipped*
