@@ -45,7 +45,7 @@ const createRateLimiter = (options = {}) => {
   return rateLimit({
     windowMs: isTest ? testWindowMs : windowMs,
     max: isTest ? testMax : max,
-    message,
+    message: { success: false, error: { message, code: 'RATE_LIMITED' } },
   });
 };
 
