@@ -1,19 +1,16 @@
-import { createPool } from 'mysql2/promise';
+import { Pool } from 'pg';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-export const pool = createPool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 3306,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME || 'fitness_app',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: true },
+  max: 10,
+  connectionTimeoutMillis: 5000,
+  idleTimeoutMillis: 30000,
 });
 
 pool.on('error', (err) => {
-  console.error('MySQL connection pool error:', err.message);
+  console.error('Database pool error:', err.message);
 });
