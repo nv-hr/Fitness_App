@@ -96,7 +96,7 @@
 
 **Wave 1** *(parallel — no dependencies)*:
 - [x] 11-01-PLAN.md — Container infrastructure: .dockerignore, multi-stage Dockerfile, simplified compose (DKR-01, DKR-03) — completed 2026-05-28
-- [x] 11-02-PLAN.md — Application integration: Express static serving + SPA catch-all, remove frontend/Dockerfile (DKR-02)
+- [x] 11-02-PLAN.md — Application integration: Express static serving + SPA catch-all, remove frontend/Dockerfile (DKR-02) — completed 2026-05-28
 
 ### Phase 12: Testing & Validation
 **Goal**: Migration is validated through automated integration tests and manual full-stack smoke tests
