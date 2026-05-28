@@ -15,6 +15,22 @@ import { errorResponse } from './utils/response.js';
 
 const app = express();
 
+// Validate and sanitize FRONTEND_URL for CORS and OAuth redirects (WR-02)
+const parseFrontendUrl = (url) => {
+  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+  try {
+    const parsed = new URL(FRONTEND_URL);
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      throw new Error('Invalid FRONTEND_URL protocol');
+    }
+    return FRONTEND_URL;
+  } catch {
+    console.error('Invalid FRONTEND_URL:', FRONTEND_URL);
+    return 'http://localhost:5173'; // safe fallback
+  }
+};
+const FRONTEND_URL = parseFrontendUrl();
+
 // === Middleware (order matters) ===
 
 // 1. Security headers
@@ -23,7 +39,7 @@ app.use(helmet());
 // 2. CORS with credentials (required for httpOnly cookie sending)
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: FRONTEND_URL,
     credentials: true,
   })
 );
@@ -116,7 +132,7 @@ app.get(
   '/api/auth/google/callback',
   passport.authenticate('google', {
     session: false,
-    failureRedirect: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/login',
+    failureRedirect: FRONTEND_URL + '/login',
   }),
   authController.googleCallback
 );
