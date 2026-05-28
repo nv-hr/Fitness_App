@@ -91,8 +91,12 @@
   1. Multi-stage Dockerfile builds frontend (npm run build) in a build stage and copies the output to the backend's public directory in the final stage
   2. Express serves React static files via express.static() with an SPA catch-all route for client-side routing
   3. docker-compose.yml contains only one service (backend) — no MySQL, no Adminer
-  4. Single container starts on one port and both API routes (e.g., /api/health) and frontend (e.g., /login) are accessible
-**Plans**: TBD
+   4. Single container starts on one port and both API routes (e.g., /api/health) and frontend (e.g., /login) are accessible
+**Plans**: 2 plans
+
+**Wave 1** *(parallel — no dependencies)*:
+- [ ] 11-01-PLAN.md — Container infrastructure: .dockerignore, multi-stage Dockerfile, simplified compose (DKR-01, DKR-03)
+- [ ] 11-02-PLAN.md — Application integration: Express static serving + SPA catch-all, remove frontend/Dockerfile (DKR-02)
 
 ### Phase 12: Testing & Validation
 **Goal**: Migration is validated through automated integration tests and manual full-stack smoke tests
@@ -119,7 +123,7 @@
 | 8. English UI Migration | v1.1 | 3/3 | Complete | 2026-05-18 |
 | 9. Supabase Setup & Schema Migration | v1.2 | 3/3 | Complete   | 2026-05-27 |
 | 10. Backend Query Rewrite | v1.2 | 4/4 | Complete    | 2026-05-28 |
-| 11. Docker Restructure | v1.2 | 0/0 | Not started | - |
+| 11. Docker Restructure | v1.2 | 0/2 | Not started | - |
 | 12. Testing & Validation | v1.2 | 0/0 | Not started | - |
 
 ---
