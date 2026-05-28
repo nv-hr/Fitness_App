@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-27)
 Phase: 12 (testing-validation) — COMPLETE
 Plans: 4 of 4 created, 4 of 4 executed
 Status: Executed
-Last activity: 2026-05-28 - Completed quick task 260528-ksa: convert log_date to local timezone date string instead of UTC-based toISOString
+Last activity: 2026-05-28 - Completed quick task 260528-lyd: create API docs endpoint and comprehensive backend documentation
 
 Progress: [██████████] 100%
 
@@ -211,6 +211,7 @@ None yet — first v1.2 planning session.
 | 260528-ksa | convert log_date to local timezone date string instead of UTC-based toISOString | 2026-05-28 | 2f20566 | [260528-ksa-convert-log-date-to-local-timezone-date-](./quick/260528-ksa-convert-log-date-to-local-timezone-date-/) |
 | 260528-l3x | delete supabase/migrations/ (schema already in cloud DB) | 2026-05-28 | 85146c7 | [260528-l3x-delete-supabase-folder-from-root](./quick/260528-l3x-delete-supabase-folder-from-root/) |
 | 260528-l8c | update backend/.env.example with missing env vars | 2026-05-28 | 81753c6 | [260528-l8c-update-backend-env-example-with-missing-](./quick/260528-l8c-update-backend-env-example-with-missing-/) |
+| 260528-lyd | create API docs endpoint and comprehensive docs | 2026-05-28 | 24ec758, 5889d2f | [260528-lyd-create-an-api-enpoint-that-return-a-docu](./quick/260528-lyd-create-an-api-enpoint-that-return-a-docu/) |
 
 ## Deferred Items
 
