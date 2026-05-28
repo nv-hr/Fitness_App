@@ -209,6 +209,7 @@ None yet — first v1.2 planning session.
 | 260528-k79 | fix JSON parse error when saving profile from frontend with Google OAuth | 2026-05-28 | cd519af, 0218ac9 | [260528-k79-fix-json-parse-error-when-saving-profile](./quick/260528-k79-fix-json-parse-error-when-saving-profile/) |
 | 260528-kj4 | fix calorie history date returning NaN after inserting new food log | 2026-05-28 | eee8d3a, 7e8bd70 | [260528-kj4-fix-calorie-history-date-returning-nan-a](./quick/260528-kj4-fix-calorie-history-date-returning-nan-a/) |
 | 260528-ksa | convert log_date to local timezone date string instead of UTC-based toISOString | 2026-05-28 | 2f20566 | [260528-ksa-convert-log-date-to-local-timezone-date-](./quick/260528-ksa-convert-log-date-to-local-timezone-date-/) |
+| 260528-l3x | delete supabase/migrations/ (schema already in cloud DB) | 2026-05-28 | 85146c7 | [260528-l3x-delete-supabase-folder-from-root](./quick/260528-l3x-delete-supabase-folder-from-root/) |
 
 ## Deferred Items
 
