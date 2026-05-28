@@ -210,6 +210,7 @@ None yet — first v1.2 planning session.
 | 260528-kj4 | fix calorie history date returning NaN after inserting new food log | 2026-05-28 | eee8d3a, 7e8bd70 | [260528-kj4-fix-calorie-history-date-returning-nan-a](./quick/260528-kj4-fix-calorie-history-date-returning-nan-a/) |
 | 260528-ksa | convert log_date to local timezone date string instead of UTC-based toISOString | 2026-05-28 | 2f20566 | [260528-ksa-convert-log-date-to-local-timezone-date-](./quick/260528-ksa-convert-log-date-to-local-timezone-date-/) |
 | 260528-l3x | delete supabase/migrations/ (schema already in cloud DB) | 2026-05-28 | 85146c7 | [260528-l3x-delete-supabase-folder-from-root](./quick/260528-l3x-delete-supabase-folder-from-root/) |
+| 260528-l8c | update backend/.env.example with missing env vars | 2026-05-28 | 81753c6 | [260528-l8c-update-backend-env-example-with-missing-](./quick/260528-l8c-update-backend-env-example-with-missing-/) |
 
 ## Deferred Items
 
