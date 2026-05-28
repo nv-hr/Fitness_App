@@ -13,4 +13,11 @@ export const pool = new Pool({
 
 pool.on('error', (err) => {
   console.error('Database pool error:', err.message);
+  // Log additional context for fatal errors (ECONNREFUSED, ENOTFOUND, etc.)
+  if (err.code) {
+    console.error(`  [code: ${err.code}]`);
+  }
+  if (err.stack) {
+    console.error(`  ${err.stack.split('\n').slice(0, 3).join('\n')}`);
+  }
 });
