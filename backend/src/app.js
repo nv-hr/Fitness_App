@@ -31,6 +31,23 @@ const parseFrontendUrl = (url) => {
 };
 const FRONTEND_URL = parseFrontendUrl();
 
+// Rate limiter helper to reduce boilerplate (IN-01)
+const createRateLimiter = (options = {}) => {
+  const {
+    windowMs = 15 * 60 * 1000,
+    max = 100,
+    message = 'Too many requests',
+    testMax = 1000,
+    testWindowMs = 1000,
+  } = options;
+  const isTest = process.env.NODE_ENV === 'test';
+  return rateLimit({
+    windowMs: isTest ? testWindowMs : windowMs,
+    max: isTest ? testMax : max,
+    message,
+  });
+};
+
 // === Middleware (order matters) ===
 
 // 1. Security headers
@@ -60,23 +77,11 @@ app.use(cookieParser());
 app.use(passport.initialize());
 
 // 8. General rate limiter for /api/ routes
-const limiterConfig = (process.env.NODE_ENV === 'test')
-  ? { windowMs: 1000, max: 1000 }
-  : { windowMs: 15 * 60 * 1000, max: 100 };
-const limiter = rateLimit({
-  ...limiterConfig,
-  message: 'Too many requests',
-});
+const limiter = createRateLimiter();
 app.use('/api/', limiter);
 
 // 9. Stricter rate limiter for auth endpoints (T-01-06, T-01-10)
-const authLimiterConfig = (process.env.NODE_ENV === 'test')
-  ? { windowMs: 1000, max: 100 }
-  : { windowMs: 15 * 60 * 1000, max: 10 };
-const authLimiter = rateLimit({
-  ...authLimiterConfig,
-  message: 'Too many auth attempts',
-});
+const authLimiter = createRateLimiter({ max: 10, message: 'Too many auth attempts', testMax: 100 });
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
@@ -91,35 +96,17 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 
 // Profile API routes — stricter rate limiter for user data endpoints
-const profileLimiterConfig = (process.env.NODE_ENV === 'test')
-  ? { windowMs: 1000, max: 1000 }
-  : { windowMs: 15 * 60 * 1000, max: 15 };
-const profileLimiter = rateLimit({
-  ...profileLimiterConfig,
-  message: 'Too many profile requests',
-});
+const profileLimiter = createRateLimiter({ max: 15, message: 'Too many profile requests' });
 app.use('/api/profile', profileLimiter);
 app.use('/api/profile', profileRoutes);
 
 // Food API routes — higher rate limit for search-as-you-type (T-04-08)
-const foodLimiterConfig = (process.env.NODE_ENV === 'test')
-  ? { windowMs: 1000, max: 1000 }
-  : { windowMs: 15 * 60 * 1000, max: 200 };
-const foodLimiter = rateLimit({
-  ...foodLimiterConfig,
-  message: 'Too many food requests',
-});
+const foodLimiter = createRateLimiter({ max: 200, message: 'Too many food requests' });
 app.use('/api/food', foodLimiter);
 app.use('/api/food', foodRoutes);
 
 // Activity API routes — rate limiter for ORDER BY RAND() queries (T-05-07)
-const activityLimiterConfig = (process.env.NODE_ENV === 'test')
-  ? { windowMs: 1000, max: 1000 }
-  : { windowMs: 15 * 60 * 1000, max: 60 };
-const activityLimiter = rateLimit({
-  ...activityLimiterConfig,
-  message: 'Too many activity requests',
-});
+const activityLimiter = createRateLimiter({ max: 60, message: 'Too many activity requests' });
 app.use('/api/activities', activityLimiter);
 app.use('/api/activities', activityRoutes);
 
