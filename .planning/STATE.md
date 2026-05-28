@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-27)
 Phase: 12 (testing-validation) — COMPLETE
 Plans: 4 of 4 created, 4 of 4 executed
 Status: Executed
-Last activity: 2026-05-28 - Completed quick task 260528-kj4: fix calorie history date returning NaN after inserting new food log
+Last activity: 2026-05-28 - Completed quick task 260528-ksa: convert log_date to local timezone date string instead of UTC-based toISOString
 
 Progress: [██████████] 100%
 
@@ -208,6 +208,7 @@ None yet — first v1.2 planning session.
 | 260528-849 | fix SPA catch-all ENOENT on backend "/" routes | 2026-05-28 | 4532ce5 | [260528-849-spa-catchall-enoent](./quick/260528-849-spa-catchall-enoent/) |
 | 260528-k79 | fix JSON parse error when saving profile from frontend with Google OAuth | 2026-05-28 | cd519af, 0218ac9 | [260528-k79-fix-json-parse-error-when-saving-profile](./quick/260528-k79-fix-json-parse-error-when-saving-profile/) |
 | 260528-kj4 | fix calorie history date returning NaN after inserting new food log | 2026-05-28 | eee8d3a, 7e8bd70 | [260528-kj4-fix-calorie-history-date-returning-nan-a](./quick/260528-kj4-fix-calorie-history-date-returning-nan-a/) |
+| 260528-ksa | convert log_date to local timezone date string instead of UTC-based toISOString | 2026-05-28 | 2f20566 | [260528-ksa-convert-log-date-to-local-timezone-date-](./quick/260528-ksa-convert-log-date-to-local-timezone-date-/) |
 
 ## Deferred Items
 
