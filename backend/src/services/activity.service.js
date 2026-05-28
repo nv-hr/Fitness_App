@@ -24,11 +24,11 @@ export function mapFitnessGoalToTags(fitnessGoal) {
  */
 export async function getRecommendations(userId, fitnessGoal, count = 5) {
   const goalTags = mapFitnessGoalToTags(fitnessGoal);
-  let activities = await getRandomActivities(userId, goalTags, count);
+  let activities = await getRandomActivities(goalTags, count);
 
   // Fallback: if no activities found for goal, return all activities shuffled
   if (activities.length === 0) {
-    activities = await getRandomActivities(userId, ['lose_weight', 'maintain', 'gain_weight'], count);
+    activities = await getRandomActivities(['lose_weight', 'maintain', 'gain_weight'], count);
   }
 
   return activities;
@@ -42,5 +42,5 @@ export async function getRecommendations(userId, fitnessGoal, count = 5) {
  */
 export async function getAllActivitiesByGoal(userId, fitnessGoal) {
   const goalTags = mapFitnessGoalToTags(fitnessGoal);
-  return getAllActivities(userId, goalTags);
+  return getAllActivities(goalTags);
 }

@@ -4,12 +4,11 @@ import { AppError } from '../utils/errors.js';
 /**
  * Get random activities filtered by goal tags (D-45: goal-filtered daily shuffle).
  * Uses JSONB ?| operator for array overlap and ORDER BY RANDOM() for shuffle.
- * @param {number} userId
  * @param {string[]} goalTags
  * @param {number} count
  * @returns {Promise<Array>}
  */
-export async function getRandomActivities(userId, goalTags, count = 5) {
+export async function getRandomActivities(goalTags, count = 5) {
   try {
     const { rows } = await pool.query(
       `SELECT * FROM activities
@@ -27,11 +26,10 @@ export async function getRandomActivities(userId, goalTags, count = 5) {
 /**
  * Get all activities filtered by goal tags, ordered by name.
  * Uses JSONB ?| operator for array overlap.
- * @param {number} userId
  * @param {string[]} goalTags
  * @returns {Promise<Array>}
  */
-export async function getAllActivities(userId, goalTags) {
+export async function getAllActivities(goalTags) {
   try {
     const { rows } = await pool.query(
       `SELECT * FROM activities
