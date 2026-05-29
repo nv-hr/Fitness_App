@@ -1,0 +1,50 @@
+{
+  "phase": 15,
+  "phase_name": "llm-backend-integration",
+  "timestamp": "2026-05-29T18:30:00Z",
+  "areas_discussed": [
+    "LLM Model Selection",
+    "Prompt Design",
+    "Output Validation",
+    "Caching & Fallback Strategy",
+    "Rate Limiting Details",
+    "Service Architecture"
+  ],
+  "decisions": {
+    "model_selection": {
+      "primary_model": "NVIDIA Nemotron 3 Nano 30B A3B (OpenRouter)",
+      "fallback_model": "gpt-4o-mini (deferred to implementer)",
+      "max_tokens": 2000,
+      "temperature": 0.2,
+      "llm_response_cache": "per week-range keyed by start_date"
+    },
+    "prompt_design": {
+      "context_included": ["user_profile", "activity_history", "available_activities"],
+      "output_format": "JSON-only, no explanation text",
+      "schema_approach": "strict schema template in system prompt",
+      "prompt_location": "backend/prompts/ directory",
+      "constraints": "explicit strict variety constraints in system prompt",
+      "activity_matching": "name-based with fuzzy fallback"
+    },
+    "output_validation": {
+      "invalid_name_handling": "fuzzy match to closest DB name, log mismatch",
+      "structural_checks": ["day_coverage", "duration_bounds"],
+      "validation_failure": "retry once with correction prompt, then fall back",
+      "validation_location": "in llm.service.js"
+    },
+    "caching_fallback": {
+      "generation_triggers": ["new_week_starts", "user_manually_requests"],
+      "in_memory_cache_ttl_seconds": 3600,
+      "fallback_plan_type": "template-based from most-used activities"
+    },
+    "rate_limiting": {
+      "scope": "per_user",
+      "limit": "5 requests per 15 minutes",
+      "response": "429 status + fallback plan body with retry_after info"
+    },
+    "service_architecture": {
+      "structure": "single llm.service.js following existing service pattern",
+      "prompt_directory": "backend/prompts/"
+    }
+  }
+}
