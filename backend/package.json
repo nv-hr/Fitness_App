@@ -10,7 +10,7 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "db:migrate": "psql \"$DATABASE_URL\" -f backend/db/drop_user_activity_log.sql -f backend/db/schema.sql -f backend/db/seed.sql",
+    "db:migrate": "psql \"$DATABASE_URL\" -f db/drop_user_activity_log.sql -f db/schema.sql -f db/seed.sql",
     "db:verify": "node scripts/verify-schema.js"
   },
   "dependencies": {
