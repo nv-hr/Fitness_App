@@ -41,7 +41,7 @@
 **Milestone Goal:** Users can log physical activities with duration/intensity, view daily calorie balance including exercise, and receive personalized LLM-generated weekly activity plans.
 
 - [x] **Phase 13: Database Schema & Foundation** — Create activity_logs and weekly_plans tables, install new npm packages (completed 2026-05-29)
-- [ ] **Phase 14: Activity Logger** — Full feature: log, view history, delete, daily net calorie summary
+- [x] **Phase 14: Activity Logger** — Full feature: log, view history, delete, daily net calorie summary (completed 2026-05-29)
 - [ ] **Phase 15: LLM Backend Integration** — OpenRouter integration with caching, rate limiting, fallback, output validation
 - [ ] **Phase 16: Weekly Plan Frontend** — Day-by-day plan cards, single-day regeneration with rate-limit UX
 - [ ] **Phase 17: Testing & Polish** — Integration tests with mocks, edge case handling, UAT verification
@@ -65,11 +65,11 @@
 **Depends on**: Phase 13
 **Requirements**: ACT-01, ACT-02, ACT-03, ACT-04
 **Success Criteria** (what must be TRUE):
-  1. User can log an activity by selecting from the existing activity database, entering duration in minutes, and choosing intensity level (light/moderate/vigorous)
-  2. User can view their activity history list showing date, activity name, duration, intensity, and calculated calories burned
-  3. User can delete any logged activity from their history
-  4. Daily summary shows total active minutes, total calories burned, and net calorie display (consumed − burned vs TDEE target)
-**Plans**: TBD
+   1. User can log an activity by selecting from the existing activity database, entering duration in minutes, and choosing intensity level (light/moderate/vigorous)
+   2. User can view their activity history list showing date, activity name, duration, intensity, and calculated calories burned
+   3. User can delete any logged activity from their history
+   4. Daily summary shows total active minutes, total calories burned, and net calorie display (consumed − burned vs TDEE target)
+**Plans**: 1 (12 tasks)
 **UI hint**: yes
 
 ### Phase 15: LLM Backend Integration
@@ -112,7 +112,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 13. Database Schema & Foundation | 1/1 | Complete   | 2026-05-29 |
-| 14. Activity Logger | 0/0 | Not started | - |
+| 14. Activity Logger | 1/1 | Complete   | 2026-05-29 |
 | 15. LLM Backend Integration | 0/0 | Not started | - |
 | 16. Weekly Plan Frontend | 0/0 | Not started | - |
 | 17. Testing & Polish | 0/0 | Not started | - |
