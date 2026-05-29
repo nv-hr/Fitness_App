@@ -8,9 +8,14 @@ A web-based health application that helps users monitor their body condition thr
 
 Users can accurately calculate their BMI and TDEE, log daily food intake by selecting ingredients and entering weight in grams, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
 
-## Current Milestone: TBD (Next)
+## Current Milestone: v1.3 Activity Tracking & Smart Suggestions
 
-**Goal:** Define next milestone scope.
+**Goal:** Add activity logging and LLM-powered weekly activity planning to enhance the exercise recommendation system.
+
+**Target features:**
+- **Activity Logger** — Log activity type + duration + intensity with database persistence
+- **LLM Weekly Activity Suggestions** — Personalized weekly plan considering user's activity level, goals, history, and weight; auto-generated weekly
+- **LLM Integration** — API integration with an LLM provider for generating personalized suggestions
 
 ## Current State
 
@@ -144,4 +149,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-28 after v1.2 Supabase Migration shipped*
+*Last updated: 2026-05-28 after starting v1.3 Activity Tracking & Smart Suggestions*
