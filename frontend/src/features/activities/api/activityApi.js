@@ -13,17 +13,17 @@ export async function logActivity(data) {
 }
 
 export async function getActivityLogs(date) {
-  return apiGet(`/api/activities/logs?date=${date}`);
+  return apiGet(`/api/activities/logs?date=${encodeURIComponent(date)}`);
 }
 
 export async function getActivityHistory(days = 7) {
-  return apiGet(`/api/activities/history?days=${days}&includeEntries=true`);
+  return apiGet(`/api/activities/history?days=${encodeURIComponent(days)}&includeEntries=true`);
 }
 
 export async function deleteActivityLog(id) {
-  return apiDelete(`/api/activities/log/${id}`);
+  return apiDelete(`/api/activities/log/${encodeURIComponent(id)}`);
 }
 
 export async function getActivitySummary(date) {
-  return apiGet(`/api/activities/summary?date=${date}`);
+  return apiGet(`/api/activities/summary?date=${encodeURIComponent(date)}`);
 }
