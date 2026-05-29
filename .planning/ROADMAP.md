@@ -42,7 +42,7 @@
 
 - [x] **Phase 13: Database Schema & Foundation** — Create activity_logs and weekly_plans tables, install new npm packages (completed 2026-05-29)
 - [x] **Phase 14: Activity Logger** — Full feature: log, view history, delete, daily net calorie summary (completed 2026-05-29)
-- [ ] **Phase 15: LLM Backend Integration** — OpenRouter integration with caching, rate limiting, fallback, output validation
+- [x] **Phase 15: LLM Backend Integration** — OpenRouter integration with caching, rate limiting, fallback, output validation (completed 2026-05-29)
 - [ ] **Phase 16: Weekly Plan Frontend** — Day-by-day plan cards, single-day regeneration with rate-limit UX
 - [ ] **Phase 17: Testing & Polish** — Integration tests with mocks, edge case handling, UAT verification
 
@@ -85,9 +85,9 @@
 **Plans**: 3 plans
 
 Plans:
-- [ ] 15-01-PLAN.md — LLM Service Foundation: prompt templates, OpenRouter client, core API call
-- [ ] 15-02-PLAN.md — Output Validation, Caching & Fallback: structural validation, fuzzy matching, retry logic, fallback plan
-- [ ] 15-03-PLAN.md — Rate Limiting & API Endpoint: per-user rate limiter, controller, route registration
+- [x] 15-01-PLAN.md — LLM Service Foundation: prompt templates, OpenRouter client, core API call
+- [x] 15-02-PLAN.md — Output Validation, Caching & Fallback: structural validation, fuzzy matching, retry logic, fallback plan
+- [x] 15-03-PLAN.md — Rate Limiting & API Endpoint: per-user rate limiter, controller, route registration
 
 ### Phase 16: Weekly Plan Frontend
 **Goal**: Users can view their weekly plan as day-by-day cards and request regeneration of individual days
@@ -118,7 +118,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 13. Database Schema & Foundation | 1/1 | Complete   | 2026-05-29 |
 | 14. Activity Logger | 1/1 | Complete   | 2026-05-29 |
-| 15. LLM Backend Integration | 0/3 | Not started | - |
+| 15. LLM Backend Integration | 3/3 | Complete   | 2026-05-29 |
 | 16. Weekly Plan Frontend | 0/0 | Not started | - |
 | 17. Testing & Polish | 0/0 | Not started | - |
 
