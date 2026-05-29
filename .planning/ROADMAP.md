@@ -82,7 +82,12 @@
   3. Rate limiting enforced at 5 requests per 15 minutes with informative error responses including retry-after header
    4. System gracefully falls back to the most recent cached plan (from `weekly_plans` table) or returns a clear "plan unavailable" message when OpenRouter is unreachable or returns invalid responses
   5. Output validation ensures every suggested activity in the plan actually exists in the database — invalid entries are rejected and trigger a regeneration attempt (up to configured retries)
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 15-01-PLAN.md — LLM Service Foundation: prompt templates, OpenRouter client, core API call
+- [ ] 15-02-PLAN.md — Output Validation, Caching & Fallback: structural validation, fuzzy matching, retry logic, fallback plan
+- [ ] 15-03-PLAN.md — Rate Limiting & API Endpoint: per-user rate limiter, controller, route registration
 
 ### Phase 16: Weekly Plan Frontend
 **Goal**: Users can view their weekly plan as day-by-day cards and request regeneration of individual days
@@ -113,7 +118,7 @@
 |-------|----------------|--------|-----------|
 | 13. Database Schema & Foundation | 1/1 | Complete   | 2026-05-29 |
 | 14. Activity Logger | 1/1 | Complete   | 2026-05-29 |
-| 15. LLM Backend Integration | 0/0 | Not started | - |
+| 15. LLM Backend Integration | 0/3 | Not started | - |
 | 16. Weekly Plan Frontend | 0/0 | Not started | - |
 | 17. Testing & Polish | 0/0 | Not started | - |
 
