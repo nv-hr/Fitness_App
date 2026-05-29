@@ -352,6 +352,7 @@ export async function generateWeeklyPlan(deps) {
           const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart });
           return { plan: fallback, fromCache: false, status: fallback.status };
         }
+        await new Promise(r => setTimeout(r, CONFIG.retryDelayMs));
         continue;
       }
     }
@@ -368,6 +369,7 @@ export async function generateWeeklyPlan(deps) {
           continue;
         } catch {
           if (attempt >= maxAttempts) break;
+          await new Promise(r => setTimeout(r, CONFIG.retryDelayMs));
           continue;
         }
       }
@@ -386,6 +388,7 @@ export async function generateWeeklyPlan(deps) {
           continue;
         } catch {
           if (attempt >= maxAttempts) break;
+          await new Promise(r => setTimeout(r, CONFIG.retryDelayMs));
           continue;
         }
       }
