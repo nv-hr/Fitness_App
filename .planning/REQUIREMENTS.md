@@ -1,88 +1,76 @@
 # Requirements: Fitness_App
 
-**Defined:** 2026-05-27
-**Core Value:** Users can accurately calculate their BMI and TDEE, log daily food intake by selecting ingredients and entering weight in grams, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
+**Defined:** 2026-05-29
+**Core Value:** Users can accurately calculate their BMI and TDEE, log daily food intake by ingredients, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
 
-## v1.2 Requirements
+## v1 Requirements
 
-Requirements for v1.2 Supabase Migration milestone.
+Requirements for v1.3 Activity Tracking & Smart Suggestions. Each maps to roadmap phases.
 
-### Supabase Setup & Schema Migration
+### Activity Logger
 
-- [x] **SUP-01**: Supabase project is created and accessible with PostgreSQL database
-- [x] **SUP-02**: Database schema (tables, indexes, ENUMs, constraints) is migrated from MySQL to PostgreSQL
-- [x] **SUP-03**: Seed data (200+ foods, 35 activities) is migrated to Supabase PostgreSQL
-- [x] **SUP-04**: Backend can establish and verify a connection to Supabase on startup
+- [ ] **ACT-01**: User can log an activity by selecting from the existing activity database, entering duration in minutes, and choosing intensity level (light/moderate/vigorous)
+- [ ] **ACT-02**: User can view their activity history list showing date, activity name, duration, intensity, and calories burned
+- [ ] **ACT-03**: User can delete logged activities from history
+- [ ] **ACT-04**: Daily activity summary shows total active minutes and calories burned, with net calorie display (consumed − burned vs TDEE target)
 
-### Backend Query Rewrite
+### LLM Weekly Activity Suggestions
 
-- [x] **QRY-01**: mysql2 driver replaced with pg (node-postgres) in database.js
-- [x] **QRY-02**: Food repository rewritten with PostgreSQL-compatible queries (RETURNING *, $1 placeholders)
-- [x] **QRY-03**: Profile and user repositories rewritten with PostgreSQL-compatible queries
-- [x] **QRY-04**: Activity repository rewritten with PostgreSQL-compatible queries (including JSON_OVERLAPS → ?| operator)
-- [x] **QRY-05**: All MySQL-specific SQL patterns grepped and translated ($1, RETURNING, boolean, error codes, date functions)
-
-### Docker Restructure
-
-- [x] **DKR-01**: Multi-stage Dockerfile builds frontend and serves via backend
-- [x] **DKR-02**: Express serves React static files (express.static + SPA catch-all)
-- [x] **DKR-03**: docker-compose.yml simplified to single service (backend only, no MySQL/Adminer)
-
-### Testing & Validation
-
-- [x] **TST-01**: Backend integration tests pass against Supabase PostgreSQL
-- [x] **TST-02**: Full-stack smoke test passes (docker build, container start, API responds, frontend loads)
+- [ ] **LLM-01**: System auto-generates a personalized weekly activity plan by selecting from the existing activity database, considering user's profile (weight, goals, activity level) and recent activity history
+- [ ] **LLM-02**: User can view their weekly activity plan as day-by-day cards showing suggested activities
+- [ ] **LLM-03**: User can request to regenerate a single day/card from the weekly plan (rate-limited to prevent abuse)
+- [ ] **LLM-04**: System gracefully falls back to cached plan or shows a message when LLM is unavailable
+- [ ] **LLM-05**: LLM provider integration with API key management, rate limiting for cost control, and output validation to ensure only database activities are suggested
 
 ## v2 Requirements
 
-Deferred to future release.
+Deferred to future release. Tracked but not in current roadmap.
 
-### Advanced Nutrition
+### Advanced Activity Features
 
-- **MACRO-01**: User can view macro breakdown (protein, carbs, fat) per meal
-- **MACRO-02**: User can set macro targets
+- **ACT-05**: User can add custom activities with name and calories per minute
+- **ACT-06**: User can one-click log a suggested activity from the weekly plan
+- **ACT-07**: User can edit previously logged activities
 
-### Data Visualization
+### Notifications
 
-- **VIZ-01**: User can view weight progress over time on a chart
-- **VIZ-02**: User can view calorie history as a timeline or graph
+- **NOTF-01**: User receives weekly plan reminder at start of week
+- **NOTF-02**: User receives daily activity reminder
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Supabase Auth (replacing JWT) | Current JWT + Google OAuth works; auth migration would add risk with no user benefit |
-| Supabase Realtime subscriptions | No real-time features needed; REST polling is sufficient |
-| Row Level Security (RLS) | Server-side only architecture; no direct client-db access |
-| ORM (Prisma/Drizzle) | Would require learning new API; repository pattern works fine with raw SQL |
-| nginx/Caddy reverse proxy | Unnecessary complexity at this scale; Express.static() is adequate |
-| Performance tuning | Not needed until traffic justifies it |
-| Zero-downtime migration | App deployment status unknown; fresh Supabase start assumed |
+| Custom activity entry | Not selected for this milestone; can add custom activities later |
+| One-click plan-to-log | Deferred to v2; requires deeper UX work |
+| Edit logged activities | Deferred — delete-and-recreate is sufficient for v1.3 |
+| Notifications (email/push) | Out of scope for activity tracking milestone |
+| Real-time activity sync | No wearable/device integration |
+| Social features (sharing, leaderboards) | Not core to individual health tracking |
+| LLM-generated activity descriptions | LLM only selects from existing database, no generative descriptions |
 
 ## Traceability
 
+Which phases cover which requirements. Updated during roadmap creation.
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SUP-01 | Phase 9 | Complete |
-| SUP-02 | Phase 9 | Complete |
-| SUP-03 | Phase 9 | Complete |
-| SUP-04 | Phase 9 | Complete |
-| QRY-01 | Phase 10 | Complete |
-| QRY-02 | Phase 10 | Complete |
-| QRY-03 | Phase 10 | Complete |
-| QRY-04 | Phase 10 | Complete |
-| QRY-05 | Phase 10 | Complete |
-| DKR-01 | Phase 11 | Complete |
-| DKR-02 | Phase 11 | Complete |
-| DKR-03 | Phase 11 | Complete |
-| TST-01 | Phase 12 | Complete |
-| TST-02 | Phase 12 | Complete |
+| ACT-01 | — | Pending |
+| ACT-02 | — | Pending |
+| ACT-03 | — | Pending |
+| ACT-04 | — | Pending |
+| LLM-01 | — | Pending |
+| LLM-02 | — | Pending |
+| LLM-03 | — | Pending |
+| LLM-04 | — | Pending |
+| LLM-05 | — | Pending |
 
 **Coverage:**
-- v1.2 requirements: 14 total
-- Mapped to phases: 14 ✓
-- Unmapped: 0 ✓
+- v1 requirements: 9 total
+- Mapped to phases: 0
+- Unmapped: 9 ⚠️
 
 ---
-*Requirements defined: 2026-05-27*
-*Last updated: 2026-05-27 after v1.2 milestone definition*
+
+*Requirements defined: 2026-05-29*
+*Last updated: 2026-05-29 after milestone v1.3 scoping*
