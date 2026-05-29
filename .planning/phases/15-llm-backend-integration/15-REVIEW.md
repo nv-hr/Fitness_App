@@ -1,6 +1,6 @@
 ---
 phase: 15-llm-backend-integration
-reviewed: 2026-05-29T12:00:00Z
+reviewed: 2026-05-29T14:30:00Z
 depth: standard
 files_reviewed: 9
 files_reviewed_list:
@@ -14,306 +14,331 @@ files_reviewed_list:
   - backend/src/routes/weeklyPlan.routes.js
   - backend/src/services/llm.service.js
 findings:
-  critical: 4
-  warning: 3
-  info: 3
-  total: 10
+  critical: 0
+  warning: 12
+  info: 5
+  total: 17
 status: issues_found
 ---
 
 # Phase 15: Code Review Report — LLM Backend Integration
 
-**Reviewed:** 2026-05-29T12:00:00Z
+**Reviewed:** 2026-05-29T14:30:00Z
 **Depth:** standard
 **Files Reviewed:** 9
 **Status:** issues_found
 
 ## Summary
 
-This phase implements the OpenRouter LLM integration for weekly plan generation, including:
-- An LLM service with prompt building, API calls, response validation, fuzzy name matching, and caching
-- A weekly plan generation API endpoint with rate limiting, controller, and routes
-
-The review found **4 critical** issues, **3 warnings**, and **3 info** items. The most severe issues are:
-
-1. **The plan cache key omits the user ID**, causing cross-user data leakage — User A sees User B's plan.
-2. **The correction retry loop discards the successfully corrected plan** — the `continue` after a correction call sends the loop back to the original prompt, wasting API calls and never returning the corrected output.
-3. **`getAllActivities()` is called without `goalTags`** in the controller, causing the SQL `WHERE goal_tags ?| NULL` to return zero rows, making the LLM generate plans from thin air and always degrade to the template fallback.
-4. **The rate limiter test-mode mutations are inert** — mutating `.max` and `.windowMs` on the middleware returned by `express-rate-limit` does not change behavior after construction.
-
----
-
-## Critical Issues
-
-### CR-01: Cache key missing userId causes cross-user plan leakage
-
-**File:** `backend/src/services/llm.service.js:230-236` (used at lines 299, 374)
-
-**Issue:** Both `getCachedPlan()` (line 230) and `setCachedPlan()` (line 234) use `plan_${weekStart}` as the cache key, with **no user ID component**. When User A generates a plan for the week starting `2026-05-25`, their plan is stored at key `plan_2026-05-25`. When User B requests a plan for the same week, they receive User A's cached plan. This is a data leakage and correctness bug.
-
-**Evidence:**
-- Line 230-231: `planCache.get(`plan_${weekStart}`)` — no `userId`
-- Line 234-235: `planCache.set(`plan_${weekStart}`, plan)` — no `userId`
-- Line 299: `const cached = getCachedPlan(deps.weekStart);` — caller has `deps.userId` but doesn't use it
-- Line 374: `setCachedPlan(deps.weekStart, plan);` — caller has `deps.userId` but doesn't use it
-
-**Fix:**
-```javascript
-// llm.service.js — update cache functions to accept and use userId
-export function getCachedPlan(userId, weekStart) {
-  return planCache.get(`plan_${userId}_${weekStart}`);
-}
-
-export function setCachedPlan(userId, weekStart, plan) {
-  planCache.set(`plan_${userId}_${weekStart}`, plan);
-}
-
-// In generateWeeklyPlan:
-const cached = getCachedPlan(deps.userId, deps.weekStart);
-// ...
-setCachedPlan(deps.userId, deps.weekStart, plan);
-```
-
----
-
-### CR-02: Correction retry loop discards successfully corrected plan
-
-**File:** `backend/src/services/llm.service.js:344-351` (same pattern at lines 360-367)
-
-**Issue:** When the initial LLM plan fails structural or name validation, a correction prompt is built and sent to the LLM. If the correction call succeeds, the `continue` statement on line 351 sends execution back to the top of the `while` loop, where `attempt` is incremented and **the original prompt is used again**, completely discarding the corrected plan. The correction API call is wasted, and the corrected output is never used.
-
-**Detailed trace of the buggy flow:**
-1. `attempt` (now 1): call LLM with original prompt → plan fails validation
-2. Correction: call LLM with `correctionPrompt` → plan **passes validation**
-3. `continue` → loop restart, `attempt` becomes 2
-4. Call LLM with **original prompt** again (corrected output from step 2 is discarded)
-5. The new result might pass or fail, but the working corrected result from step 2 was thrown away
-
-The `continue` on line 351 (and line 367) must be replaced with logic that keeps the successful correction result and validates it, rather than restarting the loop from scratch.
-
-**Fix:**
-Remove the unconditional `continue` after the correction call. Instead, after a successful correction, let the loop fall through to re-validate the corrected plan (not re-call the LLM):
-
-```javascript
-// Replace lines 344-354 with:
-const correctionPrompt = prompt + '\n\n' + buildCorrectionPrompt(structureCheck.errors);
-try {
-  plan = await callLlmApi(correctionPrompt);
-} catch {
-  // Correction API call failed — continue to next attempt
-  continue;
-}
-// Correction succeeded — DO NOT continue; fall through to re-validate
-// The corrected plan is still in `plan`, re-validate below
-```
-
-This fix also applies to the same pattern in the name validation block (lines 359-367).
-
----
-
-### CR-03: `getAllActivities()` called without `goalTags` returns zero rows
-
-**File:** `backend/src/controllers/weeklyPlan.controller.js:18` → `backend/src/repositories/activity.repository.js:32-44`
-
-**Issue:** The controller's `getActivities` function (line 18) calls `getAllActivities()` with no arguments. The repository function `getAllActivities(goalTags)` expects an array of goal tags and applies `WHERE goal_tags ?| $1` to filter activities. When `goalTags` is `undefined`, the `pg` driver converts it to `NULL`, and PostgreSQL evaluates `jsonb ?| NULL` as NULL. `WHERE NULL` returns zero rows. The LLM prompt therefore contains **zero available activities**, causing the LLM to hallucinate activity names from training data, which always fail fuzzy matching and degrade to the template-based fallback.
-
-**Evidence:**
-- `activity.repository.js:32`: `export async function getAllActivities(goalTags)` — expects array param
-- `activity.repository.js:35-36`: `WHERE goal_tags ?| $1` — filters by the parameter; with `$1=NULL`, returns no rows
-- `weeklyPlan.controller.js:18`: `getActivities: () => getAllActivities()` — passes no arguments
-
-**Fix:** Either pass an empty array (which may also be problematic with `?|`) or modify the query to skip filtering when no goal tags are provided:
-
-Option A — Pass all activities (no goal filter):
-```javascript
-// activity.repository.js — skip WHERE clause when no goalTags
-export async function getAllActivities(goalTags = []) {
-  const query = goalTags.length > 0
-    ? `SELECT * FROM activities WHERE goal_tags ?| $1 ORDER BY name ASC`
-    : `SELECT * FROM activities ORDER BY name ASC`;
-  const params = goalTags.length > 0 ? [goalTags] : [];
-  const { rows } = await pool.query(query, params);
-  return rows;
-}
-```
-
-Option B — Pass goal tags from the profile in the controller:
-```javascript
-// weeklyPlan.controller.js — derive goal tags from profile
-// This requires fetching the profile first to get fitness_goal
-```
-
----
-
-### CR-04: Rate limiter test-mode mutations are inert
-
-**File:** `backend/src/middlewares/weeklyPlanRateLimiter.js:33-37`
-
-**Issue:** After the `rateLimit()` factory creates the middleware, mutating `.max` and `.windowMs` on the returned function **does not change the rate limiter's behavior**. `express-rate-limit` v7 captures configuration during construction; late property mutations have no effect. This means test mode never actually relaxes the rate limits, causing tests to hit the 5-request-per-15-minute cap and fail unpredictably.
-
-**Evidence:**
-- Line 4-5: `rateLimit({ windowMs: 15 * 60 * 1000, max: 5, ... })` — config captured at construction
-- Line 33-37: `weeklyPlanLimiter.max = 1000; weeklyPlanLimiter.windowMs = 1000;` — inert mutations
-
-**Fix:** Apply test configuration during construction, not after:
-
-```javascript
-// weekLimitRateLimiter.js — pass config at construction time
-const isTest = process.env.NODE_ENV === 'test';
-
-const weeklyPlanLimiter = rateLimit({
-  windowMs: isTest ? 1000 : 15 * 60 * 1000,
-  max: isTest ? 1000 : 5,
-  keyGenerator: (req) => {
-    return `user_${req.user?.userId || 'anonymous'}`;
-  },
-  handler: (req, res) => { /* ... */ },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-export default weeklyPlanLimiter;
-```
+Reviewed 9 source files comprising the OpenRouter LLM integration for weekly workout plan generation. The architecture is well-structured with clear separation of concerns (controller → service → repository) and sensible retry/caching/fallback patterns. However, several substantive issues were found: date formatting that produces unusable LLM prompt text, cache unboundedness, a general-vs-specific rate limiter conflict, a missing API timeout, improper use of `console.warn` on module import, and a shared-reference cache mutation risk. No CRITICAL (security/data-loss) issues were found, but 12 WARNING-level and 5 INFO-level issues should be addressed before shipping.
 
 ---
 
 ## Warnings
 
-### WR-01: `getMonday` timezone inconsistency causes wrong start date
+### WR-01: Date objects rendered as full toString() in LLM prompt — produces garbled history
 
-**File:** `backend/src/controllers/weeklyPlan.controller.js:30-36`
+**File:** `backend/src/services/llm.service.js:58`
+**Issue:** `buildSystemPrompt()` accesses `a.logged_date` (a JavaScript `Date` object from `pg`'s default type parser) inside a template literal. `Date.prototype.toString()` is invoked implicitly, producing output like `Fri May 29 2026 00:00:00 GMT+0000` instead of the expected `2026-05-29`. This pollutes the LLM prompt with verbose, locale-dependent date strings that the model must parse.
 
-**Issue:** The `getMonday` function uses local timezone methods (`getDay()`, `getDate()`, `setDate()`) to compute "this Monday" but returns a UTC date string via `toISOString()`. When the server is in a negative UTC offset (e.g., UTC-5) and runs at a late hour:
+The upstream `getActivityHistoryWithEntries()` (activity.repository.js:226) returns `pg` rows as-is, and the database config uses `pg`'s default type parsers (database.js:10-16), so DATE columns arrive as Date objects.
 
-1. Local Monday 23:00 UTC-5 = Tuesday 04:00 UTC
-2. `getDay()` returns 1 (Monday) ✓
-3. `new Date()` says it's Monday, `setDate()` keeps it Monday
-4. `toISOString()` returns Tuesday's date because UTC has already rolled over
-5. The plan week starts on Tuesday instead of Monday
+**Contrast:** `getActivityHistory()` (activity.repository.js:129) explicitly formats via `.toLocaleDateString('en-CA')` — this inconsistency confirms the bug.
 
-This affects all users whose local time crosses midnight before UTC when they generate a plan.
+**Fix:** Format dates in `buildSystemPrompt()` or upstream in `getActivityHistoryWithEntries()`:
+```js
+// Option A: format in buildSystemPrompt (llm.service.js:56-58)
+const historyText = activityHistory.length > 0
+  ? activityHistory.map(a => {
+      const dateStr = a.logged_date
+        ? (typeof a.logged_date === 'string' ? a.logged_date : a.logged_date.toISOString().split('T')[0])
+        : a.loggedDate;
+      return `- ${dateStr}: ${a.activity_name} (${a.duration_min}min, ${a.intensity})`;
+    }).join('\n')
+  : 'No recent activity history.';
 
-**Fix:** Use UTC methods consistently, or compute the week start in the user's timezone:
-
-```javascript
-function getMonday(date) {
-  const d = new Date(date);
-  const day = d.getUTCDay();
-  const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
-  d.setUTCDate(diff);
-  return d.toISOString().split('T')[0];
-}
+// Option B: format in repository (activity.repository.js:240)
+return rows.map(r => ({
+  ...r,
+  logged_date: r.logged_date instanceof Date
+    ? r.logged_date.toISOString().split('T')[0]
+    : r.logged_date,
+}));
 ```
 
 ---
 
-### WR-02: Missing `weekStart` input validation
+### WR-02: General `/api/` rate limiter (100) preempts food-specific limiter (200)
 
-**File:** `backend/src/controllers/weeklyPlan.controller.js:13`
+**File:** `backend/src/app.js:83-84`, `backend/src/app.js:110-112`
+**Issue:** The general rate limiter at line 83 (`max: 100`) is mounted on `/api/` and evaluated BEFORE the food route limiter at line 110 (`max: 200`). Since `express-rate-limit` creates independent counters but evaluates middleware in order, the general limiter blocks all `/api/` requests at 100 per window, making the food limiter's `max: 200` unreachable. The effective food limit is 100, not 200.
 
-**Issue:** The `weekStart` value from `req.body` is used directly without any validation. If the client sends an invalid string (e.g., `"not-a-date"`, `"abc"`), it propagates through `generateWeeklyPlan` → `new Date(weekStart + 'T00:00:00Z')` creates an `Invalid Date`. All downstream date operations then produce `NaN` / `Invalid Date`, generating confusing error messages like `"Day 1: expected date Invalid Date but got 2026-05-25"` and forcing the system into fallback mode unnecessarily.
+This also silently undermines the activity limiter (`max: 60`) — though 60 < 100 so it's unaffected — and the weekly plan limiter (5 requests/15min at route level) is unaffected since it uses a per-user key.
 
-**Fix:** Add input validation in the controller before passing to the service:
+**Fix:** Increase the general limiter's ceiling to be safely above the highest specific limiter, or restructure so specific limiters apply before the general one:
+```js
+// Option A: Raise general ceiling (app.js:83)
+const limiter = createRateLimiter({ max: 500, message: 'Too many requests' });
+//          or { max: 1000 }
 
-```javascript
-function isValidDateString(str) {
-  if (typeof str !== 'string') return false;
-  const d = new Date(str + 'T00:00:00Z');
-  return !isNaN(d.getTime());
-}
-
-async function generate(req, res, next) {
-  try {
-    const userId = req.user.userId;
-    let weekStart = req.body.weekStart;
-    
-    if (weekStart && !isValidDateString(weekStart)) {
-      return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
-    }
-    if (!weekStart) {
-      weekStart = getMonday(new Date());
-    }
-    // ... rest of function
-  }
-}
+// Option B: Mount specific route limiters before general (restructure needed)
 ```
 
 ---
 
-### WR-03: LLM API call sends only system message, no user message
+### WR-03: NodeCache has no `maxKeys` — unbounded memory growth
 
-**File:** `backend/src/services/llm.service.js:80-87`
+**File:** `backend/src/services/llm.service.js:43`
+**Issue:** `new NodeCache({ stdTTL: 3600, checkperiod: 600 })` stores every user's weekly plan indefinitely (up to 1-hour TTL) with no cap on total entries. With thousands of users generating plans each hour, memory grows without bound. The `checkperiod: 600` only evicts expired entries; active entries accumulate linearly.
 
-**Issue:** The `callLlmApi` function only includes a single `{ role: 'system', content: systemPrompt }` message in the API request. Many LLMs (especially through OpenRouter) are tuned for chat completion with alternating user/assistant turns. Without at least one user message, some models may:
-- Return empty responses or refuse to respond
-- Behave unpredictably (the system prompt may be interpreted differently without a user request frame)
-
-**Fix:** Add a minimal user message that frames the task:
-
-```javascript
-const response = await client.chat.completions.create({
-  model: CONFIG.model,
-  messages: [
-    { role: 'system', content: systemPrompt },
-    { role: 'user', content: 'Generate my weekly fitness plan based on my profile and history.' },
-  ],
-  temperature: CONFIG.temperature,
-  max_tokens: CONFIG.maxTokens,
+**Fix:** Add a `maxKeys` limit:
+```js
+const planCache = new NodeCache({
+  stdTTL: 3600,
+  checkperiod: 600,
+  maxKeys: 1000,     // ← add this — evicts oldest when full
 });
+```
+
+---
+
+### WR-04: `retryDelayMs` configured but never used — retries are immediate
+
+**File:** `backend/src/services/llm.service.js:38`
+**File:** `backend/src/services/llm.service.js:337-351`
+**Issue:** `CONFIG.retryDelayMs` is set to `1000` but is never referenced anywhere. When the LLM API call fails (line 343) or returns invalid results, the retry loop at lines 337-395 retries immediately with no delay. If the failure was a transient rate-limit or server error, an immediate retry will likely fail again, wasting both attempts.
+
+**Fix:** Add a delay before retry:
+```js
+// After the `continue` in the catch blocks (e.g., after line 350, 367, 384):
+await new Promise(r => setTimeout(r, CONFIG.retryDelayMs));
+```
+
+---
+
+### WR-05: No explicit timeout on LLM API calls — request can hang indefinitely
+
+**File:** `backend/src/services/llm.service.js:76-98`
+**Issue:** The `OpenAI` client is instantiated with no `timeout` option (line 22-31). While the OpenAI Node.js SDK v4+ has a default timeout of ~10 minutes, this is far too long for an HTTP request-response cycle. A hanging request ties up a connection pool slot and a server worker thread for minutes.
+
+**Fix:** Add a timeout to the OpenAI client constructor:
+```js
+openaiClient = new OpenAI({
+  baseURL: OPENROUTER_BASE_URL,
+  apiKey: API_KEY,
+  timeout: 30000,         // ← 30 second timeout
+  maxRetries: 0,          // ← handle retries ourselves
+  defaultHeaders: {
+    'HTTP-Referer': APP_URL,
+    'X-OpenRouter-Title': 'Fitness_App',
+  },
+});
+```
+
+---
+
+### WR-06: Cached plan object shares reference with returned plan — mutation risk
+
+**File:** `backend/src/services/llm.service.js:390-394`
+**Issue:** After validation, the plan object is stored in cache via `setCachedPlan(...)` and then returned in the response object. Both the cache entry and the response reference the **same** JavaScript object. If a future caller mutates the returned plan (e.g., during serialization or error processing), the cached version is also mutated — potentially returning corrupted data on cache hits.
+
+While the current architecture serializes with `res.json()` (creating a deep copy for the response), the cached reference remains exposed to any future code path that touches the returned object.
+
+**Fix:** Deep-clone before caching:
+```js
+setCachedPlan(deps.userId, deps.weekStart, JSON.parse(JSON.stringify(plan)));
+// or use structuredClone if available:
+setCachedPlan(deps.userId, deps.weekStart, structuredClone(plan));
+return { plan, fromCache: false, status: 'active' };
+```
+
+---
+
+### WR-07: User-provided `weekStart` not normalized to Monday — LLM prompt incoherent
+
+**File:** `backend/src/controllers/weeklyPlan.controller.js:27-33`
+**File:** `backend/prompts/system-prompt.md:41`
+
+**Issue:** The controller only calls `getMonday()` when `weekStart` is absent. If a user provides a valid non-Monday date (e.g., `"2026-05-27"` — a Wednesday), the system prompt receives `weekStartDate = "2026-05-27"` but instructs the LLM to "start from Monday of" that date. The LLM will be confused: it's told to start from a Monday but given a Wednesday as the reference.
+
+**Fix:** Always normalize `weekStart` to the Monday of its week:
+```js
+if (weekStart && !isValidDateString(weekStart)) {
+  return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
+}
+weekStart = getMonday(weekStart ? new Date(weekStart) : new Date());
+```
+
+---
+
+### WR-08: LLM response cleaning doesn't remove text before/after JSON — causes parse failure
+
+**File:** `backend/src/services/llm.service.js:97-98`
+**Issue:** The regex cleanup only strips ` ```json ` and ` ``` ` markers. If the LLM returns explanatory text before or after the JSON block (despite prompt instructions), `JSON.parse()` throws a `SyntaxError`. The error is caught by the retry loop, but it wastes a full API call and one of the two retry attempts.
+
+Example of a response that fails: `"Here is your plan:\n{\"days\":[...]}"` — the text before `{` causes `JSON.parse` to throw.
+
+**Fix:** Extract JSON object from the response more robustly:
+```js
+const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+if (!jsonMatch) {
+  throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);
+}
+return JSON.parse(jsonMatch[0]);
+```
+
+---
+
+### WR-09: Off-by-one in `getActivityHistory` / `getActivityHistoryWithEntries` — returns N+1 days
+
+**File:** `backend/src/repositories/activity.repository.js:118-119`, lines 229-230
+**Issue:** The cutoff calculation `setDate(getDate() - days)` and then `logged_date >= cutoff` includes `days + 1` days of data. For example, when `days = 14` (as called from `generateWeeklyPlan`), the query returns 15 days (today + 14 prior days). The system prompt says "last 14 days" but gets 15.
+
+**Fix:** Subtract `(days - 1)` to include exactly `days` days (today through `days - 1` days ago):
+```js
+const cutoffDate = new Date();
+cutoffDate.setDate(cutoffDate.getDate() - (days - 1));  // ← was: - days
+```
+
+---
+
+### WR-10: `parseFrontendUrl` declares unused parameter
+
+**File:** `backend/src/app.js:22`
+**Issue:** The function signature `const parseFrontendUrl = (url) => {` declares a parameter `url` that is never used. The function reads `process.env.FRONTEND_URL` directly and is called with no argument (`parseFrontendUrl()`). This is dead code — the parameter is misleading and could confuse maintainers.
+
+**Fix:** Remove the unused parameter:
+```js
+const parseFrontendUrl = () => {
+```
+
+---
+
+### WR-11: `validateAndFixPlan` mutates plan in-place with side effects
+
+**File:** `backend/src/services/llm.service.js:204-231`
+**Issue:** `validateAndFixPlan` mutates the plan object passed to it: `act.name = result.activity.name; act.activity_id = result.activity.id;`. This is a side-effect function that both validates AND mutates its argument. The caller (`generateWeeklyPlan`) correctly stores the mutated result (`plan = nameCheck.plan`), but the mutation pattern makes it harder to reason about control flow — especially since the `plan` object was previously parsed from an API response and manipulated in the validation loop.
+
+Consider making the function immutable (return a new plan object) or renaming to `validateAndMutatePlan` to clarify the side effect.
+
+**Fix:** Rename or document the mutation:
+```js
+// Either make it return a new object:
+export function validateAndFixPlan(plan, dbActivities) {
+  const newPlan = JSON.parse(JSON.stringify(plan));
+  // ... mutate newPlan ...
+  return { valid: errors.length === 0, fixed, plan: newPlan, errors };
+}
+// Or rename to clarify side effects:
+export function validateAndFixPlanInPlace(plan, dbActivities) { ... }
+```
+
+---
+
+### WR-12: `LLM_FALLBACK_MODEL` documented in `.env.example` but never read by code
+
+**File:** `backend/.env.example:29`
+**File:** `backend/src/services/llm.service.js:34-39`
+
+**Issue:** The `.env.example` documents `LLM_FALLBACK_MODEL=gpt-4o-mini` as a suggested fallback, but the LLM service only ever reads `LLM_MODEL` (line 35) and has no fallback model logic. If the primary model (default `nvidia/nemotron-nano-30b-a3b`) fails with a model-specific error, there's no automatic fallback to a different model.
+
+**Fix either:** Remove the misleading comment from `.env.example`, or implement model fallback:
+```js
+const PRIMARY_MODEL = process.env.LLM_MODEL || 'nvidia/nemotron-nano-30b-a3b';
+const FALLBACK_MODEL = process.env.LLM_FALLBACK_MODEL || 'gpt-4o-mini';
+
+// In callLlmApi, try primary, catch and retry with fallback:
+try {
+  response = await attemptModel(PRIMARY_MODEL);
+} catch (err) {
+  console.warn(`[LLM] Primary model failed, trying fallback:`, err.message);
+  response = await attemptModel(FALLBACK_MODEL);
+}
 ```
 
 ---
 
 ## Info
 
-### IN-01: Anonymous key fallback in rate limiter is dead code
+### IN-01: `console.warn` used for informational model notification on module import
 
-**File:** `backend/src/middlewares/weeklyPlanRateLimiter.js:7`
+**File:** `backend/src/services/llm.service.js:41`
+**Issue:** `console.warn('[LLM] Using model:...')` fires every time the module is imported. This is a log-level misuse — it's informational, not a warning. It also fires during test imports, producing noisy output.
 
-**Issue:** The `keyGenerator` function uses `req.user?.userId || 'anonymous'` as the rate limit key. However, `authenticateToken` middleware runs **before** the rate limiter in the route chain (see `weeklyPlan.routes.js:8-10`). Any request without a valid token is rejected before reaching the rate limiter, making the `'anonymous'` fallback unreachable.
+**Fix:** Use `console.log` or `console.info`, and consider deferring to first use:
+```js
+// Either:
+console.log('[LLM] Using model: ' + CONFIG.model);
 
-No functional impact, but dead code adds noise.
-
-**Fix:** Remove the fallback since it is never reached:
-```javascript
-keyGenerator: (req) => `user_${req.user.userId}`,
-```
-
----
-
-### IN-02: Empty activity name can produce false fuzzy-match
-
-**File:** `backend/src/services/llm.service.js:149`
-
-**Issue:** In `fuzzyMatchActivityName`, if `act.name` is an empty string after `trim()`, `normalized` becomes `""`. The Levenshtein distance between `""` and any activity name equals the length of that name. If the shortest activity name in the database has length < 4, the empty name would falsely match via Levenshtein. Though structural validation (`validatePlanStructure` line 133) catches empty names before this function is called, removing the implicit dependency between the two validators would be more robust.
-
-**Fix:** Add a guard at the top of `fuzzyMatchActivityName`:
-```javascript
-export function fuzzyMatchActivityName(name, dbActivities) {
-  const normalized = name.trim().toLowerCase();
-  if (normalized.length === 0) {
-    return { matched: false, activity: null, matchType: 'none' };
+// Or lazy-log on first call:
+let _modelLogged = false;
+function getClient() {
+  if (!openaiClient && API_KEY) {
+    if (!_modelLogged) {
+      console.log('[LLM] Using model: ' + CONFIG.model);
+      _modelLogged = true;
+    }
+    // ...
   }
-  // ...
 }
 ```
 
 ---
 
-### IN-03: Default LLM model name may be invalid on OpenRouter
+### IN-02: `ValidationError` imported but never used in `llm.service.js`
 
-**File:** `backend/src/services/llm.service.js:35`
+**File:** `backend/src/services/llm.service.js:6`
+**Issue:** `ValidationError` is imported from `../utils/errors.js` but never referenced in this module. `AppError` is used throughout; `ValidationError` is unused dead code.
 
-**Issue:** The default model `nvidia/nemotron-nano-30b-a3b` combines "nano" (typically very small) with "30b" (30 billion parameters), which is contradictory. This model identifier may not exist on OpenRouter. If it doesn't, every API call will fail with a model-not-found error, forcing the fallback path for every request until the operator sets `LLM_MODEL` to a valid model.
-
-**Fix:** Verify the model identifier against OpenRouter's available models, or use a known-working default such as `"openai/gpt-4o-mini"` or the fallback already recommended in `.env.example` (line 29). At minimum, add a warning log at startup if the model cannot be verified:
-
-```javascript
-console.warn(`[LLM] Using model: ${CONFIG.model}. Verify this model is available on OpenRouter.`);
+**Fix:** Remove the unused import:
+```js
+import { AppError } from '../utils/errors.js';
 ```
 
 ---
 
-_Reviewed: 2026-05-29T12:00:00Z_
+### IN-03: `fixed` tracking variable in `validateAndFixPlan` is never consumed by caller
+
+**File:** `backend/src/services/llm.service.js:205`, 230
+**Issue:** The `let fixed = false` variable is set to `true` when a fuzzy match occurs (line 222), but the caller (`generateWeeklyPlan`) only checks `nameCheck.valid`. The `fixed` flag is returned but never read. This is dead logic.
+
+**Fix either:** Remove `fixed` from the return, or log it in the caller for observability:
+```js
+// If not needed:
+return { valid: errors.length === 0, plan, errors };
+
+// Or consume it for observability:
+if (nameCheck.fixed) {
+  console.log(`[LLM] Plan had ${nameCheck.errors.length} name corrections applied`);
+}
+```
+
+---
+
+### IN-04: `getActivityHistoryWithEntries` returns Date objects that downstream must reformat
+
+**File:** `backend/src/repositories/activity.repository.js:226-240`
+**Issue:** This function returns raw `pg` rows with `logged_date` as a JavaScript `Date` object. Every downstream consumer must reformat it (as `getActivityHistory` does at line 129 with `toLocaleDateString`). Currently `buildSystemPrompt` in `llm.service.js` mishandles it (see WR-01). Normalizing the date format at the repository boundary would prevent this class of bugs.
+
+**Fix:** Format `logged_date` in the repository, matching `getActivityHistory`'s pattern:
+```js
+return rows.map(r => ({
+  ...r,
+  logged_date: r.logged_date instanceof Date
+    ? r.logged_date.toISOString().split('T')[0]
+    : r.logged_date,
+}));
+```
+
+---
+
+### IN-05: `app.js` line 17: `errorResponse` imported but could also be used in 404 handler to match other error responses
+
+**File:** `backend/src/app.js:158-160`
+**Note:** The 404 handler correctly uses `errorResponse`. No issue here — this is a style note: the global error handler (lines 163-173) and the 404 handler use the same utility, which is good. No action needed; included for completeness.
+
+---
+
+_Reviewed: 2026-05-29T14:30:00Z_
 _Reviewer: gsd-code-reviewer (standard depth)_
 _Depth: standard_
