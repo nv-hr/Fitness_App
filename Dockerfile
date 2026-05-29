@@ -19,6 +19,7 @@ FROM node:20-alpine AS development
 # (Frontend runs via Vite dev server on host or separate container during dev)
 WORKDIR /app
 COPY backend/package*.json ./
+RUN node -e "process.exit(Number(process.version.slice(1).split('.')[0] < 18))" || (echo "Node >= 18 required for openai@^6" && exit 1)
 RUN npm install
 COPY backend/ ./
 ENV PORT=80
@@ -39,6 +40,7 @@ WORKDIR /app
 
 # Install only production dependencies per D-04
 COPY backend/package*.json ./
+RUN node -e "process.exit(Number(process.version.slice(1).split('.')[0] < 18))" || (echo "Node >= 18 required for openai@^6" && exit 1)
 RUN npm ci --omit=dev
 
 # Copy backend source code
