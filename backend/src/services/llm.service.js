@@ -55,7 +55,12 @@ export function buildPrompt(filename, variables) {
 export function buildSystemPrompt(profile, activityHistory, activities, weekStartDate) {
   const topActivityNames = [...new Set(activityHistory.map(a => a.activity_name))].slice(0, 5).join(', ');
   const historyText = activityHistory.length > 0
-    ? activityHistory.map(a => `- ${a.logged_date || a.loggedDate}: ${a.activity_name} (${a.duration_min}min, ${a.intensity})`).join('\n')
+    ? activityHistory.map(a => {
+        const dateStr = a.logged_date
+          ? (typeof a.logged_date === 'string' ? a.logged_date : a.logged_date.toISOString().split('T')[0])
+          : a.loggedDate;
+        return `- ${dateStr}: ${a.activity_name} (${a.duration_min}min, ${a.intensity})`;
+      }).join('\n')
     : 'No recent activity history.';
   const activitiesText = activities.map(a => `- ${a.name} (${a.estimated_calories} cal, ~${a.duration_min}min)`).join('\n');
 
