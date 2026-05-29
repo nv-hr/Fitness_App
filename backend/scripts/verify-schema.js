@@ -100,7 +100,7 @@ async function main() {
     console.log(allPass ? '\n✓ SCHEMA VERIFICATION PASSED' : '\n✗ SCHEMA VERIFICATION FAILED');
     process.exit(allPass ? 0 : 1);
   } catch (err) {
-    console.error(`FATAL: ${err.message}`);
+    console.error(`FATAL: ${err.message}\n${err.stack || '(no stack trace)'}`);
     process.exit(1);
   } finally {
     await pool.end();
