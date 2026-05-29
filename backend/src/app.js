@@ -19,7 +19,7 @@ import { errorResponse } from './utils/response.js';
 const app = express();
 
 // Validate and sanitize FRONTEND_URL for CORS and OAuth redirects (WR-02)
-const parseFrontendUrl = (url) => {
+const parseFrontendUrl = () => {
   const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
   try {
     const parsed = new URL(FRONTEND_URL);
