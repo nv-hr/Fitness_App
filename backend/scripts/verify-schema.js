@@ -47,12 +47,19 @@ async function main() {
     const hasUserActivityLog = tables.includes('user_activity_log');
     console.log(`  user_activity_log table: ${!hasUserActivityLog ? '✓ DROPPED' : '✗ STILL EXISTS'}`);
 
-    // Query 2: Check for intensity_level ENUM type
+    // Query 2: Check for all required ENUM types
+    const enumNames = ['intensity_level', 'gender', 'fitness_goal', 'activity_level', 'food_category', 'meal_type'];
     const enumResult = await pool.query(
-      `SELECT typname FROM pg_type WHERE typname = 'intensity_level'`
+      `SELECT typname FROM pg_type WHERE typname = ANY($1)`,
+      [enumNames]
     );
-    const hasIntensityEnum = enumResult.rows.length > 0;
-    console.log(`  intensity_level ENUM: ${hasIntensityEnum ? '✓ EXISTS' : '✗ MISSING'}`);
+    const foundEnums = enumResult.rows.map(r => r.typname);
+    let allEnumsPass = true;
+    for (const name of enumNames) {
+      const ok = foundEnums.includes(name);
+      console.log(`  ${name} ENUM: ${ok ? '✓ EXISTS' : '✗ MISSING'}`);
+      if (!ok) allEnumsPass = false;
+    }
 
     // Query 3: Verify activity_logs columns
     if (hasActivityLogs) {
@@ -88,7 +95,7 @@ async function main() {
       hasActivityLogs &&
       hasWeeklyPlans &&
       !hasUserActivityLog &&
-      hasIntensityEnum;
+      allEnumsPass;
 
     console.log(allPass ? '\n✓ SCHEMA VERIFICATION PASSED' : '\n✗ SCHEMA VERIFICATION FAILED');
     process.exit(allPass ? 0 : 1);
