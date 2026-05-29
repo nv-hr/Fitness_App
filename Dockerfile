@@ -5,7 +5,7 @@ FROM node:20-alpine AS builder
 # Install ALL dependencies (including devDeps like Vite) — D-04 applies only to production stage
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm ci
+RUN npm install
 
 # Build the React app (output: frontend/dist/)
 COPY frontend/ ./
