@@ -22,7 +22,7 @@ const INTENSITY_MULTIPLIERS = {
  */
 export function calculateActivityCalories(estimatedCalories, activityDurationMin, durationMin, intensity) {
   const dur = parseInt(durationMin, 10);
-  if (!estimatedCalories || !activityDurationMin || isNaN(dur) || dur < 1 || dur > 1440) {
+  if (estimatedCalories == null || activityDurationMin == null || isNaN(dur) || dur < 1 || dur > 1440) {
     return null;
   }
   const multiplier = INTENSITY_MULTIPLIERS[intensity] || 1.0;
