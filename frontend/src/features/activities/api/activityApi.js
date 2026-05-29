@@ -17,7 +17,7 @@ export async function getActivityLogs(date) {
 }
 
 export async function getActivityHistory(days = 7) {
-  return apiGet(`/api/activities/history?days=${days}`);
+  return apiGet(`/api/activities/history?days=${days}&includeEntries=true`);
 }
 
 export async function deleteActivityLog(id) {
