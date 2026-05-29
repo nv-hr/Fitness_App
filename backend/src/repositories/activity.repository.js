@@ -116,7 +116,7 @@ export async function getActivityHistory(userId, days = 7) {
   days = Math.min(Math.max(1, Math.floor(days)), 365);
   try {
     const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
+    cutoffDate.setDate(cutoffDate.getDate() - (days - 1));
     const cutoffStr = cutoffDate.toISOString().split('T')[0];
     const { rows } = await pool.query(
       `SELECT al.logged_date, SUM(al.duration_min) as total_minutes, SUM(al.calories_burned) as total_burned, COUNT(*) as entry_count
@@ -227,7 +227,7 @@ export async function getActivityHistoryWithEntries(userId, days = 7) {
   days = Math.min(Math.max(1, Math.floor(days)), 365);
   try {
     const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
+    cutoffDate.setDate(cutoffDate.getDate() - (days - 1));
     const cutoffStr = cutoffDate.toISOString().split('T')[0];
     const { rows } = await pool.query(
       `SELECT al.*, a.name as activity_name
