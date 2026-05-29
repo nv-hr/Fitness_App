@@ -59,3 +59,162 @@ export async function getActivityById(activityId) {
     throw new AppError('DatabaseError', `Failed to get activity: ${err.message}`, 500);
   }
 }
+
+/**
+ * Create a new activity log entry.
+ * @param {number} userId
+ * @param {Object} logData
+ * @param {number} logData.activityId
+ * @param {number} logData.durationMin
+ * @param {string} logData.intensity
+ * @param {number} logData.caloriesBurned
+ * @param {string} logData.loggedDate
+ * @returns {Promise<Object>}
+ */
+export async function createActivityLog(userId, { activityId, durationMin, intensity, caloriesBurned, loggedDate }) {
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO activity_logs (user_id, activity_id, duration_min, intensity, calories_burned, logged_date)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [userId, activityId, durationMin, intensity, caloriesBurned, loggedDate]
+    );
+    return rows[0] || null;
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to create activity log: ${err.message}`, 500);
+  }
+}
+
+/**
+ * Get all activity log entries for a specific date, with activity name.
+ * @param {number} userId
+ * @param {string} date
+ * @returns {Promise<Array>}
+ */
+export async function getActivityLogsByDate(userId, date) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT al.*, a.name as activity_name, a.estimated_calories, a.duration_min as activity_duration_min
+       FROM activity_logs al
+       JOIN activities a ON al.activity_id = a.id
+       WHERE al.user_id = $1 AND al.logged_date = $2
+       ORDER BY al.created_at DESC`,
+      [userId, date]
+    );
+    return rows;
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to get activity logs: ${err.message}`, 500);
+  }
+}
+
+/**
+ * Get activity history grouped by date with totals.
+ * @param {number} userId
+ * @param {number} days
+ * @returns {Promise<Array>}
+ */
+export async function getActivityHistory(userId, days = 7) {
+  days = Math.min(Math.max(1, Math.floor(days)), 365);
+  try {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    const cutoffStr = cutoffDate.toISOString().split('T')[0];
+    const { rows } = await pool.query(
+      `SELECT al.logged_date, SUM(al.duration_min) as total_minutes, SUM(al.calories_burned) as total_burned, COUNT(*) as entry_count
+       FROM activity_logs al
+       WHERE al.user_id = $1 AND al.logged_date >= $2::date
+       GROUP BY al.logged_date
+       ORDER BY al.logged_date DESC`,
+      [userId, cutoffStr]
+    );
+    return rows.map(r => ({ ...r, logged_date: r.logged_date.toLocaleDateString('en-CA') }));
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to get activity history: ${err.message}`, 500);
+  }
+}
+
+/**
+ * Get activity logs in a date range with activity name (for detailed history).
+ * @param {number} userId
+ * @param {string} startDate
+ * @param {string} endDate
+ * @returns {Promise<Array>}
+ */
+export async function getActivityLogsInRange(userId, startDate, endDate) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT al.*, a.name as activity_name
+       FROM activity_logs al
+       JOIN activities a ON al.activity_id = a.id
+       WHERE al.user_id = $1 AND al.logged_date >= $2 AND al.logged_date <= $3
+       ORDER BY al.logged_date DESC, al.created_at DESC`,
+      [userId, startDate, endDate]
+    );
+    return rows;
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to get activity logs in range: ${err.message}`, 500);
+  }
+}
+
+/**
+ * Delete an activity log entry scoped by user.
+ * @param {number} logId
+ * @param {number} userId
+ * @returns {Promise<number|null>} Deleted id or null if not found/not owned
+ */
+export async function deleteActivityLog(logId, userId) {
+  try {
+    const { rows } = await pool.query(
+      `DELETE FROM activity_logs WHERE id = $1 AND user_id = $2 RETURNING id`,
+      [logId, userId]
+    );
+    return rows[0] ? rows[0].id : null;
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to delete activity log: ${err.message}`, 500);
+  }
+}
+
+/**
+ * Get daily activity totals (calories burned and minutes).
+ * @param {number} userId
+ * @param {string} date
+ * @returns {Promise<{total_burned: number, total_minutes: number}>}
+ */
+export async function getDailyActivityTotal(userId, date) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT COALESCE(SUM(calories_burned), 0) as total_burned, COALESCE(SUM(duration_min), 0) as total_minutes
+       FROM activity_logs
+       WHERE user_id = $1 AND logged_date = $2`,
+      [userId, date]
+    );
+    return { total_burned: Number(rows[0].total_burned), total_minutes: Number(rows[0].total_minutes) };
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to get daily activity total: ${err.message}`, 500);
+  }
+}
+
+/**
+ * Get activity history with full entry details (single query JOIN for grouped display).
+ * @param {number} userId
+ * @param {number} days
+ * @returns {Promise<Array>}
+ */
+export async function getActivityHistoryWithEntries(userId, days = 7) {
+  days = Math.min(Math.max(1, Math.floor(days)), 365);
+  try {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    const cutoffStr = cutoffDate.toISOString().split('T')[0];
+    const { rows } = await pool.query(
+      `SELECT al.*, a.name as activity_name
+       FROM activity_logs al
+       JOIN activities a ON al.activity_id = a.id
+       WHERE al.user_id = $1 AND al.logged_date >= $2
+       ORDER BY al.logged_date DESC, al.created_at DESC`,
+      [userId, cutoffStr]
+    );
+    return rows;
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to get activity history with entries: ${err.message}`, 500);
+  }
+}
