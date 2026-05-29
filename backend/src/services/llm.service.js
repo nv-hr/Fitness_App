@@ -220,6 +220,9 @@ export function validateAndFixPlan(plan, dbActivities) {
     return { valid: false, fixed: false, plan, errors: ['Plan has no days array'] };
   }
 
+  // Clone the plan to avoid mutating the caller's reference
+  plan = JSON.parse(JSON.stringify(plan));
+
   for (const day of plan.days) {
     if (!Array.isArray(day.activities)) continue;
 
