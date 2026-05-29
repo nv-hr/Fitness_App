@@ -22,6 +22,8 @@ function getClient() {
     openaiClient = new OpenAI({
       baseURL: OPENROUTER_BASE_URL,
       apiKey: API_KEY,
+      timeout: 30000,
+      maxRetries: 0,
       defaultHeaders: {
         'HTTP-Referer': APP_URL,
         'X-OpenRouter-Title': 'Fitness_App',
