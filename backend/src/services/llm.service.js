@@ -332,18 +332,23 @@ export async function generateWeeklyPlan(deps) {
   let plan;
   let attempt = 0;
   const maxAttempts = 2;
+  let skipInitialCall = false;
 
   while (attempt < maxAttempts) {
     attempt++;
-    try {
-      plan = await callLlmApi(prompt);
-    } catch (err) {
-      console.error(`[LLM] API call attempt ${attempt} failed:`, err.message);
-      if (attempt >= maxAttempts) {
-        const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart });
-        return { plan: fallback, fromCache: false, status: fallback.status };
+    if (skipInitialCall) {
+      skipInitialCall = false;
+    } else {
+      try {
+        plan = await callLlmApi(prompt);
+      } catch (err) {
+        console.error(`[LLM] API call attempt ${attempt} failed:`, err.message);
+        if (attempt >= maxAttempts) {
+          const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart });
+          return { plan: fallback, fromCache: false, status: fallback.status };
+        }
+        continue;
       }
-      continue;
     }
 
     const structureCheck = validatePlanStructure(plan, deps.weekStart);
@@ -353,11 +358,13 @@ export async function generateWeeklyPlan(deps) {
         const correctionPrompt = prompt + '\n\n' + buildCorrectionPrompt(structureCheck.errors);
         try {
           plan = await callLlmApi(correctionPrompt);
+          // Correction succeeded — re-validate the corrected plan on next iteration
+          skipInitialCall = true;
+          continue;
         } catch {
           if (attempt >= maxAttempts) break;
           continue;
         }
-        // Correction succeeded — DO NOT continue; fall through to re-validate
       }
       break;
     }
@@ -369,11 +376,13 @@ export async function generateWeeklyPlan(deps) {
         const correctionPrompt = prompt + '\n\n' + buildCorrectionPrompt(nameCheck.errors);
         try {
           plan = await callLlmApi(correctionPrompt);
+          // Correction succeeded — re-validate the corrected plan on next iteration
+          skipInitialCall = true;
+          continue;
         } catch {
           if (attempt >= maxAttempts) break;
           continue;
         }
-        // Correction succeeded — DO NOT continue; fall through to the success path
       }
       break;
     }
