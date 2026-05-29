@@ -174,6 +174,30 @@ export async function deleteActivityLog(logId, userId) {
 }
 
 /**
+ * Get user's most-frequently logged activities for fallback plan generation.
+ * @param {number} userId
+ * @param {number} limit - Max activities to return (default 5)
+ * @returns {Promise<Array<{ id: number, name: string, estimated_calories: number, duration_min: number, log_count: number }>>}
+ */
+export async function getTopActivities(userId, limit = 5) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT a.id, a.name, a.estimated_calories, a.duration_min, COUNT(al.id) as log_count
+       FROM activity_logs al
+       JOIN activities a ON al.activity_id = a.id
+       WHERE al.user_id = $1
+       GROUP BY a.id, a.name, a.estimated_calories, a.duration_min
+       ORDER BY log_count DESC
+       LIMIT $2`,
+      [userId, limit]
+    );
+    return rows;
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to get top activities: ${err.message}`, 500);
+  }
+}
+
+/**
  * Get daily activity totals (calories burned and minutes).
  * @param {number} userId
  * @param {string} date
