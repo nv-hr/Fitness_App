@@ -43,3 +43,7 @@ export async function apiPost(path, body) {
     body: body !== null ? JSON.stringify(body) : undefined,
   });
 }
+
+export async function apiDelete(path) {
+  return apiFetch(path, { method: 'DELETE' });
+}
