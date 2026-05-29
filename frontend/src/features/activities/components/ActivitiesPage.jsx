@@ -27,8 +27,8 @@ export default function ActivitiesPage() {
       ]);
       setSummary(summaryRes.data);
       setHistory(historyRes.data || []);
-    } catch {
-      // Silently fail — user can refresh
+    } catch (err) {
+      console.warn('Failed to refresh activity data:', err);
     }
   }, []);
 
