@@ -38,6 +38,8 @@ const CONFIG = {
   retryDelayMs: 1000,
 };
 
+console.warn(`[LLM] Using model: ${CONFIG.model}. Verify this model is available on OpenRouter.`);
+
 const planCache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
 
 export function buildPrompt(filename, variables) {
@@ -81,6 +83,7 @@ export async function callLlmApi(systemPrompt) {
     model: CONFIG.model,
     messages: [
       { role: 'system', content: systemPrompt },
+      { role: 'user', content: 'Generate my weekly fitness plan based on my profile and history.' },
     ],
     temperature: CONFIG.temperature,
     max_tokens: CONFIG.maxTokens,
@@ -146,7 +149,13 @@ export function validatePlanStructure(plan, weekStart) {
 }
 
 export function fuzzyMatchActivityName(name, dbActivities) {
+  if (!name || typeof name !== 'string') {
+    return { matched: false, activity: null, matchType: 'none' };
+  }
   const normalized = name.trim().toLowerCase();
+  if (normalized.length === 0) {
+    return { matched: false, activity: null, matchType: 'none' };
+  }
 
   const exact = dbActivities.find(a => a.name.toLowerCase() === normalized);
   if (exact) {
@@ -227,16 +236,16 @@ export function buildCorrectionPrompt(validationErrors) {
   });
 }
 
-export function getCachedPlan(weekStart) {
-  return planCache.get(`plan_${weekStart}`);
+export function getCachedPlan(userId, weekStart) {
+  return planCache.get(`plan_${userId}_${weekStart}`);
 }
 
-export function setCachedPlan(weekStart, plan) {
-  planCache.set(`plan_${weekStart}`, plan);
+export function setCachedPlan(userId, weekStart, plan) {
+  planCache.set(`plan_${userId}_${weekStart}`, plan);
 }
 
-export function clearCachedPlan(weekStart) {
-  planCache.del(`plan_${weekStart}`);
+export function clearCachedPlan(userId, weekStart) {
+  planCache.del(`plan_${userId}_${weekStart}`);
 }
 
 export async function generateFallbackPlan(deps) {
@@ -296,7 +305,7 @@ export async function generateFallbackPlan(deps) {
 export async function generateWeeklyPlan(deps) {
   const { getProfile, getActivityHistory, getActivities, getTopActivities } = deps;
 
-  const cached = getCachedPlan(deps.weekStart);
+  const cached = getCachedPlan(deps.userId, deps.weekStart);
   if (cached) {
     return { plan: cached, fromCache: true, status: 'active' };
   }
@@ -348,7 +357,7 @@ export async function generateWeeklyPlan(deps) {
           if (attempt >= maxAttempts) break;
           continue;
         }
-        continue;
+        // Correction succeeded — DO NOT continue; fall through to re-validate
       }
       break;
     }
@@ -364,14 +373,14 @@ export async function generateWeeklyPlan(deps) {
           if (attempt >= maxAttempts) break;
           continue;
         }
-        continue;
+        // Correction succeeded — DO NOT continue; fall through to the success path
       }
       break;
     }
 
     plan = nameCheck.plan;
 
-    setCachedPlan(deps.weekStart, plan);
+    setCachedPlan(deps.userId, deps.weekStart, plan);
 
     return { plan, fromCache: false, status: 'active' };
   }
