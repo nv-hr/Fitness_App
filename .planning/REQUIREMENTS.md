@@ -20,7 +20,7 @@ Requirements for v1.3 Activity Tracking & Smart Suggestions. Each maps to roadma
 - [ ] **LLM-02**: User can view their weekly activity plan as day-by-day cards showing suggested activities
 - [ ] **LLM-03**: User can request to regenerate a single day/card from the weekly plan (rate-limited to prevent abuse)
 - [ ] **LLM-04**: System gracefully falls back to cached plan or shows a message when LLM is unavailable
-- [ ] **LLM-05**: LLM provider integration with API key management, rate limiting for cost control, and output validation to ensure only database activities are suggested
+- [ ] **LLM-05**: LLM provider integration with OpenRouter API key management, rate limiting for cost control, and output validation to ensure only database activities are suggested
 
 ## v2 Requirements
 
@@ -55,20 +55,20 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ACT-01 | — | Pending |
-| ACT-02 | — | Pending |
-| ACT-03 | — | Pending |
-| ACT-04 | — | Pending |
-| LLM-01 | — | Pending |
-| LLM-02 | — | Pending |
-| LLM-03 | — | Pending |
-| LLM-04 | — | Pending |
-| LLM-05 | — | Pending |
+| ACT-01 | Phase 14 | Pending |
+| ACT-02 | Phase 14 | Pending |
+| ACT-03 | Phase 14 | Pending |
+| ACT-04 | Phase 14 | Pending |
+| LLM-01 | Phase 15 | Pending |
+| LLM-02 | Phase 16 | Pending |
+| LLM-03 | Phase 16 | Pending |
+| LLM-04 | Phase 15 | Pending |
+| LLM-05 | Phase 15 | Pending |
 
 **Coverage:**
 - v1 requirements: 9 total
-- Mapped to phases: 0
-- Unmapped: 9 ⚠️
+- Mapped to phases: 9
+- Unmapped: 0 ✅
 
 ---
 
