@@ -102,7 +102,11 @@ export async function callLlmApi(systemPrompt) {
   }
 
   const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-  return JSON.parse(cleaned);
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);
+  }
+  return JSON.parse(jsonMatch[0]);
 }
 
 export function validatePlanStructure(plan, weekStart) {
