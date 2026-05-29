@@ -40,7 +40,7 @@
 
 **Milestone Goal:** Users can log physical activities with duration/intensity, view daily calorie balance including exercise, and receive personalized LLM-generated weekly activity plans.
 
-- [ ] **Phase 13: Database Schema & Foundation** — Create activity_logs and weekly_plans tables, install new npm packages
+- [x] **Phase 13: Database Schema & Foundation** — Create activity_logs and weekly_plans tables, install new npm packages (completed 2026-05-29)
 - [ ] **Phase 14: Activity Logger** — Full feature: log, view history, delete, daily net calorie summary
 - [ ] **Phase 15: LLM Backend Integration** — OpenRouter integration with caching, rate limiting, fallback, output validation
 - [ ] **Phase 16: Weekly Plan Frontend** — Day-by-day plan cards, single-day regeneration with rate-limit UX
@@ -111,7 +111,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 13. Database Schema & Foundation | 0/0 | Not started | - |
+| 13. Database Schema & Foundation | 1/1 | Complete   | 2026-05-29 |
 | 14. Activity Logger | 0/0 | Not started | - |
 | 15. LLM Backend Integration | 0/0 | Not started | - |
 | 16. Weekly Plan Frontend | 0/0 | Not started | - |
