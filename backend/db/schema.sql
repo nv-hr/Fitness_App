@@ -66,6 +66,8 @@ CREATE TABLE IF NOT EXISTS profiles (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+COMMENT ON COLUMN profiles.calorie_rate IS 'Recommended daily calorie intake rate string (e.g., "2000" kcal/day). Populated by application logic.';
+
 -- foods table: seeded + custom food ingredients (D-30)
 -- Seeded foods: user_id=NULL, is_custom=FALSE
 -- Custom foods: user_id=set, is_custom=TRUE
