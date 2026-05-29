@@ -29,14 +29,14 @@ export async function getRandomActivities(goalTags, count = 5) {
  * @param {string[]} goalTags
  * @returns {Promise<Array>}
  */
-export async function getAllActivities(goalTags) {
+export async function getAllActivities(goalTags = []) {
   try {
-    const { rows } = await pool.query(
-      `SELECT * FROM activities
-       WHERE goal_tags ?| $1
-       ORDER BY name ASC`,
-      [goalTags]
-    );
+    const hasTags = goalTags && goalTags.length > 0;
+    const query = hasTags
+      ? `SELECT * FROM activities WHERE goal_tags ?| $1 ORDER BY name ASC`
+      : `SELECT * FROM activities ORDER BY name ASC`;
+    const params = hasTags ? [goalTags] : [];
+    const { rows } = await pool.query(query, params);
     return rows;
   } catch (err) {
     throw new AppError('DatabaseError', `Failed to get all activities: ${err.message}`, 500);
