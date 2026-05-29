@@ -7,10 +7,31 @@ import {
   getTopActivities,
 } from '../repositories/activity.repository.js';
 
+function isValidDateString(str) {
+  if (typeof str !== 'string') return false;
+  const d = new Date(str + 'T00:00:00Z');
+  return !isNaN(d.getTime());
+}
+
+function getMonday(date) {
+  const d = new Date(date);
+  const day = d.getUTCDay();
+  const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
+  d.setUTCDate(diff);
+  return d.toISOString().split('T')[0];
+}
+
 async function generate(req, res, next) {
   try {
     const userId = req.user.userId;
-    const weekStart = req.body.weekStart || getMonday(new Date());
+    let weekStart = req.body.weekStart;
+
+    if (weekStart && !isValidDateString(weekStart)) {
+      return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
+    }
+    if (!weekStart) {
+      weekStart = getMonday(new Date());
+    }
 
     const result = await generateWeeklyPlan({
       getProfile: (id) => findProfileByUserId(id),
@@ -25,14 +46,6 @@ async function generate(req, res, next) {
   } catch (err) {
     next(err);
   }
-}
-
-function getMonday(date) {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  d.setDate(diff);
-  return d.toISOString().split('T')[0];
 }
 
 export default {
