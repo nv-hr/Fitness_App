@@ -160,6 +160,7 @@ CREATE INDEX IF NOT EXISTS idx_user_date ON food_logs(user_id, log_date);
 CREATE INDEX IF NOT EXISTS idx_user_recent ON food_logs(user_id, log_date DESC);
 
 -- user_activity_log table indexes
+-- REMOVE AFTER MIGRATION: index on deprecated user_activity_log (kept for backward compat until phase 14 cleanup)
 CREATE INDEX IF NOT EXISTS idx_user_date ON user_activity_log(user_id, completed_date);
 
 -- activity_logs table indexes
