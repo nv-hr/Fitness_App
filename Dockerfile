@@ -22,6 +22,8 @@ COPY backend/package*.json ./
 RUN node -e "process.exit(Number(process.version.slice(1).split('.')[0] < 18))" || (echo "Node >= 18 required for openai@^6" && exit 1)
 RUN npm install
 COPY backend/ ./
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
 ENV PORT=80
 EXPOSE 80
 
@@ -48,6 +50,9 @@ COPY backend/ ./
 
 # Copy built frontend from builder stage to ./public (served by Express.static per D-02)
 COPY --from=builder /app/frontend/dist ./public
+
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup && chown -R appuser:appgroup /app
+USER appuser
 
 # Default to port 80 per D-06
 ENV PORT=80
