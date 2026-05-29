@@ -80,7 +80,7 @@ app.use(cookieParser());
 app.use(passport.initialize());
 
 // 8. General rate limiter for /api/ routes
-const limiter = createRateLimiter();
+const limiter = createRateLimiter({ max: 500 });
 app.use('/api/', limiter);
 
 // 9. Stricter rate limiter for auth endpoints (T-01-06, T-01-10)
