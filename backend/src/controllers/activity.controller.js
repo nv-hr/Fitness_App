@@ -2,7 +2,7 @@ import { successResponse, errorResponse } from '../utils/response.js';
 import { getRecommendations, getAllActivitiesByGoal } from '../services/activity.service.js';
 import * as activityLogService from '../services/activityLog.service.js';
 import { findByUserId as findProfileByUserId } from '../repositories/profile.repository.js';
-import { getFoodById, getDailyTotal } from '../repositories/food.repository.js';
+import { getDailyTotal } from '../repositories/food.repository.js';
 import { getCalorieTarget, calculateTdee } from '../services/profile.service.js';
 import * as activityRepo from '../repositories/activity.repository.js';
 
@@ -40,8 +40,7 @@ async function getAllActivitiesHandler(req, res, next) {
       activities = await getAllActivitiesByGoal(req.user.userId, profile.fitness_goal);
     } else {
       // Fallback: return all activities if no profile
-      const { getAllActivities: getAllFromRepo } = await import('../repositories/activity.repository.js');
-      activities = await getAllFromRepo(req.user.userId, ['lose_weight', 'maintain', 'gain_weight']);
+      activities = await activityRepo.getAllActivities(['lose_weight', 'maintain', 'gain_weight']);
     }
 
     return successResponse(res, { activities, total: activities.length });
