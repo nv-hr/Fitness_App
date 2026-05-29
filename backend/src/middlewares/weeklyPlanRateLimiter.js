@@ -1,10 +1,12 @@
 import rateLimit from 'express-rate-limit';
 
+const isTest = process.env.NODE_ENV === 'test';
+
 const weeklyPlanLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
+  windowMs: isTest ? 1000 : 15 * 60 * 1000,
+  max: isTest ? 1000 : 5,
   keyGenerator: (req) => {
-    return `user_${req.user?.userId || 'anonymous'}`;
+    return `user_${req.user.userId}`;
   },
   handler: (req, res) => {
     const retryAfter = Math.ceil(
@@ -29,11 +31,5 @@ const weeklyPlanLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-
-const isTest = process.env.NODE_ENV === 'test';
-if (isTest) {
-  weeklyPlanLimiter.max = 1000;
-  weeklyPlanLimiter.windowMs = 1000;
-}
 
 export default weeklyPlanLimiter;
