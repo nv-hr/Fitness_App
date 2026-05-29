@@ -237,7 +237,12 @@ export async function getActivityHistoryWithEntries(userId, days = 7) {
        ORDER BY al.logged_date DESC, al.created_at DESC`,
       [userId, cutoffStr]
     );
-    return rows;
+    return rows.map(r => ({
+      ...r,
+      logged_date: r.logged_date instanceof Date
+        ? r.logged_date.toISOString().split('T')[0]
+        : r.logged_date,
+    }));
   } catch (err) {
     throw new AppError('DatabaseError', `Failed to get activity history with entries: ${err.message}`, 500);
   }

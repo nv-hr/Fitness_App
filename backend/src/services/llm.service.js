@@ -3,7 +3,7 @@ import NodeCache from 'node-cache';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { AppError, ValidationError } from '../utils/errors.js';
+import { AppError } from '../utils/errors.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROMPTS_DIR = path.resolve(__dirname, '../../prompts');
@@ -41,7 +41,7 @@ const CONFIG = {
   retryDelayMs: 1000,
 };
 
-console.warn(`[LLM] Using model: ${CONFIG.model}. Verify this model is available on OpenRouter.`);
+console.log(`[LLM] Using model: ${CONFIG.model}. Verify this model is available on OpenRouter.`);
 
 const planCache = new NodeCache({ stdTTL: 3600, checkperiod: 600, maxKeys: 1000 });
 
@@ -226,11 +226,10 @@ function levenshteinDistance(a, b) {
 }
 
 export function validateAndFixPlan(plan, dbActivities) {
-  let fixed = false;
   const errors = [];
 
   if (!plan || !Array.isArray(plan.days)) {
-    return { valid: false, fixed: false, plan, errors: ['Plan has no days array'] };
+    return { valid: false, plan, errors: ['Plan has no days array'] };
   }
 
   // Clone the plan to avoid mutating the caller's reference
@@ -246,7 +245,6 @@ export function validateAndFixPlan(plan, dbActivities) {
       } else if (result.matchType !== 'exact') {
         act.name = result.activity.name;
         act.activity_id = result.activity.id;
-        fixed = true;
         console.warn(`[LLM] Fixed activity name: "${act.name}" → "${result.activity.name}"`);
       } else {
         act.activity_id = result.activity.id;
@@ -254,7 +252,7 @@ export function validateAndFixPlan(plan, dbActivities) {
     }
   }
 
-  return { valid: errors.length === 0, fixed, plan, errors };
+  return { valid: errors.length === 0, plan, errors };
 }
 
 export function buildCorrectionPrompt(validationErrors) {
