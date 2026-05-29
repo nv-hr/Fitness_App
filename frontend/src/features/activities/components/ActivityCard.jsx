@@ -1,6 +1,6 @@
 
 
-export default function ActivityCard({ activity }) {
+export default function ActivityCard({ activity, onLogClick, isLogging }) {
   return (
     <div style={{
       border: '1px solid #e5e7eb',
@@ -23,13 +23,36 @@ export default function ActivityCard({ activity }) {
           {'Estimated Calories'}: {activity.estimated_calories} {'kcal'}
         </span>
       </div>
-      <div style={{ fontSize: '0.875rem', color: '#666' }}>
+      <div style={{ fontSize: '0.875rem', color: '#666', marginBottom: '0.75rem' }}>
         {'Equipment Needed'}: {
           activity.equipment_needed && activity.equipment_needed.length === 0
             ? 'No equipment'
             : activity.equipment_needed?.join(', ') || 'No equipment'
         }
       </div>
+
+      {/* Log This Button */}
+      {onLogClick && (
+        <button
+          onClick={() => onLogClick(activity)}
+          disabled={isLogging}
+          style={{
+            width: '100%',
+            padding: '0.5rem 1rem',
+            cursor: isLogging ? 'not-allowed' : 'pointer',
+            opacity: isLogging ? 0.6 : 1,
+            background: '#f0fdf4',
+            border: '1px solid #bbf7d0',
+            borderRadius: '4px',
+            color: '#16a34a',
+            fontWeight: 'bold',
+            fontSize: '0.875rem',
+            minHeight: '36px',
+          }}
+        >
+          {isLogging ? 'Logging...' : 'Log This'}
+        </button>
+      )}
     </div>
   );
 }
