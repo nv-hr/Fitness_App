@@ -399,7 +399,7 @@ export async function generateWeeklyPlan(deps) {
 
     plan = nameCheck.plan;
 
-    setCachedPlan(deps.userId, deps.weekStart, plan);
+    setCachedPlan(deps.userId, deps.weekStart, JSON.parse(JSON.stringify(plan)));
 
     return { plan, fromCache: false, status: 'active' };
   }
