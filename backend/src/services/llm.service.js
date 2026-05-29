@@ -40,7 +40,7 @@ const CONFIG = {
 
 console.warn(`[LLM] Using model: ${CONFIG.model}. Verify this model is available on OpenRouter.`);
 
-const planCache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
+const planCache = new NodeCache({ stdTTL: 3600, checkperiod: 600, maxKeys: 1000 });
 
 export function buildPrompt(filename, variables) {
   const filePath = path.join(PROMPTS_DIR, filename);
