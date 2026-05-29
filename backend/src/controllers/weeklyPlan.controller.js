@@ -29,9 +29,7 @@ async function generate(req, res, next) {
     if (weekStart && !isValidDateString(weekStart)) {
       return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
     }
-    if (!weekStart) {
-      weekStart = getMonday(new Date());
-    }
+    weekStart = getMonday(weekStart ? new Date(weekStart) : new Date());
 
     const result = await generateWeeklyPlan({
       getProfile: (id) => findProfileByUserId(id),
