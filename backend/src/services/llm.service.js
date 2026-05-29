@@ -35,6 +35,7 @@ function getClient() {
 
 const CONFIG = {
   model: process.env.LLM_MODEL || 'nvidia/nemotron-nano-30b-a3b',
+  fallbackModel: process.env.LLM_FALLBACK_MODEL || null,
   temperature: 0.2,
   maxTokens: 2000,
   retryDelayMs: 1000,
@@ -80,14 +81,9 @@ export function buildSystemPrompt(profile, activityHistory, activities, weekStar
   });
 }
 
-export async function callLlmApi(systemPrompt) {
-  const client = getClient();
-  if (!client) {
-    throw new AppError('LlmConfigError', 'OPENROUTER_API_KEY not configured', 503);
-  }
-
+async function callLlmWithModel(client, model, systemPrompt) {
   const response = await client.chat.completions.create({
-    model: CONFIG.model,
+    model,
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: 'Generate my weekly fitness plan based on my profile and history.' },
@@ -107,6 +103,23 @@ export async function callLlmApi(systemPrompt) {
     throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);
   }
   return JSON.parse(jsonMatch[0]);
+}
+
+export async function callLlmApi(systemPrompt) {
+  const client = getClient();
+  if (!client) {
+    throw new AppError('LlmConfigError', 'OPENROUTER_API_KEY not configured', 503);
+  }
+
+  try {
+    return await callLlmWithModel(client, CONFIG.model, systemPrompt);
+  } catch (err) {
+    if (CONFIG.fallbackModel) {
+      console.warn(`[LLM] Primary model ${CONFIG.model} failed, trying fallback ${CONFIG.fallbackModel}: ${err.message}`);
+      return await callLlmWithModel(client, CONFIG.fallbackModel, systemPrompt);
+    }
+    throw err;
+  }
 }
 
 export function validatePlanStructure(plan, weekStart) {
