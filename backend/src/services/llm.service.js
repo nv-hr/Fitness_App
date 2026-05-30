@@ -243,9 +243,10 @@ export function validateAndFixPlan(plan, dbActivities) {
       if (!result.matched) {
         errors.push(`Activity "${act.name}" not found in database`);
       } else if (result.matchType !== 'exact') {
+        const originalName = act.name;
         act.name = result.activity.name;
         act.activity_id = result.activity.id;
-        console.warn(`[LLM] Fixed activity name: "${act.name}" → "${result.activity.name}"`);
+        console.warn(`[LLM] Fixed activity name: "${originalName}" → "${result.activity.name}"`);
       } else {
         act.activity_id = result.activity.id;
       }
