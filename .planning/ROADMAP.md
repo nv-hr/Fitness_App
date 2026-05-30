@@ -3,7 +3,7 @@
 **Created:** 2026-05-17
 **Updated:** 2026-05-31 (v1.3 Testing & Polish complete)
 **Phases:** 17 complete (v1.1 + v1.2 + v1.3)
-**Milestones:** 2 shipped (v1.1, v1.2)
+**Milestones:** 3 shipped (v1.1, v1.2, v1.3)
 
 ## Milestones
 
@@ -36,9 +36,8 @@
 
 </details>
 
-### ✅ v1.3 Activity Tracking & Smart Suggestions (Phases 13-17) — SHIPPED 2026-05-31
-
-**Milestone Goal:** Users can log physical activities with duration/intensity, view daily calorie balance including exercise, and receive personalized LLM-generated weekly activity plans.
+<details>
+<summary>✅ v1.3 Activity Tracking & Smart Suggestions (Phases 13-17) — SHIPPED 2026-05-31</summary>
 
 - [x] **Phase 13: Database Schema & Foundation** — Create activity_logs and weekly_plans tables, install new npm packages (completed 2026-05-29)
 - [x] **Phase 14: Activity Logger** — Full feature: log, view history, delete, daily net calorie summary (completed 2026-05-29)
@@ -46,82 +45,7 @@
 - [x] **Phase 16: Weekly Plan Frontend** — Day-by-day plan cards, single-day regeneration with rate-limit UX (3/3 plans complete)
 - [x] **Phase 17: Testing & Polish** — Integration tests with mocks, edge case handling, UAT verification (1/1 plan complete — Activity Logger 14 integ tests, LLM 39 unit tests, 10 frontend component tests)
 
-## Phase Details
-
-### Phase 13: Database Schema & Foundation
-**Goal**: New database tables and npm packages are ready for activity tracking and LLM features
-**Depends on**: Phase 12 (completed)
-**Requirements**: (infrastructure — no direct user-facing requirements)
-**Success Criteria** (what must be TRUE):
-  1. `activity_logs` table exists with columns: id, user_id, activity_id, duration_min, intensity (ENUM), logged_date, created_at, with FK to activities and users
-  2. `weekly_plans` table exists with JSONB `plan_data` column and UNIQUE constraint on (user_id, week_start)
-  3. `intensity_level` ENUM exists with values: light, moderate, vigorous
-  4. Old `user_activity_log` table is cleanly dropped (data loss acceptable — seed-only data)
-  5. `openai@^6.1.0` and `node-cache@^5.1.2` install without dependency conflicts and are importable
-**Plans**: TBD
-
-### Phase 14: Activity Logger
-**Goal**: Users can log activities, view history, delete entries, and see daily net calorie summary including exercise
-**Depends on**: Phase 13
-**Requirements**: ACT-01, ACT-02, ACT-03, ACT-04
-**Success Criteria** (what must be TRUE):
-   1. User can log an activity by selecting from the existing activity database, entering duration in minutes, and choosing intensity level (light/moderate/vigorous)
-   2. User can view their activity history list showing date, activity name, duration, intensity, and calculated calories burned
-   3. User can delete any logged activity from their history
-   4. Daily summary shows total active minutes, total calories burned, and net calorie display (consumed − burned vs TDEE target)
-**Plans**: 1 (12 tasks)
-**UI hint**: yes
-
-### Phase 15: LLM Backend Integration
-**Goal**: System can generate personalized weekly activity plans via OpenRouter with caching, rate limiting, API key management, and graceful fallback
-**Depends on**: Phase 14 (LLM needs recent activity history as context)
-**Requirements**: LLM-01, LLM-04, LLM-05
-**Success Criteria** (what must be TRUE):
-   1. System generates a personalized weekly plan from OpenRouter using user's profile (weight, goals, activity level) and recent history, selecting only from existing database activities
-  2. API keys are managed via environment variable with startup validation (missing key → clear error, not silent failure)
-  3. Rate limiting enforced at 5 requests per 15 minutes with informative error responses including retry-after header
-   4. System gracefully falls back to the most recent cached plan (from `weekly_plans` table) or returns a clear "plan unavailable" message when OpenRouter is unreachable or returns invalid responses
-  5. Output validation ensures every suggested activity in the plan actually exists in the database — invalid entries are rejected and trigger a regeneration attempt (up to configured retries)
-**Plans**: 3 plans
-
-Plans:
-- [x] 15-01-PLAN.md — LLM Service Foundation: prompt templates, OpenRouter client, core API call
-- [x] 15-02-PLAN.md — Output Validation, Caching & Fallback: structural validation, fuzzy matching, retry logic, fallback plan
-- [x] 15-03-PLAN.md — Rate Limiting & API Endpoint: per-user rate limiter, controller, route registration
-
-### Phase 16: Weekly Plan Frontend
-**Goal**: Users can view their weekly plan as day-by-day cards (Mon-Sun) showing suggested activities with name, duration, and intensity for each day
-**Depends on**: Phase 15
-**Requirements**: LLM-02, LLM-03
-**Success Criteria** (what must be TRUE):
-  1. User can view their weekly plan as day-by-day cards (Mon-Sun) showing suggested activities with name, duration, and intensity for each day
-  2. User can request to regenerate a single day/card from the weekly plan
-  3. Frontend displays clear rate-limit messaging with countdown when regeneration limit (5/15min) is hit
-  4. Frontend shows appropriate loading states during generation and graceful fallback display when no plan exists or plan generation fails
-**Plans**: 3 plans
-
-**Wave 1 (parallel):**
-- [x] 16-01-PLAN.md — Backend additions: GET endpoint + regenerate-day endpoint
-- [x] 16-02-PLAN.md — Frontend components: API module, DayCard, orchestrator, utility components
-**Wave 2 *(blocked on Wave 1)*:**
-- [x] 16-03-PLAN.md — Router integration: route registration + dashboard nav link
-
-Cross-cutting constraints:
-- "User can view weekly plan as day-by-day cards" (truth in 16-02, 16-03)
-- "User can regenerate a single day" (truth in 16-01, 16-02)
-- "Rate-limit countdown on regenerate" (truth in 16-01, 16-02)
-**UI hint**: yes
-
-### Phase 17: Testing & Polish
-**Goal**: All v1.3 features are verified with integration tests, edge cases are handled, and UAT criteria confirmed
-**Depends on**: Phase 14, Phase 16 (all features complete)
-**Requirements**: (quality gate — no direct user-facing requirements)
-**Success Criteria** (what must be TRUE):
-   1. Activity Logger integration tests pass (log activity, list history, delete entry, daily summary with net calories)
-    2. LLM integration tests pass with mocked OpenRouter responses (generation, caching, fallback, rate limiting, output validation)
-   3. All new UI components render correctly in loading, empty, error, and success states
-   4. Full-stack smoke test completes without errors, covering activity logging and weekly plan features
-**Plans**: 1 plan
+</details>
 
 ## Progress
 
@@ -131,7 +55,7 @@ Cross-cutting constraints:
 | 14. Activity Logger | 1/1 | Complete   | 2026-05-29 |
 | 15. LLM Backend Integration | 3/3 | Complete   | 2026-05-29 |
 | 16. Weekly Plan Frontend | 3/3 | Complete   | 2026-05-30 |
-| 17. Testing & Polish | 0/1 | Planned | - |
+| 17. Testing & Polish | 1/1 | Complete   | 2026-05-31 |
 
 ---
 *Roadmap created: 2026-05-17*

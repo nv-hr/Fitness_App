@@ -31,3 +31,16 @@
 - food_logs.meal_type ENUM migrated from Indonesian (sarapan, makan_siang, makan_malam, camilan) to English (breakfast, lunch, dinner, snack) with 3-step migration script in init.sql
 
 ---
+
+## v1.3 Activity Tracking & Smart Suggestions (Shipped: 2026-05-31)
+
+**Phases completed:** 5 phases, 9 plans
+
+**Key accomplishments:**
+- Activity Logger with full CRUD: log, list, delete, daily summary with net calorie calculation
+- LLM Integration via OpenRouter with prompt templates, output validation, in-memory + DB caching, rate limiting (5 req/15min)
+- Weekly Plan Frontend with day-by-day cards, single-day regeneration, rate-limit countdown UX
+- 260/260 tests passing (backend 134, frontend 126)
+- Comprehensive test suite: 14 Activity Logger integration tests, 39 LLM unit tests, 10 frontend component test files
+
+---
