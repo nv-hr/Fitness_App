@@ -1,6 +1,8 @@
 import { successResponse, errorResponse } from '../utils/response.js';
-import { generateWeeklyPlan } from '../services/llm.service.js';
+import { generateWeeklyPlan, getCachedPlan } from '../services/llm.service.js';
 import { findByUserId as findProfileByUserId } from '../repositories/profile.repository.js';
+import { pool } from '../config/database.js';
+import { AppError } from '../utils/errors.js';
 import {
   getActivityHistoryWithEntries,
   getAllActivities,
@@ -19,6 +21,48 @@ function getMonday(date) {
   const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
   d.setUTCDate(diff);
   return d.toISOString().split('T')[0];
+}
+
+async function get(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    let weekStart = req.query.weekStart;
+
+    if (weekStart && !isValidDateString(weekStart)) {
+      return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
+    }
+    weekStart = weekStart || getMonday(new Date());
+
+    // Try in-memory cache first (faster, no DB hit)
+    const cached = getCachedPlan(userId, weekStart);
+    if (cached) {
+      return successResponse(res, { plan: cached, fromCache: true });
+    }
+
+    // Fall back to DB
+    const { rows } = await pool.query(
+      `SELECT plan_data, status, created_at, updated_at
+       FROM weekly_plans
+       WHERE user_id = $1 AND week_start = $2
+       LIMIT 1`,
+      [userId, weekStart]
+    );
+
+    if (rows.length === 0) {
+      return successResponse(res, { plan: null, fromCache: false });
+    }
+
+    const row = rows[0];
+    const plan = {
+      days: row.plan_data.days || [],
+      status: row.status || 'active',
+      generated_at: row.plan_data.generated_at || row.created_at,
+    };
+
+    return successResponse(res, { plan, fromCache: false });
+  } catch (err) {
+    next(err);
+  }
 }
 
 async function generate(req, res, next) {
@@ -47,5 +91,6 @@ async function generate(req, res, next) {
 }
 
 export default {
+  get,
   generate,
 };

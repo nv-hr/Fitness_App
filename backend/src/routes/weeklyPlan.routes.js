@@ -7,6 +7,7 @@ const router = Router();
 
 router.use(authenticateToken);
 
+router.get('/', weeklyPlanController.get);
 router.post('/generate', weeklyPlanLimiter, weeklyPlanController.generate);
 
 export default router;
