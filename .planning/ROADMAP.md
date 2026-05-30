@@ -43,7 +43,7 @@
 - [x] **Phase 13: Database Schema & Foundation** — Create activity_logs and weekly_plans tables, install new npm packages (completed 2026-05-29)
 - [x] **Phase 14: Activity Logger** — Full feature: log, view history, delete, daily net calorie summary (completed 2026-05-29)
 - [x] **Phase 15: LLM Backend Integration** — OpenRouter integration with caching, rate limiting, fallback, output validation (completed 2026-05-29)
-- [ ] **Phase 16: Weekly Plan Frontend** — Day-by-day plan cards, single-day regeneration with rate-limit UX (2/3 plans complete)
+- [x] **Phase 16: Weekly Plan Frontend** — Day-by-day plan cards, single-day regeneration with rate-limit UX (3/3 plans complete)
 - [ ] **Phase 17: Testing & Polish** — Integration tests with mocks, edge case handling, UAT verification
 
 ## Phase Details
@@ -104,7 +104,7 @@ Plans:
 - [x] 16-01-PLAN.md — Backend additions: GET endpoint + regenerate-day endpoint
 - [x] 16-02-PLAN.md — Frontend components: API module, DayCard, orchestrator, utility components
 **Wave 2 *(blocked on Wave 1)*:**
-- [ ] 16-03-PLAN.md — Router integration: route registration + dashboard nav link
+- [x] 16-03-PLAN.md — Router integration: route registration + dashboard nav link
 
 Cross-cutting constraints:
 - "User can view weekly plan as day-by-day cards" (truth in 16-02, 16-03)
@@ -130,7 +130,7 @@ Cross-cutting constraints:
 | 13. Database Schema & Foundation | 1/1 | Complete   | 2026-05-29 |
 | 14. Activity Logger | 1/1 | Complete   | 2026-05-29 |
 | 15. LLM Backend Integration | 3/3 | Complete   | 2026-05-29 |
-| 16. Weekly Plan Frontend | 2/3 | In Progress | - |
+| 16. Weekly Plan Frontend | 3/3 | Complete   | 2026-05-30 |
 | 17. Testing & Polish | 0/0 | Not started | - |
 
 ---

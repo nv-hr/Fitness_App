@@ -17,8 +17,8 @@ Requirements for v1.3 Activity Tracking & Smart Suggestions. Each maps to roadma
 ### LLM Weekly Activity Suggestions
 
 - [ ] **LLM-01**: System auto-generates a personalized weekly activity plan by selecting from the existing activity database, considering user's profile (weight, goals, activity level) and recent activity history
-- [ ] **LLM-02**: User can view their weekly activity plan as day-by-day cards showing suggested activities
-- [ ] **LLM-03**: User can request to regenerate a single day/card from the weekly plan (rate-limited to prevent abuse)
+- [x] **LLM-02**: User can view their weekly activity plan as day-by-day cards showing suggested activities
+- [x] **LLM-03**: User can request to regenerate a single day/card from the weekly plan (rate-limited to prevent abuse)
 - [ ] **LLM-04**: System gracefully falls back to cached plan or shows a message when LLM is unavailable
 - [ ] **LLM-05**: LLM provider integration with OpenRouter API key management, rate limiting for cost control, and output validation to ensure only database activities are suggested
 
@@ -60,8 +60,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ACT-03 | Phase 14 | Pending |
 | ACT-04 | Phase 14 | Pending |
 | LLM-01 | Phase 15 | Pending |
-| LLM-02 | Phase 16 | Pending |
-| LLM-03 | Phase 16 | Pending |
+| LLM-02 | Phase 16 | Complete |
+| LLM-03 | Phase 16 | Complete |
 | LLM-04 | Phase 15 | Pending |
 | LLM-05 | Phase 15 | Pending |
 
