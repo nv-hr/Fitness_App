@@ -9,5 +9,6 @@ router.use(authenticateToken);
 
 router.get('/', weeklyPlanController.get);
 router.post('/generate', weeklyPlanLimiter, weeklyPlanController.generate);
+router.post('/regenerate-day', weeklyPlanLimiter, weeklyPlanController.regenerateDay);
 
 export default router;

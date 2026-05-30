@@ -1,5 +1,5 @@
 import { successResponse, errorResponse } from '../utils/response.js';
-import { generateWeeklyPlan, getCachedPlan } from '../services/llm.service.js';
+import { generateWeeklyPlan, getCachedPlan, regenerateDay } from '../services/llm.service.js';
 import { findByUserId as findProfileByUserId } from '../repositories/profile.repository.js';
 import { pool } from '../config/database.js';
 import { AppError } from '../utils/errors.js';
@@ -90,7 +90,38 @@ async function generate(req, res, next) {
   }
 }
 
+async function regenerateDayHandler(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const { weekStart, dayIndex } = req.body;
+
+    if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {
+      return errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR');
+    }
+
+    let targetWeekStart = weekStart;
+    if (targetWeekStart && !isValidDateString(targetWeekStart)) {
+      return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
+    }
+    targetWeekStart = targetWeekStart || getMonday(new Date());
+
+    const result = await regenerateDay({
+      getProfile: (id) => findProfileByUserId(id),
+      getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
+      getActivities: () => getAllActivities(),
+      getTopActivities: (id, limit) => getTopActivities(id, limit),
+      userId,
+      weekStart: targetWeekStart,
+    }, dayIndex);
+
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export default {
   get,
   generate,
+  regenerateDay: regenerateDayHandler,
 };

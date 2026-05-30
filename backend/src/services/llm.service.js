@@ -426,3 +426,33 @@ export async function generateWeeklyPlan(deps) {
   const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart });
   return { plan: fallback, fromCache: false, status: fallback.status };
 }
+
+export async function regenerateDay(deps, dayIndex) {
+  // Validate dayIndex
+  if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {
+    throw new AppError('ValidationError', 'dayIndex must be a number between 0 and 6', 400);
+  }
+
+  // Generate a fresh full week plan (this consumes the rate-limit quota)
+  const result = await generateWeeklyPlan(deps);
+  const freshPlan = result.plan;
+
+  if (!freshPlan || !freshPlan.days || !freshPlan.days[dayIndex]) {
+    throw new AppError('GenerationError', 'Failed to generate plan for the requested day', 500);
+  }
+
+  // Get existing plan from cache or use fresh plan
+  const cached = getCachedPlan(deps.userId, deps.weekStart);
+  const existingPlan = cached || freshPlan;
+
+  // Replace only the requested day
+  const mergedPlan = JSON.parse(JSON.stringify(existingPlan));
+  mergedPlan.days[dayIndex] = freshPlan.days[dayIndex];
+  mergedPlan.status = 'active';
+  mergedPlan.generated_at = new Date().toISOString();
+
+  // Update cache
+  setCachedPlan(deps.userId, deps.weekStart, JSON.parse(JSON.stringify(mergedPlan)));
+
+  return { plan: mergedPlan, day: mergedPlan.days[dayIndex], dayIndex, fromCache: false, status: 'active' };
+}
