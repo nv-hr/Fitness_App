@@ -54,9 +54,9 @@ async function get(req, res, next) {
 
     const row = rows[0];
     const plan = {
-      days: row.plan_data.days || [],
+      days: row.plan_data?.days || [],
       status: row.status || 'active',
-      generated_at: row.plan_data.generated_at || row.created_at,
+      generated_at: row.plan_data?.generated_at || row.created_at,
     };
 
     return successResponse(res, { plan, fromCache: false });
