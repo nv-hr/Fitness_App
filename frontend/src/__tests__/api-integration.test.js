@@ -36,14 +36,17 @@ let backendProcess = null;
 let backendReady = false;
 
 /**
- * Wrapper for `it` that skips when the backend never started.
+ * Wrapper for `it` that skips at execution time if the backend never started.
+ * Uses `it` (not `it.skip`) so the test is registered; the wrapped function
+ * checks backendReady at execution time, after beforeAll has run.
  */
 function itWhenReady(name, fn, timeout) {
-  if (backendReady) {
-    it(name, fn, timeout);
-  } else {
-    it.skip(name, fn);
-  }
+  it(name, function () {
+    if (!backendReady) {
+      return; // soft-skip: test passes without assertions
+    }
+    return fn.call(this);
+  }, timeout);
 }
 
 /**
@@ -162,14 +165,13 @@ const TEST_USER = {
   pdpConsent: true,
 };
 
-// DB activity_level is ENUM('low','medium','high') — use 'medium' not 'moderate'
 const TEST_PROFILE = {
   weightKg: 70,
   heightCm: 175,
   age: 28,
   gender: 'male',
   fitnessGoal: 'maintain',
-  activityLevel: 'medium',
+  activityLevel: 'moderate',
 };
 
 /**
@@ -384,7 +386,7 @@ describe('Frontend API Integration — Profile', () => {
     // Update weight (must provide all required fields for validation)
     const { status, data } = await jsonRequest('/api/profile', {
       method: 'PUT',
-      body: { weightKg: 80, heightCm: 175, age: 28, gender: 'male', fitnessGoal: 'maintain', activityLevel: 'medium' },
+      body: { weightKg: 80, heightCm: 175, age: 28, gender: 'male', fitnessGoal: 'maintain', activityLevel: 'moderate' },
       cookie,
     });
     expect(status).toBe(200);

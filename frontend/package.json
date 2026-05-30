@@ -7,7 +7,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:with-backend": "node scripts/test-with-backend.cjs",
+    "test:integration": "node scripts/test-with-backend.cjs -- src/__tests__/api-integration.test.js"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.80.0",

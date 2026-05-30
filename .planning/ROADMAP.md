@@ -117,11 +117,11 @@ Cross-cutting constraints:
 **Depends on**: Phase 14, Phase 16 (all features complete)
 **Requirements**: (quality gate — no direct user-facing requirements)
 **Success Criteria** (what must be TRUE):
-  1. Activity Logger integration tests pass (log activity, list history, delete entry, daily summary with net calories)
-   2. LLM integration tests pass with mocked OpenRouter responses (generation, caching, fallback, rate limiting, output validation)
-  3. All new UI components render correctly in loading, empty, error, and success states
-  4. Full-stack smoke test completes without errors, covering activity logging and weekly plan features
-**Plans**: TBD
+   1. Activity Logger integration tests pass (log activity, list history, delete entry, daily summary with net calories)
+    2. LLM integration tests pass with mocked OpenRouter responses (generation, caching, fallback, rate limiting, output validation)
+   3. All new UI components render correctly in loading, empty, error, and success states
+   4. Full-stack smoke test completes without errors, covering activity logging and weekly plan features
+**Plans**: 1 plan
 
 ## Progress
 
@@ -131,7 +131,7 @@ Cross-cutting constraints:
 | 14. Activity Logger | 1/1 | Complete   | 2026-05-29 |
 | 15. LLM Backend Integration | 3/3 | Complete   | 2026-05-29 |
 | 16. Weekly Plan Frontend | 3/3 | Complete   | 2026-05-30 |
-| 17. Testing & Polish | 0/0 | Not started | - |
+| 17. Testing & Polish | 0/1 | Planned | - |
 
 ---
 *Roadmap created: 2026-05-17*

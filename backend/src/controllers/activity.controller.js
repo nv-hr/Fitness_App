@@ -79,7 +79,10 @@ async function logActivity(req, res, next) {
       loggedDate: logDate,
     });
 
-    return successResponse(res, log, 201);
+    return successResponse(res, {
+      ...log,
+      logged_date: log.logged_date instanceof Date ? log.logged_date.toLocaleDateString('en-CA') : log.logged_date,
+    }, 201);
   } catch (err) {
     next(err);
   }
