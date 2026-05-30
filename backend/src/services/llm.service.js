@@ -433,6 +433,8 @@ export async function regenerateDay(deps, dayIndex) {
     throw new AppError('ValidationError', 'dayIndex must be a number between 0 and 6', 400);
   }
 
+  // Clear cache so generateWeeklyPlan actually makes an LLM call (not returning stale cache)
+  clearCachedPlan(deps.userId, deps.weekStart);
   // Generate a fresh full week plan (this consumes the rate-limit quota)
   const result = await generateWeeklyPlan(deps);
   const freshPlan = result.plan;
