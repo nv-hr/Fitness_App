@@ -6,6 +6,7 @@ import RegisterForm from '../features/auth/components/RegisterForm.jsx';
 import ProfileForm from '../features/profile/components/ProfileForm.jsx';
 import { FoodLogPage } from '../features/food-log/index.js';
 import { ActivitiesPage } from '../features/activities/index.js';
+import { WeeklyPlanPage } from '../features/weekly-plan/index.js';
 import { getProfile } from '../features/profile/api/profileApi.js';
 
 import { useResponsive } from '../shared/hooks/useResponsive.js';
@@ -69,6 +70,9 @@ function DashboardPlaceholder() {
         <Link to="/activities" style={{ padding: '0.75rem 1rem', border: '1px solid #ccc', borderRadius: '4px', textDecoration: 'none', color: '#333', minHeight: '44px', display: 'inline-flex', alignItems: 'center' }}>
           {'Activity Recommendations'}
         </Link>
+        <Link to="/weekly-plan" style={{ padding: '0.75rem 1rem', border: '1px solid #ccc', borderRadius: '4px', textDecoration: 'none', color: '#333', minHeight: '44px', display: 'inline-flex', alignItems: 'center' }}>
+          {'Weekly Plan'}
+        </Link>
       </div>
       <button onClick={logout} style={{ padding: '0.75rem 1rem', minHeight: '44px', cursor: 'pointer' }}>{'Sign Out'}</button>
     </div>
@@ -84,6 +88,7 @@ export default function Router() {
         <Route path="/profile" element={<ResponsiveLayout><ProtectedRoute><ProfileForm /></ProtectedRoute></ResponsiveLayout>} />
         <Route path="/food-log" element={<ResponsiveLayout><ProtectedRoute><FoodLogPage /></ProtectedRoute></ResponsiveLayout>} />
         <Route path="/activities" element={<ResponsiveLayout><ProtectedRoute><ActivitiesPage /></ProtectedRoute></ResponsiveLayout>} />
+        <Route path="/weekly-plan" element={<ResponsiveLayout><ProtectedRoute><WeeklyPlanPage /></ProtectedRoute></ResponsiveLayout>} />
         <Route path="/" element={<ResponsiveLayout><ProtectedRoute><ProfileGuard><DashboardPlaceholder /></ProfileGuard></ProtectedRoute></ResponsiveLayout>} />
       </Routes>
     </BrowserRouter>
