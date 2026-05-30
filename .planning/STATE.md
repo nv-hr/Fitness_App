@@ -5,7 +5,7 @@ milestone_name: Activity Tracking & Smart Suggestions
 status: completed
 stopped_at: Phase 16 context gathered
 last_updated: "2026-05-30T16:44:06.605Z"
-last_activity: 2026-05-30 -- Phase 16 Plan 02 complete
+last_activity: 2026-05-30 -- Phase 16 Plan 01 complete
 progress:
   total_phases: 5
   completed_phases: 2
@@ -27,9 +27,9 @@ See: .planning/PROJECT.md (updated 2026-05-29)
 ## Current Position
 
 Phase: 16 — IN PROGRESS
-Plan: 2/3 complete (waves 1 & 2 remaining)
-Status: Phase 16 Plan 02 complete
-Last activity: 2026-05-30 -- Phase 16 Plan 02 complete
+Plan: 2/3 complete (Plan 01 + Plan 02 done, Plan 03 remaining)
+Status: Phase 16 Plan 01 + Plan 02 complete
+Last activity: 2026-05-30 -- Phase 16 Plan 01 complete
 
 Progress: [████████░░] 67%
 
@@ -47,6 +47,7 @@ Progress: [████████░░] 67%
 |-------|-------|-------|----------|
 | 01-12 | 39 | 39 | — |
 | Phase 14 P14 | 5min | 12 tasks | 13 files |
+| Phase 16 P01 | 12min | 2 tasks | 3 files |
 | Phase 16 P02 | 8min | 3 tasks | 8 files |
 
 ## Accumulated Context
@@ -54,6 +55,9 @@ Progress: [████████░░] 67%
 ### Decisions
 
 - v1.3 adds 2 feature categories: Activity Logger + LLM Weekly Suggestions
+- GET endpoint returns cached plan with fromCache flag, avoiding DB hit and not consuming rate-limit quota
+- Both POST /generate and POST /regenerate-day share same weeklyPlanLimiter (5 req/15min per user)
+- regenerateDay generates full plan but merges only one day into existing cached plan, preserving other days
 - Per-day retryAfter tracked in dayRetryAfters object keyed by dayIndex for independent per-card rate limits
 - getMonday helper computes ISO week start; week start computed client-side
 - Activity Logger is independent and can ship first (Phases 13-14)
@@ -86,9 +90,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-30T23:48:00.000Z
-Stopped at: Phase 16 Plan 02 complete
-Resume file: .planning/phases/16-weekly-plan-frontend/16-02-SUMMARY.md
+Last session: 2026-05-30T23:43:09.000Z
+Stopped at: Phase 16 Plan 01 complete
+Resume file: .planning/phases/16-weekly-plan-frontend/16-01-SUMMARY.md
 
 ## Operator Next Steps
 
