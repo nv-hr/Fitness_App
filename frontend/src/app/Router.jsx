@@ -88,7 +88,7 @@ export default function Router() {
         <Route path="/profile" element={<ResponsiveLayout><ProtectedRoute><ProfileForm /></ProtectedRoute></ResponsiveLayout>} />
         <Route path="/food-log" element={<ResponsiveLayout><ProtectedRoute><FoodLogPage /></ProtectedRoute></ResponsiveLayout>} />
         <Route path="/activities" element={<ResponsiveLayout><ProtectedRoute><ActivitiesPage /></ProtectedRoute></ResponsiveLayout>} />
-        <Route path="/weekly-plan" element={<ResponsiveLayout><ProtectedRoute><WeeklyPlanPage /></ProtectedRoute></ResponsiveLayout>} />
+        <Route path="/weekly-plan" element={<ResponsiveLayout><ProtectedRoute><ProfileGuard><WeeklyPlanPage /></ProfileGuard></ProtectedRoute></ResponsiveLayout>} />
         <Route path="/" element={<ResponsiveLayout><ProtectedRoute><ProfileGuard><DashboardPlaceholder /></ProfileGuard></ProtectedRoute></ResponsiveLayout>} />
       </Routes>
     </BrowserRouter>
