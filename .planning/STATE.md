@@ -3,15 +3,16 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Activity Tracking & Smart Suggestions
 status: completed
-stopped_at: Phase 16 Plan 01 complete
-last_updated: "2026-05-30T23:46:56.000Z"
-last_activity: 2026-05-30 -- Phase 16 Plan 03 complete
+stopped_at: Phase 17 Plan 01 created
+last_updated: "2026-05-31T00:00:00.000Z"
+last_activity: 2026-05-30 - Completed quick task 260531-0ea: fix api-integration.test.js with current setup
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 8
+  planned_phases: 1
+  total_plans: 9
   completed_plans: 8
-  percent: 80
+  percent: 89
 ---
 
 # Project State
@@ -22,16 +23,16 @@ See: .planning/PROJECT.md (updated 2026-05-29)
 
 **Core value:** Users can accurately calculate their BMI and TDEE, log daily food intake by ingredients, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
 
-**Current focus:** Phase 16 — Weekly Plan Frontend
+**Current focus:** Phase 17 — Testing & Polish
 
 ## Current Position
 
-Phase: 16 — COMPLETE
-Plan: 3/3 complete (Plan 01 + Plan 02 + Plan 03 done)
-Status: Phase 16 Plan 03 complete
-Last activity: 2026-05-30 -- Phase 16 Plan 03 complete
+Phase: 17 — PLANNED
+Plan: 0/1 (Plan 01 created, not yet executed)
+Status: Phase 17 Plan 01 ready for execution
+Last activity: 2026-05-30 - Completed quick task 260531-0ea: fix preexisting fail on api-integration.test.js with current setup
 
-Progress: [██████████] 100%
+Progress: [██████████] 89% (8/9 plans complete, 1 planned)
 
 ## Performance Metrics
 
@@ -88,6 +89,7 @@ None yet.
 | 260529-ny7 | Fix integration tests (checkDbConnection, describeIf graceful skip) | 2026-05-29 | — | [260529-ny7-fix-all-issue-that-occurs-on-backend-test](./quick/260529-ny7-fix-all-issue-that-occurs-on-backend-test/) |
 | 260529-oc5 | Manual testing verification + pooler fix | 2026-05-29 | b49b8ee | [260529-oc5-will-it-run-fine-on-manual-testing](./quick/260529-oc5-will-it-run-fine-on-manual-testing/) |
 | 260529-oc5b | Session pooler retest — all 81 tests pass, 6/6 API endpoints OK | 2026-05-29 | 1f80eb8 | [260529-oc5-try-test-backend-again-i-updated-to-session-pooler](./quick/260529-oc5-try-test-backend-again-i-updated-to-session-pooler/) |
+| 260531-0ea | fix preexisting fail on api-integration.test.js with current setup | 2026-05-30 | ea2b960 | [260531-0ea-fix-preexisting-fail-on-api-integration-](./quick/260531-0ea-fix-preexisting-fail-on-api-integration-/) |
 
 ## Session Continuity
 
