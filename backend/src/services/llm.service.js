@@ -50,7 +50,7 @@ export function buildPrompt(filename, variables) {
   let template = fs.readFileSync(filePath, 'utf-8');
   for (const [key, value] of Object.entries(variables)) {
     const placeholder = new RegExp(`{{${key}}}`, 'g');
-    template = template.replace(placeholder, String(value ?? ''));
+    template = template.replace(placeholder, () => String(value ?? ''));
   }
   return template;
 }
