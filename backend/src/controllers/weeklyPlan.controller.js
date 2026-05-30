@@ -31,7 +31,7 @@ async function get(req, res, next) {
     if (weekStart && !isValidDateString(weekStart)) {
       return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
     }
-    weekStart = weekStart || getMonday(new Date());
+    weekStart = getMonday(weekStart ? new Date(weekStart) : new Date());
 
     // Try in-memory cache first (faster, no DB hit)
     const cached = getCachedPlan(userId, weekStart);
@@ -103,7 +103,7 @@ async function regenerateDayHandler(req, res, next) {
     if (targetWeekStart && !isValidDateString(targetWeekStart)) {
       return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
     }
-    targetWeekStart = targetWeekStart || getMonday(new Date());
+    targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());
 
     const result = await regenerateDay({
       getProfile: (id) => findProfileByUserId(id),
