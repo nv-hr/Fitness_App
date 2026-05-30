@@ -4,13 +4,13 @@ milestone: v1.3
 milestone_name: Activity Tracking & Smart Suggestions
 status: completed
 stopped_at: Phase 16 context gathered
-last_updated: "2026-05-30T15:49:46.241Z"
-last_activity: 2026-05-29 -- Phase 15 marked complete
+last_updated: "2026-05-30T16:44:06.605Z"
+last_activity: 2026-05-30 -- Phase 16 Plan 02 complete
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 4
-  completed_plans: 5
+  total_plans: 7
+  completed_plans: 7
   percent: 40
 ---
 
@@ -22,22 +22,22 @@ See: .planning/PROJECT.md (updated 2026-05-29)
 
 **Core value:** Users can accurately calculate their BMI and TDEE, log daily food intake by ingredients, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
 
-**Current focus:** Phase 15 — llm-backend-integration
+**Current focus:** Phase 16 — Weekly Plan Frontend
 
 ## Current Position
 
-Phase: 15 — COMPLETE
-Plan: 1 of 3
-Status: Phase 15 complete
-Last activity: 2026-05-29 -- Phase 15 marked complete
+Phase: 16 — IN PROGRESS
+Plan: 2/3 complete (waves 1 & 2 remaining)
+Status: Phase 16 Plan 02 complete
+Last activity: 2026-05-30 -- Phase 16 Plan 02 complete
 
-Progress: [██████████] 100%
+Progress: [████████░░] 67%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 34 (v1.0 + v1.1 + v1.2)
+- Total plans completed: 40 (v1.0 + v1.1 + v1.2 + v1.3)
 - Average duration: N/A
 - Total execution time: ~2.5 hours (v1.0 + v1.1 estimate)
 
@@ -47,12 +47,15 @@ Progress: [██████████] 100%
 |-------|-------|-------|----------|
 | 01-12 | 39 | 39 | — |
 | Phase 14 P14 | 5min | 12 tasks | 13 files |
+| Phase 16 P02 | 8min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
 ### Decisions
 
 - v1.3 adds 2 feature categories: Activity Logger + LLM Weekly Suggestions
+- Per-day retryAfter tracked in dayRetryAfters object keyed by dayIndex for independent per-card rate limits
+- getMonday helper computes ISO week start; week start computed client-side
 - Activity Logger is independent and can ship first (Phases 13-14)
 - LLM feature depends on activity history data (Phase 14 complete before Phase 15)
 - 2 new npm packages: openai@^6.1.0, node-cache@^5.1.2
@@ -83,12 +86,12 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-30T15:49:46.231Z
-Stopped at: Phase 16 context gathered
-Resume file: .planning/phases/16-weekly-plan-frontend/16-CONTEXT.md
+Last session: 2026-05-30T23:48:00.000Z
+Stopped at: Phase 16 Plan 02 complete
+Resume file: .planning/phases/16-weekly-plan-frontend/16-02-SUMMARY.md
 
 ## Operator Next Steps
 
-- `/gsd-execute-phase 15` to execute the 3 LLM Backend Integration plans
-- `/clear` first for a fresh context window
-- Phase 16 (Weekly Plan Frontend) can be planned after Phase 15 completes
+- Execute 16-03-PLAN.md (Router integration: route registration + dashboard nav link)
+- After Phase 16 completes, execute Phase 17 (Testing & Polish)
+- WeeklyPlanPage needs to be added to the router at `/weekly-plan` and linked in main navigation

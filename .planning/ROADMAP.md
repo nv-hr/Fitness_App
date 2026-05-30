@@ -43,7 +43,7 @@
 - [x] **Phase 13: Database Schema & Foundation** — Create activity_logs and weekly_plans tables, install new npm packages (completed 2026-05-29)
 - [x] **Phase 14: Activity Logger** — Full feature: log, view history, delete, daily net calorie summary (completed 2026-05-29)
 - [x] **Phase 15: LLM Backend Integration** — OpenRouter integration with caching, rate limiting, fallback, output validation (completed 2026-05-29)
-- [ ] **Phase 16: Weekly Plan Frontend** — Day-by-day plan cards, single-day regeneration with rate-limit UX
+- [ ] **Phase 16: Weekly Plan Frontend** — Day-by-day plan cards, single-day regeneration with rate-limit UX (2/3 plans complete)
 - [ ] **Phase 17: Testing & Polish** — Integration tests with mocks, edge case handling, UAT verification
 
 ## Phase Details
@@ -90,7 +90,7 @@ Plans:
 - [x] 15-03-PLAN.md — Rate Limiting & API Endpoint: per-user rate limiter, controller, route registration
 
 ### Phase 16: Weekly Plan Frontend
-**Goal**: Users can view their weekly plan as day-by-day cards and request regeneration of individual days
+**Goal**: Users can view their weekly plan as day-by-day cards (Mon-Sun) showing suggested activities with name, duration, and intensity for each day
 **Depends on**: Phase 15
 **Requirements**: LLM-02, LLM-03
 **Success Criteria** (what must be TRUE):
@@ -98,7 +98,18 @@ Plans:
   2. User can request to regenerate a single day/card from the weekly plan
   3. Frontend displays clear rate-limit messaging with countdown when regeneration limit (5/15min) is hit
   4. Frontend shows appropriate loading states during generation and graceful fallback display when no plan exists or plan generation fails
-**Plans**: TBD
+**Plans**: 3 plans
+
+**Wave 1 (parallel):**
+- [x] 16-01-PLAN.md — Backend additions: GET endpoint + regenerate-day endpoint
+- [x] 16-02-PLAN.md — Frontend components: API module, DayCard, orchestrator, utility components
+**Wave 2 *(blocked on Wave 1)*:**
+- [ ] 16-03-PLAN.md — Router integration: route registration + dashboard nav link
+
+Cross-cutting constraints:
+- "User can view weekly plan as day-by-day cards" (truth in 16-02, 16-03)
+- "User can regenerate a single day" (truth in 16-01, 16-02)
+- "Rate-limit countdown on regenerate" (truth in 16-01, 16-02)
 **UI hint**: yes
 
 ### Phase 17: Testing & Polish
@@ -119,9 +130,9 @@ Plans:
 | 13. Database Schema & Foundation | 1/1 | Complete   | 2026-05-29 |
 | 14. Activity Logger | 1/1 | Complete   | 2026-05-29 |
 | 15. LLM Backend Integration | 3/3 | Complete   | 2026-05-29 |
-| 16. Weekly Plan Frontend | 0/0 | Not started | - |
+| 16. Weekly Plan Frontend | 2/3 | In Progress | - |
 | 17. Testing & Polish | 0/0 | Not started | - |
 
 ---
 *Roadmap created: 2026-05-17*
-*Last updated: 2026-05-29 (v1.3 Activity Tracking & Smart Suggestions phases defined)*
+*Last updated: 2026-05-30 (Phase 16 Plan 02 complete)*
