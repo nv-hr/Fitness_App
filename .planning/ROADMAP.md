@@ -1,8 +1,8 @@
 # ROADMAP: Fitness_App
 
 **Created:** 2026-05-17
-**Updated:** 2026-05-28 (v1.2 Supabase Migration shipped)
-**Phases:** 12 complete (v1.1 + v1.2)
+**Updated:** 2026-05-31 (v1.3 Testing & Polish complete)
+**Phases:** 17 complete (v1.1 + v1.2 + v1.3)
 **Milestones:** 2 shipped (v1.1, v1.2)
 
 ## Milestones
@@ -36,7 +36,7 @@
 
 </details>
 
-### 🚧 v1.3 Activity Tracking & Smart Suggestions (Phases 13-17)
+### ✅ v1.3 Activity Tracking & Smart Suggestions (Phases 13-17) — SHIPPED 2026-05-31
 
 **Milestone Goal:** Users can log physical activities with duration/intensity, view daily calorie balance including exercise, and receive personalized LLM-generated weekly activity plans.
 
@@ -44,7 +44,7 @@
 - [x] **Phase 14: Activity Logger** — Full feature: log, view history, delete, daily net calorie summary (completed 2026-05-29)
 - [x] **Phase 15: LLM Backend Integration** — OpenRouter integration with caching, rate limiting, fallback, output validation (completed 2026-05-29)
 - [x] **Phase 16: Weekly Plan Frontend** — Day-by-day plan cards, single-day regeneration with rate-limit UX (3/3 plans complete)
-- [ ] **Phase 17: Testing & Polish** — Integration tests with mocks, edge case handling, UAT verification
+- [x] **Phase 17: Testing & Polish** — Integration tests with mocks, edge case handling, UAT verification (1/1 plan complete — Activity Logger 14 integ tests, LLM 39 unit tests, 10 frontend component tests)
 
 ## Phase Details
 
