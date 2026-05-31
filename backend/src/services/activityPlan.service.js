@@ -28,6 +28,11 @@ export function validateActivityPlanStructure(plan, planDate) {
       errors.push(`Activity ${i + 1}: intensity must be light/moderate/vigorous`);
     }
   });
+  // If the plan includes a rest_day field, log it but don't fail validation
+  // (system-prompt.md may train the LLM to include it; daily plans can ignore it)
+  if (plan.rest_day !== undefined && typeof plan.rest_day !== 'boolean') {
+    errors.push('rest_day must be a boolean if present');
+  }
   return { valid: errors.length === 0, errors };
 }
 
