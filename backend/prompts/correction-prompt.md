@@ -12,3 +12,4 @@ Please generate a corrected version following these rules:
 - Activity days: rest_day=false with 1-4 activities
 - Rest days: rest_day=true with empty activities array
 - Every day MUST include the rest_day field
+- Include "format_version": 1 at the root level
