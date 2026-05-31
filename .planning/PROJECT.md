@@ -27,18 +27,11 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 - **LLM Weekly Activity Plans** — AI-generated 7-day personalized plans via OpenRouter with day-by-day cards, single-day regeneration, and rate-limit UX
 - **260/260 tests passing** — backend 134 + frontend 126
 
-## Current Milestone: v1.5 Smart Auto-Logging
+## Next Milestone: TBD
 
-**Goal:** Auto-save generated activity/meal plans to logs, inline management (complete/regenerate), daily meal generation, auto-generation on page visit, and unified UI merging plan pages with log pages.
+v1.5 is shipped — all 6 milestones (v1.0–v1.5) complete across 29 phases.
 
-**Target features:**
-- Generated activities auto-save to activity log with completed toggle
-- Generated meals auto-save to food log with completed/regenerate actions
-- Meal recommendations generate for 1 day (not weekly)
-- Auto-generate plan when visiting page if none exists
-- Manual regenerate button always available
-- Activity Plan UI merged into Activities page
-- Meal Plan UI merged into Food Log page
+Next milestone to be defined via `/gsd-new-milestone` or `/gsd-project-roadmap`.
 
 ## Requirements
 

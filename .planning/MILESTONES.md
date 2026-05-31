@@ -1,5 +1,15 @@
 # Milestones
 
+## v1.5 Smart Auto-Logging (Shipped: 2026-05-31)
+
+**Phases completed:** 1 phases, 2 plans, 0 tasks
+
+**Key accomplishments:**
+
+- (none recorded)
+
+---
+
 ## v1.1 International Ingredient Logging (Shipped: 2026-05-18)
 
 **Phases completed:** 8 phases, 23 plans, 28 tasks
@@ -37,6 +47,7 @@
 **Phases completed:** 5 phases, 9 plans
 
 **Key accomplishments:**
+
 - Activity Logger with full CRUD: log, list, delete, daily summary with net calorie calculation
 - LLM Integration via OpenRouter with prompt templates, output validation, in-memory + DB caching, rate limiting (5 req/15min)
 - Weekly Plan Frontend with day-by-day cards, single-day regeneration, rate-limit countdown UX
