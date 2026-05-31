@@ -185,7 +185,8 @@ export function validatePlanStructure(plan, weekStart, availableDays = null) {
   }
 
   if (Array.isArray(plan.activities)) {
-    return { valid: errors.length === 0, errors: validateActivities(plan.activities, '', false) };
+    const actErrors = validateActivities(plan.activities, '', false)
+    return { valid: errors.length === 0 && actErrors.length === 0, errors: [...errors, ...actErrors] }
   }
 
   if (!Array.isArray(plan.days)) {
