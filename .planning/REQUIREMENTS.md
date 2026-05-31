@@ -74,38 +74,38 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CAL-FND-01 | | Pending |
-| CAL-FND-02 | | Pending |
-| CAL-FND-03 | | Pending |
-| CAL-FND-04 | | Pending |
-| CAL-FND-05 | | Pending |
-| CAL-FND-06 | | Pending |
-| CAL-FND-07 | | Pending |
-| CAL-FND-08 | | Pending |
-| CAL-ACT-01 | | Pending |
-| CAL-ACT-02 | | Pending |
-| CAL-ACT-03 | | Pending |
-| CAL-ACT-04 | | Pending |
-| CAL-ACT-05 | | Pending |
-| CAL-ACT-06 | | Pending |
-| CAL-ACT-07 | | Pending |
-| CAL-MEA-01 | | Pending |
-| CAL-MEA-02 | | Pending |
-| CAL-MEA-03 | | Pending |
-| CAL-MEA-04 | | Pending |
-| CAL-MEA-05 | | Pending |
-| CAL-MEA-06 | | Pending |
-| CAL-CLN-01 | | Pending |
-| CAL-CLN-02 | | Pending |
-| CAL-CLN-03 | | Pending |
-| CAL-CLN-04 | | Pending |
-| CAL-CLN-05 | | Pending |
-| CAL-CLN-06 | | Pending |
+| CAL-FND-01 | Phase 34 | Pending |
+| CAL-FND-02 | Phase 34 | Pending |
+| CAL-FND-03 | Phase 34 | Pending |
+| CAL-FND-04 | Phase 34 | Pending |
+| CAL-FND-05 | Phase 34 | Pending |
+| CAL-FND-06 | Phase 34 | Pending |
+| CAL-FND-07 | Phase 34 | Pending |
+| CAL-FND-08 | Phase 34 | Pending |
+| CAL-ACT-01 | Phase 35 | Pending |
+| CAL-ACT-02 | Phase 35 | Pending |
+| CAL-ACT-03 | Phase 35 | Pending |
+| CAL-ACT-04 | Phase 35 | Pending |
+| CAL-ACT-05 | Phase 35 | Pending |
+| CAL-ACT-06 | Phase 35 | Pending |
+| CAL-ACT-07 | Phase 35 | Pending |
+| CAL-MEA-01 | Phase 36 | Pending |
+| CAL-MEA-02 | Phase 36 | Pending |
+| CAL-MEA-03 | Phase 36 | Pending |
+| CAL-MEA-04 | Phase 36 | Pending |
+| CAL-MEA-05 | Phase 36 | Pending |
+| CAL-MEA-06 | Phase 36 | Pending |
+| CAL-CLN-01 | Phase 37 | Pending |
+| CAL-CLN-02 | Phase 37 | Pending |
+| CAL-CLN-03 | Phase 37 | Pending |
+| CAL-CLN-04 | Phase 37 | Pending |
+| CAL-CLN-05 | Phase 37 | Pending |
+| CAL-CLN-06 | Phase 37 | Pending |
 
 **Coverage:**
 - v1.7 requirements: 27 total
-- Mapped to phases: 0
-- Unmapped: 27 ⚠️
+- Mapped to phases: 27
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-05-31*

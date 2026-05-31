@@ -1,9 +1,9 @@
 # ROADMAP: Fitness_App
 
 **Created:** 2026-05-17
-**Updated:** 2026-05-31 (v1.6 shipped)
-**Phases:** 33 complete
-**Milestones:** 7 shipped
+**Updated:** 2026-05-31 (v1.7 planning)
+**Phases:** 33 complete, 4 planned
+**Milestones:** 6 shipped, 1 in progress
 
 ## Milestones
 
@@ -14,6 +14,7 @@
 - ✅ **v1.4 LLM Food Recommendations** — Phases 18-23 (shipped 2026-05-31)
 - ✅ **v1.5 Smart Auto-Logging** — Phases 24-29 (shipped 2026-05-31)
 - ✅ **v1.6 Activity Planner Rework** — Phases 30-33 (shipped 2026-05-31)
+- 🔄 **v1.7 Calendar-Based Plan UI** — Phases 34-37 (in progress)
 
 ## Phases
 
@@ -92,9 +93,17 @@
 
 </details>
 
-### Next Milestone: TBD
+<details open>
+<summary>🔄 v1.7 Calendar-Based Plan UI (Phases 34-37) — IN PROGRESS</summary>
 
-*Next milestone to be defined via `/gsd-new-milestone`.*
+- [ ] Phase 34: Calendar Shared Components — 0/0 plans
+- [ ] Phase 35: Activity Calendar Page — 0/0 plans
+- [ ] Phase 36: Meal Calendar Page — 0/0 plans
+- [ ] Phase 37: Cleanup — Remove Old Components & Update Nav — 0/0 plans
+
+</details>
+
+### Next Milestone: v1.7 Calendar-Based Plan UI
 
 ### Phase 30: Prompt & Validation Rework
 **Goal**: LLM generates variable-day plans with profile-driven activity selection and rest days
@@ -157,6 +166,57 @@ Plans:
 - [x] 33-01-PLAN.md — Lazy migration (GET + swapHandler) + 404 fix for nonexistent activityId — completed 2026-05-31
 - [x] 33-02-PLAN.md — Unit + E2E tests for migration flows and swap edge cases — completed 2026-05-31
 
+### Phase 34: Calendar Shared Components
+**Goal**: Shared month-grid calendar foundation — CalendarGrid, DayCell, MonthNav, CalendarPageLayout, DayDetailPanel, and calendar utility functions
+**Depends on**: Phase 33
+**Requirements**: CAL-FND-01, CAL-FND-02, CAL-FND-03, CAL-FND-04, CAL-FND-05, CAL-FND-06, CAL-FND-07, CAL-FND-08
+**Success Criteria** (what must be TRUE):
+   1. CalendarGrid renders a 7-column CSS grid showing all days of the current month with correct day numbers and weekday headers
+   2. Day cells display color coding: blue for incomplete/planned, green for completed, grey for past incomplete days, with a "Today" visual indicator on the current day
+   3. Users can navigate between months using prev/next arrow buttons, and CalendarGrid renders the correct month after navigation
+   4. Clicking any day cell selects it and populates the CalendarPageLayout's detail panel slot with day information
+   5. calendarUtils correctly compute day status from plan data via getWeekStartsForMonth(), buildMonthGrid(), and computeDayStatus() — verified by unit tests
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 35: Activity Calendar Page
+**Goal**: Users can browse, generate, and manage weekly activity plans through a calendar-driven interface
+**Depends on**: Phase 34
+**Requirements**: CAL-ACT-01, CAL-ACT-02, CAL-ACT-03, CAL-ACT-04, CAL-ACT-05, CAL-ACT-06, CAL-ACT-07
+**Success Criteria** (what must be TRUE):
+   1. Activity Calendar page at `/activity-calendar` renders CalendarGrid with activity completion status per day using the shared calendar components
+   2. Clicking a day opens the detail panel showing planned activities using DayActivityRow — each with swap button and completion toggle
+   3. Generate Week button above the calendar generates a weekly activity plan with loading state feedback
+   4. Auto-generate creates a weekly plan when viewing today with no existing plan (gated — does not fire on month navigation, uses ref guard)
+   5. Past days show grey detail panel with read-only display (no swap, no toggle, no clickable interactions)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 36: Meal Calendar Page
+**Goal**: Users can browse, generate, and log daily meal plans through a calendar-driven interface
+**Depends on**: Phase 35
+**Requirements**: CAL-MEA-01, CAL-MEA-02, CAL-MEA-03, CAL-MEA-04, CAL-MEA-05, CAL-MEA-06
+**Success Criteria** (what must be TRUE):
+   1. Meal Calendar page at `/meal-calendar` renders CalendarGrid with meal logging status per day using the shared calendar components
+   2. Clicking a day opens the detail panel showing planned meals using MealRow — each with one-click log action
+   3. Generate Day button above the calendar generates a daily meal plan with loading state feedback
+   4. Auto-generate creates a daily meal plan when viewing today with no existing plan (gated — does not fire on month navigation, uses ref guard)
+   5. Past days show grey detail panel with read-only display (no log actions, no clickable interactions)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 37: Cleanup — Remove Old Components & Update Navigation
+**Goal**: Old section-based plan components are removed, navigation updated to calendar pages, and test coverage validated
+**Depends on**: Phase 36
+**Requirements**: CAL-CLN-01, CAL-CLN-02, CAL-CLN-03, CAL-CLN-04, CAL-CLN-05, CAL-CLN-06
+**Success Criteria** (what must be TRUE):
+   1. Old ActivityPlanSection, WeeklyPlanPage, and DayCard components are removed with zero remaining import references (verified by glob search)
+   2. Old DailyMealPlanSection, MealPlanPage, and DayMealCard components are removed with zero remaining import references (verified by glob search)
+   3. Dashboard/menu navigation links point to `/activity-calendar` and `/meal-calendar` instead of old page routes
+   4. Old page-specific tests are removed; equivalent calendar tests exist matching or exceeding previous coverage
+   5. All 27 CAL requirements pass end-to-end verification — both calendar pages functional, no dead imports
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -194,9 +254,12 @@ Plans:
 | 31. Activity Swap Endpoint | v1.6 | 2/2 | Complete | 2026-05-31 |
 | 32. Frontend — Days Selector & Swap UI | v1.6 | 2/2 | Complete | 2026-05-31 |
 | 33. Plan Migration & Edge Cases | v1.6 | 2/2 | Complete | 2026-05-31 |
+| 34. Calendar Shared Components | v1.7 | 0/0 | Not started | - |
+| 35. Activity Calendar Page | v1.7 | 0/0 | Not started | - |
+| 36. Meal Calendar Page | v1.7 | 0/0 | Not started | - |
+| 37. Cleanup — Remove Old Components & Update Nav | v1.7 | 0/0 | Not started | - |
 
 
 ---
-
 *Roadmap created: 2026-05-17*
-*Last updated: 2026-05-31 (v1.6 shipped)*
+*Last updated: 2026-05-31 (v1.7 planning)*

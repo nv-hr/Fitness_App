@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-05-31T14:27:35.192Z"
 last_activity: 2026-05-31
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,20 +21,20 @@ See: .planning/PROJECT.md (updated 2026-05-31)
 
 **Core value:** Users can accurately calculate their BMI and TDEE, log daily food intake by selecting ingredients and entering weight in grams, log physical activities with intensity-based calorie tracking, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
 
-**Current focus:** (next milestone TBD)
+**Current focus:** Building v1.7 Calendar-Based Plan UI — Replace existing section-based plan displays with calendar-driven UIs for activity and meal plans.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Phase 34 — Calendar Shared Components (pending planning)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-31 — Milestone v1.7 started
+Status: Planning roadmap
+Last activity: 2026-05-31 — Roadmap created for v1.7 (Phases 34-37)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 68 (v1.0–v1.5)
+- Total plans completed: 68 (v1.0–v1.6)
 - Average duration: N/A
 - Total execution time: N/A
 
@@ -56,6 +56,13 @@ Last activity: 2026-05-31 — Milestone v1.7 started
 - D-12: Swap countdown managed at WeeklyPlanPage level via swapRetryAfter state + useEffect interval pattern
 - D-13: Toast state uses single {message} object that replaces on new error; rendered in all 5 return branches
 - [Phase ?]: availableDays default for migrated plans = 5 (CONTEXT.md discretion)
+- D-14 (v1.7): Calendar uses custom CSS Grid + date-fns — no full calendar library (wrong paradigm for day-status model)
+- D-15 (v1.7): CalendarGrid receives precomputed status enums — stays pure and reusable across activity/meal pages
+- D-16 (v1.7): Month data fetched via 5-6 parallel weekly plan calls (not 28-31 daily) using getWeekStartsForMonth()
+- D-17 (v1.7): DayActivityRow extended with onToggleLog prop for completion toggle in activity calendar detail panel
+- D-18 (v1.7): Past days read-only enforced in detail panel — no swap, no toggle, no log interactions for past dates
+- D-19 (v1.7): Auto-generate gated with ref guard — fires only when viewing today with no plan, not on month navigation
+- D-20 (v1.7): Cleanup Phase 37 must wait until both calendar pages deployed — verifies zero imports before deletion
 
 ### Pending Todos
 
@@ -83,5 +90,5 @@ Items acknowledged and carried forward from v1.5 milestone close:
 ## Session Continuity
 
 Last session: 2026-05-31T19:55:00.000Z
-Stopped at: Plan 33-02 complete — Unit tests for isOldFormat() and E2E migration edge case tests — 2/2 plans done in Phase 33
+Stopped at: Roadmap created for v1.7 — Phases 34-37 defined, 27 requirements mapped
 Resume file: None
