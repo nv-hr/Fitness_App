@@ -31,17 +31,18 @@ export default function CalendarPageLayout({
 
   // Handle month navigation
   const handleMonthChange = useCallback((month) => {
-    setCurrentMonth(startOfMonth(month));
+    const normalized = startOfMonth(month);
+    setCurrentMonth(normalized);
     setSelectedDay(null); // Reset selection on month change per spec
-    if (externalOnMonthChange) externalOnMonthChange(month);
+    if (externalOnMonthChange) externalOnMonthChange(normalized);
   }, [externalOnMonthChange]);
 
   // Handle Today button click
   const handleTodayClick = useCallback(() => {
-    const today = new Date();
-    setCurrentMonth(startOfMonth(today));
+    const normalized = startOfMonth(new Date());
+    setCurrentMonth(normalized);
     setSelectedDay(null);
-    if (externalOnMonthChange) externalOnMonthChange(today);
+    if (externalOnMonthChange) externalOnMonthChange(normalized);
   }, [externalOnMonthChange]);
 
   // Handle day selection
