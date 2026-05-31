@@ -11,6 +11,23 @@ import {
 } from '../repositories/activity.repository.js';
 import { findByUserAndWeek, upsertPlan } from '../repositories/weeklyPlan.repository.js';
 
+// CR-01: Migration failure cooldown — prevents infinite retry on every GET
+// when LLM is unavailable. After a failed attempt, subsequent requests
+// skip migration for a configurable window.
+const migrationFailCooldown = new Map();
+const MIGRATION_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+
+function isMigrationOnCooldown(userId, weekStart) {
+  const key = `${userId}_${weekStart}`;
+  const lastAttempt = migrationFailCooldown.get(key);
+  if (!lastAttempt) return false;
+  if (Date.now() - lastAttempt > MIGRATION_COOLDOWN_MS) {
+    migrationFailCooldown.delete(key);
+    return false;
+  }
+  return true;
+}
+
 function isValidDateString(str) {
   if (typeof str !== 'string') return false;
   const d = new Date(str + 'T00:00:00Z');
@@ -42,12 +59,17 @@ async function get(req, res, next) {
       // have format_version: 1, but old-format plans cached via swapHandler CR-03
       // would lack it).
       if (isOldFormat(cached)) {
-        const migrated = await attemptMigration(userId, weekStart);
-        if (migrated) {
-          return successResponse(res, { plan: migrated, fromCache: false });
+        if (!isMigrationOnCooldown(userId, weekStart)) {
+          const migrated = await attemptMigration(userId, weekStart);
+          if (migrated) {
+            return successResponse(res, { plan: migrated, fromCache: false });
+          }
+          // CR-01: Record failed migration to enforce cooldown
+          migrationFailCooldown.set(`${userId}_${weekStart}`, Date.now());
         }
-        // D-03: LLM failure — fall through to return cached plan as-is
-        console.warn(`[Migration] LLM failed for user ${userId}, week ${weekStart}. Returning cached old-format plan.`);
+        // D-03 / CR-06: Return cached plan as-is — do NOT fall through to DB path,
+        // which would trigger a second migration attempt on the same request.
+        console.warn(`[Migration] LLM failed or cooldown active for user ${userId}, week ${weekStart}. Returning cached old-format plan.`);
       }
       return successResponse(res, { plan: cached, fromCache: true });
     }
@@ -70,12 +92,16 @@ async function get(req, res, next) {
     // D-01: Lazy migration — detect old format by absence of format_version
     // If the DB plan_data lacks format_version, trigger silent regeneration.
     if (row.plan_data && isOldFormat(row.plan_data)) {
-      const migrated = await attemptMigration(userId, weekStart);
-      if (migrated) {
-        return successResponse(res, { plan: migrated, fromCache: false });
+      if (!isMigrationOnCooldown(userId, weekStart)) {
+        const migrated = await attemptMigration(userId, weekStart);
+        if (migrated) {
+          return successResponse(res, { plan: migrated, fromCache: false });
+        }
+        // CR-01: Record failed migration to enforce cooldown
+        migrationFailCooldown.set(`${userId}_${weekStart}`, Date.now());
       }
-      // D-03: LLM failure — keep old format, try again next visit
-      console.warn(`[Migration] LLM failed for user ${userId}, week ${weekStart}. Returning DB old-format plan.`);
+      // D-03: LLM failure — keep old format, try again after cooldown expires
+      console.warn(`[Migration] LLM failed or cooldown active for user ${userId}, week ${weekStart}. Returning DB old-format plan.`);
     }
 
     const plan = {
@@ -261,6 +287,12 @@ async function swapHandler(req, res, next) {
  * @returns {Promise<object|null>} Migrated plan or null on failure
  */
 async function attemptMigration(userId, weekStart) {
+  // CR-01: Check cooldown before attempting migration
+  if (isMigrationOnCooldown(userId, weekStart)) {
+    console.warn(`[Migration] Cooldown active for user ${userId}, week ${weekStart}. Skipping migration.`);
+    return null;
+  }
+
   console.log(`[Migration] Old-format plan detected for user ${userId}, week ${weekStart}. Regenerating...`);
 
   // Clear cache to force fresh LLM call (D-04: prevents generateWeeklyPlan
@@ -284,6 +316,7 @@ async function attemptMigration(userId, weekStart) {
     // Validate the generated plan has minimum required structure
     if (!newPlan || !Array.isArray(newPlan.days) || newPlan.days.length === 0) {
       console.warn(`[Migration] Regeneration produced invalid plan (days: ${newPlan?.days?.length || 0}). Keeping old format.`);
+      migrationFailCooldown.set(`${userId}_${weekStart}`, Date.now());
       return null;
     }
 
@@ -293,7 +326,8 @@ async function attemptMigration(userId, weekStart) {
 
     return newPlan;
   } catch (err) {
-    // D-03: LLM failure — keep old format, try again next visit
+    // D-03: LLM failure — keep old format, try again after cooldown
+    migrationFailCooldown.set(`${userId}_${weekStart}`, Date.now());
     console.error(`[Migration] Failed: ${err.message}. Keeping old format for user ${userId}.`);
     return null;
   }
