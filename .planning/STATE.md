@@ -4,7 +4,7 @@ milestone: v1.4
 milestone_name: LLM Food Recommendations
 status: complete
 last_updated: "2026-05-31T18:00:00.000Z"
-last_activity: 2026-05-31
+last_activity: 2026-05-31 - Completed quick task 260531-ej7: Update stale documentation
 progress:
   total_phases: 6
   completed_phases: 6
