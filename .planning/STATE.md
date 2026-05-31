@@ -4,7 +4,7 @@ milestone: v1.5
 milestone_name: Smart Auto-Logging
 status: shipped
 last_updated: "2026-05-31T12:00:00.000Z"
-last_activity: 2026-05-31 - Completed quick task 260531-hqs: improve the llm promt for activities and meal plan
+last_activity: 2026-05-31 - Completed quick task 260531-aow: activity plan copy-to-clipboard + switch to Owl Alpha
 progress:
   total_phases: 6
   completed_phases: 6
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-05-31)
 
 Phase: 29 (complete)
 Status: Shipped
-Last activity: 2026-05-31 - Completed quick task 260531-hqs: improve the llm promt for activities and meal plan
+Last activity: 2026-05-31 - Completed quick task 260531-aow: activity plan copy-to-clipboard + switch to Owl Alpha
 
 Progress: [██████████] 100%
 
@@ -78,6 +78,7 @@ Progress: [██████████] 100%
 |---|-------------|------|--------|-----------|
 | 260531-jng | Update all documentation to reflect completed cleanup of legacy meal_plans system and v1.5 state | 2026-05-31 | c0601b0 | [260531-jng-update-all-documentation](./quick/260531-jng-update-all-documentation/) |
 | 260531-hqs | improve the llm promt for activities and meal plan | 2026-05-31 | cd1443b | [260531-hqs-improve-llm-prompts](./quick/260531-hqs-improve-llm-prompts/) |
+| 260531-aow | Activity Plan copy-to-clipboard + switch to Owl Alpha model | 2026-05-31 | c07008d, ff3027a | [260531-aow-activity-plan-copy-owl-alpha](./quick/260531-aow-activity-plan-copy-owl-alpha/) |
 
 ## Notes
 
