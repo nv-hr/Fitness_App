@@ -6,7 +6,7 @@ status: shipped
 shipped_at: "2026-05-31"
 stopped_at: Milestone v1.6 complete — all 8 plans, 4 phases shipped
 last_updated: "2026-05-31"
-last_activity: 2026-05-31 — Milestone v1.6 shipped
+last_activity: 2026-05-31 - Completed quick task 260531-sgr: test all endpoint
 progress:
   total_phases: 4
   completed_phases: 4
@@ -70,6 +70,12 @@ Progress: [██████████] 100%
 ### Blockers/Concerns
 
 - LLM reliability with variable-length output (4-6 days) — existing correction loop mitigates but untested at boundary conditions
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260531-sgr | test all endpoint | 2026-05-31 | 85bdcc7 | [260531-sgr-test-all-endpoint](./quick/260531-sgr-test-all-endpoint/) |
 
 ## Deferred Items
 
