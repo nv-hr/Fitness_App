@@ -5,6 +5,7 @@ import FoodSearch from './FoodSearch.jsx';
 import CustomFoodForm from './CustomFoodForm.jsx';
 import FoodLogTable from './FoodLogTable.jsx';
 import CalorieHistory from './CalorieHistory.jsx';
+import DailyMealPlanSection from './DailyMealPlanSection.jsx';
 import { calculatePreviewCalories } from './previewCalories.js';
 
 
@@ -142,6 +143,11 @@ export default function FoodLogPage() {
 
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {successMsg && <p style={{ color: '#16a34a' }}>{successMsg}</p>}
+
+      {/* Daily Meal Plan Section (v1.5 auto-generated) */}
+      <div style={{ marginBottom: '1.5rem', padding: '0.75rem', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#fafafa' }}>
+        <DailyMealPlanSection />
+      </div>
 
       {/* Calorie Summary Bar (D-36) */}
       {summary && (

@@ -5,6 +5,7 @@ import ActivityPool from './ActivityPool.jsx';
 import ActivityLogForm from './ActivityLogForm.jsx';
 import ActivityHistory from './ActivityHistory.jsx';
 import ActivitySummary from './ActivitySummary.jsx';
+import ActivityPlanSection from './ActivityPlanSection.jsx';
 
 export default function ActivitiesPage() {
   const [recommendations, setRecommendations] = useState([]);
@@ -117,6 +118,11 @@ export default function ActivitiesPage() {
       <p style={{ color: '#666', marginBottom: '1.5rem' }}>
         {'Suggested activities for your fitness goal'}
       </p>
+
+      {/* Activity Plan Section (v1.5 auto-generated) */}
+      <div style={{ marginBottom: '1.5rem', padding: '0.75rem', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#fafafa' }}>
+        <ActivityPlanSection />
+      </div>
 
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {successMsg && <p style={{ color: '#16a34a' }}>{successMsg}</p>}
