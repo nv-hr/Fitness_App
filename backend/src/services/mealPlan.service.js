@@ -303,7 +303,7 @@ export async function generateFallbackMealPlan(calorieTarget, weekStart, dbFoods
 
 export async function generateMealPlan(deps) {
   const { userId, weekStart, getProfile, getAllFoods, getLogHistory } = deps;
-  const cached = getCachedPlan(userId, weekStart);
+  const cached = getCachedPlan(userId, weekStart, 'meal');
   if (cached) {
     return { plan: cached, fromCache: true, status: 'active' };
   }
@@ -378,7 +378,7 @@ export async function generateMealPlan(deps) {
     } catch (err) {
       console.error('[MealPlan] Failed to persist generated plan:', err.message);
     }
-    setCachedPlan(userId, weekStart, JSON.parse(JSON.stringify(plan)));
+    setCachedPlan(userId, weekStart, JSON.parse(JSON.stringify(plan)), 'meal');
     return { plan, fromCache: false, status: 'active' };
   }
   console.warn('[MealPlan] All generation attempts failed, returning fallback');
@@ -399,13 +399,13 @@ export async function regenerateDay(deps, dayIndex) {
     throw new AppError('ValidationError', 'dayIndex must be a number between 0 and 6', 400);
   }
   const { userId, weekStart } = deps;
-  clearCachedPlan(userId, weekStart);
+  clearCachedPlan(userId, weekStart, 'meal');
   const result = await generateMealPlan(deps);
   const freshPlan = result.plan;
   if (!freshPlan || !freshPlan.days || !freshPlan.days[dayIndex]) {
     throw new AppError('GenerationError', 'Failed to generate plan for the requested day', 500);
   }
-  const cached = getCachedPlan(userId, weekStart);
+  const cached = getCachedPlan(userId, weekStart, 'meal');
   let existingPlan;
   if (cached) {
     existingPlan = cached;
@@ -426,6 +426,6 @@ export async function regenerateDay(deps, dayIndex) {
   } catch (err) {
     console.error('[MealPlan] Failed to persist regenerated plan:', err.message);
   }
-  setCachedPlan(userId, weekStart, JSON.parse(JSON.stringify(mergedPlan)));
+  setCachedPlan(userId, weekStart, JSON.parse(JSON.stringify(mergedPlan)), 'meal');
   return { plan: mergedPlan, day: mergedPlan.days[dayIndex], dayIndex, fromCache: false, status: 'active' };
 }

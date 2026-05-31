@@ -264,16 +264,16 @@ export function buildMealPlanCorrectionPrompt(validationErrors) {
   });
 }
 
-export function getCachedPlan(userId, weekStart) {
-  return planCache.get(`plan_${userId}_${weekStart}`);
+export function getCachedPlan(userId, weekStart, planType = 'activity') {
+  return planCache.get(`plan_${planType}_${userId}_${weekStart}`);
 }
 
-export function setCachedPlan(userId, weekStart, plan) {
-  planCache.set(`plan_${userId}_${weekStart}`, plan);
+export function setCachedPlan(userId, weekStart, plan, planType = 'activity') {
+  planCache.set(`plan_${planType}_${userId}_${weekStart}`, plan);
 }
 
-export function clearCachedPlan(userId, weekStart) {
-  planCache.del(`plan_${userId}_${weekStart}`);
+export function clearCachedPlan(userId, weekStart, planType = 'activity') {
+  planCache.del(`plan_${planType}_${userId}_${weekStart}`);
 }
 
 export async function generateFallbackPlan(deps) {
