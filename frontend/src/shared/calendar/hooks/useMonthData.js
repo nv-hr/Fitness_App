@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { getWeekStartsForMonth, computeDayStatus } from '../calendarUtils.js';
+import { getWeekStartsForMonth, buildMonthGrid, computeDayStatus } from '../calendarUtils.js';
 
 /**
  * Generic hook for fetching month-range plan data via 5-6 parallel
@@ -40,14 +40,27 @@ export function useMonthData(date, fetchWeekFn) {
     const map = new Map();
     const today = new Date();
 
+    const todayStr = format(today, 'yyyy-MM-dd');
+
+    // 1. Fill from API data
     results.forEach(result => {
       if (!result.data?.plan?.days) return;
       result.data.plan.days.forEach(planDay => {
         const dateStr = planDay.date; // 'YYYY-MM-DD'
-        const isPast = dateStr < format(today, 'yyyy-MM-dd');
+        const isPast = dateStr < todayStr;
         const status = computeDayStatus(dateStr, planDay, isPast);
         map.set(dateStr, status);
       });
+    });
+
+    // 2. Fill defaults for all grid days not covered by API data
+    const allGridDays = buildMonthGrid(date);
+    allGridDays.forEach(day => {
+      const dateStr = format(day, 'yyyy-MM-dd');
+      if (!map.has(dateStr)) {
+        const isPast = dateStr < todayStr;
+        map.set(dateStr, computeDayStatus(dateStr, null, isPast));
+      }
     });
 
     return map;
