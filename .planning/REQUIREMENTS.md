@@ -58,25 +58,25 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ACT-01 | — | Pending |
-| ACT-02 | — | Pending |
-| ACT-03 | — | Pending |
-| MEAL-01 | — | Pending |
-| MEAL-02 | — | Pending |
-| MEAL-03 | — | Pending |
-| MEAL-04 | — | Pending |
-| AUTO-01 | — | Pending |
-| AUTO-02 | — | Pending |
-| AUTO-03 | — | Pending |
-| AUTO-04 | — | Pending |
-| UI-01 | — | Pending |
-| UI-02 | — | Pending |
-| UI-03 | — | Pending |
+| ACT-01 | Phase 24 | Pending |
+| ACT-02 | Phase 25 | Pending |
+| ACT-03 | Phase 24 | Pending |
+| MEAL-01 | Phase 26 | Pending |
+| MEAL-02 | Phase 26 | Pending |
+| MEAL-03 | Phase 27 | Pending |
+| MEAL-04 | Phase 27 | Pending |
+| AUTO-01 | Phase 28 | Pending |
+| AUTO-02 | Phase 28 | Pending |
+| AUTO-03 | Phase 28 | Pending |
+| AUTO-04 | Phase 28 | Pending |
+| UI-01 | Phase 29 | Pending |
+| UI-02 | Phase 29 | Pending |
+| UI-03 | Phase 29 | Pending |
 
 **Coverage:**
 - v1.5 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14 ⚠️
+- Mapped to phases: 14
+- Unmapped: 0 ✅
 
 ---
 *Requirements defined: 2026-05-31*
