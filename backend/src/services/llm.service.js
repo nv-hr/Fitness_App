@@ -143,7 +143,7 @@ export async function callLlmApi(systemPrompt) {
   throw new AppError('LlmAllFailed', 'All LLM models failed', 502);
 }
 
-function validateActivities(activities, prefix, allowEmpty = false) {
+export function validateActivities(activities, prefix, allowEmpty = false) {
   const errors = [];
   if (!Array.isArray(activities)) {
     errors.push(`${prefix}"activities" must be an array`);

@@ -5,6 +5,7 @@ import {
   validateAndFixPlan,
   buildSystemPrompt,
   generateFallbackPlan,
+  validateActivities,
 } from '../../src/services/llm.service.js';
 import {
   calculateCaloriesBurned,
@@ -452,5 +453,186 @@ describe('buildSystemPrompt', () => {
     const result = buildSystemPrompt(baseProfile, [], [{ name: 'Running', estimated_calories: 300, duration_min: 30 }], '2026-01-05');
     expect(result).toMatch(/json|JSON/);
     expect(result).toMatch(/{|{|"days"/);
+  });
+});
+
+// ===== NEW TESTS: Variable-day validation, rest_day, format_version =====
+
+describe('validatePlanStructure with availableDays + rest_day', () => {
+  function makeRestDay(date) {
+    return { date, rest_day: true, activities: [] };
+  }
+
+  function makeActivityDay(date, activityCount = 1) {
+    const activities = Array.from({ length: activityCount }, (_, i) => ({
+      activity_id: i + 1,
+      name: `Activity ${i + 1}`,
+      duration_min: 30,
+      intensity: 'moderate',
+    }));
+    return { date, rest_day: false, activities };
+  }
+
+  function buildWeekDates(startStr) {
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(startStr + 'T00:00:00Z');
+      d.setDate(d.getDate() + i);
+      dates.push(d.toISOString().split('T')[0]);
+    }
+    return dates;
+  }
+
+  it('valid 7-day plan with 5 activity days + 2 rest days passes', () => {
+    const dates = buildWeekDates('2026-01-05');
+    const days = dates.map((d, i) =>
+      i < 5 ? makeActivityDay(d) : makeRestDay(d)
+    );
+    const result = validatePlanStructure({ days }, '2026-01-05', 5);
+    expect(result.valid).toBe(true);
+    expect(result.errors).toEqual([]);
+  });
+
+  it('wrong activity day count (6 instead of 5) returns error', () => {
+    const dates = buildWeekDates('2026-01-05');
+    const days = dates.map((d, i) =>
+      i < 6 ? makeActivityDay(d) : makeRestDay(d)
+    );
+    const result = validatePlanStructure({ days }, '2026-01-05', 5);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes('Expected 5 activity days'))).toBe(true);
+  });
+
+  it('rest day with non-empty activities returns error', () => {
+    const dates = buildWeekDates('2026-01-05');
+    const days = dates.map((d, i) =>
+      i < 5
+        ? makeActivityDay(d)
+        : { date: d, rest_day: true, activities: [{ activity_id: 1, name: 'Test', duration_min: 30, intensity: 'moderate' }] }
+    );
+    const result = validatePlanStructure({ days }, '2026-01-05', 5);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes('rest day must have empty activities'))).toBe(true);
+  });
+
+  it('missing rest_day field returns error', () => {
+    const dates = buildWeekDates('2026-01-05');
+    const days = dates.map((d, i) =>
+      i < 5
+        ? { date: d, activities: [{ activity_id: 1, name: 'Test', duration_min: 30, intensity: 'moderate' }] }
+        : { date: d, activities: [] }
+    );
+    const result = validatePlanStructure({ days }, '2026-01-05', 5);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes('rest_day field is required'))).toBe(true);
+  });
+
+  it('availableDays not provided (null) skips count check', () => {
+    const dates = buildWeekDates('2026-01-05');
+    // Without availableDays, all days must have 1-4 activities (backward compat)
+    const days = dates.map(d => makeActivityDay(d));
+    const result = validatePlanStructure({ days }, '2026-01-05', null);
+    expect(result.valid).toBe(true);
+  });
+
+  it('plan with format_version: 1 passes validation', () => {
+    const dates = buildWeekDates('2026-01-05');
+    const days = dates.map((d, i) =>
+      i < 5 ? makeActivityDay(d) : makeRestDay(d)
+    );
+    const result = validatePlanStructure({ format_version: 1, days }, '2026-01-05', 5);
+    expect(result.valid).toBe(true);
+  });
+});
+
+describe('validateActivities with allowEmpty flag', () => {
+  it('empty activities fails by default (allowEmpty=false)', () => {
+    const errors = validateActivities([], '');
+    expect(errors.some(e => e.includes('1-4'))).toBe(true);
+  });
+
+  it('empty activities passes when allowEmpty=true', () => {
+    const errors = validateActivities([], '', true);
+    expect(errors.length).toBe(0);
+  });
+
+  it('5 activities exceeds max regardless of allowEmpty', () => {
+    const activities = Array.from({ length: 5 }, (_, i) => ({
+      activity_id: i + 1,
+      name: `Act ${i}`,
+      duration_min: 30,
+      intensity: 'moderate',
+    }));
+    const errors = validateActivities(activities, '', true);
+    expect(errors.some(e => e.includes('1-4'))).toBe(true);
+  });
+});
+
+describe('generateFallbackPlan with availableDays', () => {
+  const topActivities = [
+    { id: 1, name: 'Running', estimated_calories: 300, duration_min: 30 },
+    { id: 2, name: 'Yoga', estimated_calories: 150, duration_min: 45 },
+  ];
+
+  it('5 activity days with 2 rest days', async () => {
+    const result = await generateFallbackPlan({
+      getTopActivities: async () => topActivities,
+      userId: 1,
+      weekStart: '2026-01-05',
+      availableDays: 5,
+    });
+    expect(result.days.length).toBe(7);
+    const activityDays = result.days.filter(d => d.rest_day === false);
+    const restDays = result.days.filter(d => d.rest_day === true);
+    expect(activityDays.length).toBe(5);
+    expect(restDays.length).toBe(2);
+    restDays.forEach(d => expect(d.activities.length).toBe(0));
+    activityDays.forEach(d => expect(d.activities.length).toBeGreaterThan(0));
+  });
+
+  it('4 activity days with 3 rest days', async () => {
+    const result = await generateFallbackPlan({
+      getTopActivities: async () => topActivities,
+      userId: 1,
+      weekStart: '2026-01-05',
+      availableDays: 4,
+    });
+    const activityDays = result.days.filter(d => d.rest_day === false);
+    const restDays = result.days.filter(d => d.rest_day === true);
+    expect(activityDays.length).toBe(4);
+    expect(restDays.length).toBe(3);
+  });
+
+  it('6 activity days with 1 rest day', async () => {
+    const result = await generateFallbackPlan({
+      getTopActivities: async () => topActivities,
+      userId: 1,
+      weekStart: '2026-01-05',
+      availableDays: 6,
+    });
+    const activityDays = result.days.filter(d => d.rest_day === false);
+    const restDays = result.days.filter(d => d.rest_day === true);
+    expect(activityDays.length).toBe(6);
+    expect(restDays.length).toBe(1);
+  });
+
+  it('fallback plan includes format_version: 1', async () => {
+    const result = await generateFallbackPlan({
+      getTopActivities: async () => topActivities,
+      userId: 1,
+      weekStart: '2026-01-05',
+      availableDays: 4,
+    });
+    expect(result.format_version).toBe(1);
+  });
+
+  it('fallback plan with 0 history still has format_version', async () => {
+    const result = await generateFallbackPlan({
+      getTopActivities: async () => [],
+      userId: 1,
+      weekStart: '2026-01-05',
+      availableDays: 4,
+    });
+    expect(result.format_version).toBe(1);
   });
 });
