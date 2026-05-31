@@ -8,6 +8,7 @@ try {
   console.log('Migration completed successfully');
 } catch (err) {
   console.error('Migration failed:', err.message);
+  process.exit(1);
 } finally {
   await pool.end();
 }

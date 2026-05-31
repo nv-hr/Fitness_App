@@ -1,6 +1,7 @@
 /**
  * Intensity multipliers for calorie preview.
- * Matches server-side formula in activityLog.service.js.
+ * MUST MATCH backend/src/services/activityLog.service.js INTENSITY_MULTIPLIERS.
+ * If updating this, update the backend copy too.
  */
 const INTENSITY_MULTIPLIERS = {
   light: 0.7,

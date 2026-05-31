@@ -45,9 +45,14 @@ console.log(`[LLM] Using model: ${CONFIG.model}. Verify this model is available 
 
 const planCache = new NodeCache({ stdTTL: 3600, checkperiod: 600, maxKeys: 1000 });
 
+const promptCache = new Map();
+
 export function buildPrompt(filename, variables) {
-  const filePath = path.join(PROMPTS_DIR, filename);
-  let template = fs.readFileSync(filePath, 'utf-8');
+  if (!promptCache.has(filename)) {
+    const filePath = path.join(PROMPTS_DIR, filename);
+    promptCache.set(filename, fs.readFileSync(filePath, 'utf-8'));
+  }
+  let template = promptCache.get(filename);
   for (const [key, value] of Object.entries(variables)) {
     const placeholder = new RegExp(`{{${key}}}`, 'g');
     template = template.replace(placeholder, () => String(value ?? ''));
@@ -56,9 +61,10 @@ export function buildPrompt(filename, variables) {
 }
 
 export function buildSystemPrompt(profile, activityHistory, activities, weekStartDate) {
+  const historyEntries = activityHistory.slice(-20);
   const topActivityNames = [...new Set(activityHistory.map(a => a.activity_name))].slice(0, 5).join(', ');
-  const historyText = activityHistory.length > 0
-    ? activityHistory.map(a => {
+  const historyText = historyEntries.length > 0
+    ? historyEntries.map(a => {
         const dateStr = a.logged_date
           ? (typeof a.logged_date === 'string' ? a.logged_date : a.logged_date.toISOString().split('T')[0])
           : a.loggedDate;
@@ -102,7 +108,11 @@ async function callLlmWithModel(client, model, systemPrompt) {
   if (!jsonMatch) {
     throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);
   }
-  return JSON.parse(jsonMatch[0]);
+  try {
+    return JSON.parse(jsonMatch[0]);
+  } catch (parseErr) {
+    throw new AppError('LlmParseError', 'Failed to parse LLM response as JSON', 502);
+  }
 }
 
 export async function callLlmApi(systemPrompt) {
@@ -388,7 +398,8 @@ export async function generateWeeklyPlan(deps) {
           // Correction succeeded — re-validate the corrected plan on next iteration
           skipInitialCall = true;
           continue;
-        } catch {
+        } catch (correctionErr) {
+          console.warn(`[LLM] Correction prompt attempt ${attempt} failed:`, correctionErr.message);
           if (attempt >= maxAttempts) break;
           await new Promise(r => setTimeout(r, CONFIG.retryDelayMs));
           continue;
@@ -407,7 +418,8 @@ export async function generateWeeklyPlan(deps) {
           // Correction succeeded — re-validate the corrected plan on next iteration
           skipInitialCall = true;
           continue;
-        } catch {
+        } catch (correctionErr) {
+          console.warn(`[LLM] Correction prompt attempt ${attempt} failed:`, correctionErr.message);
           if (attempt >= maxAttempts) break;
           await new Promise(r => setTimeout(r, CONFIG.retryDelayMs));
           continue;

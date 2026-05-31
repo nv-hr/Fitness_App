@@ -175,7 +175,7 @@ export default function ActivitiesPage() {
         <ActivityPool
           activities={allActivities}
           onLogClick={handleLogClick}
-          isLogging={!!loggingActivity}
+          isLogging={loggingActivity}
         />
       )}
 

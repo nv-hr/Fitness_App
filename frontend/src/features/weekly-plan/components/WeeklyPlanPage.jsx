@@ -6,9 +6,9 @@ import FallbackBanner from './FallbackBanner.jsx';
 
 function getMonday(date) {
   const d = new Date(date);
-  const day = d.getUTCDay();
-  const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
-  d.setUTCDate(diff);
+  const localDay = d.getDay();
+  const diff = d.getDate() - localDay + (localDay === 0 ? -6 : 1);
+  d.setDate(diff);
   return d.toISOString().split('T')[0];
 }
 

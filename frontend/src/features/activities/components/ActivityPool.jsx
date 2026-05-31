@@ -1,4 +1,3 @@
-
 import ActivityCard from './ActivityCard.jsx';
 
 export default function ActivityPool({ activities, onLogClick, isLogging }) {
