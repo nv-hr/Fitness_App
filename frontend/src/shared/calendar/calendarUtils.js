@@ -6,8 +6,6 @@ import {
   eachDayOfInterval,
   addDays,
   isBefore,
-  startOfDay,
-  startOfToday,
   format,
 } from 'date-fns';
 
