@@ -47,6 +47,20 @@ console.log(`[LLM] Using model: ${CONFIG.model} (fallbacks: ${CONFIG.fallbackMod
 
 const planCache = new NodeCache({ stdTTL: 3600, checkperiod: 600, maxKeys: 1000 });
 
+// Per-user mutex for TOCTOU race prevention (CR-01)
+// Serializes read-modify-write operations on the same cache key
+const locks = new Map();
+
+async function acquireLock(key, timeout = 15000) {
+  const start = Date.now();
+  while (locks.get(key)) {
+    if (Date.now() - start > timeout) throw new AppError('LockTimeout', 'Could not acquire lock', 429);
+    await new Promise(r => setTimeout(r, 100));
+  }
+  locks.set(key, true);
+  return () => locks.delete(key);
+}
+
 const promptCache = new Map();
 
 export function buildPrompt(filename, variables) {
@@ -513,41 +527,48 @@ export async function regenerateDay(deps, dayIndex) {
     throw new AppError('ValidationError', 'dayIndex must be a number between 0 and 6', 400);
   }
 
-  // Defensively propagate availableDays from the cached plan
-  // if the caller did not explicitly provide it. This prevents
-  // silently switching availableDays when regenerating a single day.
-  if (!deps.availableDays) {
-    const cached = getCachedPlan(deps.userId, deps.weekStart)
-    if (cached && Array.isArray(cached.days)) {
-      const activityDays = cached.days.filter(d => d.rest_day === false).length
-      if (activityDays > 0) deps.availableDays = activityDays
+  // Acquire per-user lock to prevent TOCTOU race on the cache (CR-01)
+  const lockKey = `swap_${deps.userId}_${deps.weekStart}`
+  const release = await acquireLock(lockKey)
+  try {
+    // Defensively propagate availableDays from the cached plan
+    // if the caller did not explicitly provide it. This prevents
+    // silently switching availableDays when regenerating a single day.
+    if (!deps.availableDays) {
+      const cached = getCachedPlan(deps.userId, deps.weekStart)
+      if (cached && Array.isArray(cached.days)) {
+        const activityDays = cached.days.filter(d => d.rest_day === false).length
+        if (activityDays > 0) deps.availableDays = activityDays
+      }
     }
+
+    // Clear cache so generateWeeklyPlan actually makes an LLM call (not returning stale cache)
+    clearCachedPlan(deps.userId, deps.weekStart);
+    // Generate a fresh full week plan (this consumes the rate-limit quota)
+    const result = await generateWeeklyPlan(deps);
+    const freshPlan = result.plan;
+
+    if (!freshPlan || !freshPlan.days || !freshPlan.days[dayIndex]) {
+      throw new AppError('GenerationError', 'Failed to generate plan for the requested day', 500);
+    }
+
+    // Get existing plan from cache or use fresh plan
+    const cached = getCachedPlan(deps.userId, deps.weekStart);
+    const existingPlan = cached || freshPlan;
+
+    // Replace only the requested day
+    const mergedPlan = JSON.parse(JSON.stringify(existingPlan));
+    mergedPlan.days[dayIndex] = freshPlan.days[dayIndex];
+    mergedPlan.status = 'active';
+    mergedPlan.generated_at = new Date().toISOString();
+
+    // Update cache (under lock — prevents TOCTOU race)
+    setCachedPlan(deps.userId, deps.weekStart, JSON.parse(JSON.stringify(mergedPlan)));
+
+    return { plan: mergedPlan, day: mergedPlan.days[dayIndex], dayIndex, fromCache: false, status: 'active' };
+  } finally {
+    release()
   }
-
-  // Clear cache so generateWeeklyPlan actually makes an LLM call (not returning stale cache)
-  clearCachedPlan(deps.userId, deps.weekStart);
-  // Generate a fresh full week plan (this consumes the rate-limit quota)
-  const result = await generateWeeklyPlan(deps);
-  const freshPlan = result.plan;
-
-  if (!freshPlan || !freshPlan.days || !freshPlan.days[dayIndex]) {
-    throw new AppError('GenerationError', 'Failed to generate plan for the requested day', 500);
-  }
-
-  // Get existing plan from cache or use fresh plan
-  const cached = getCachedPlan(deps.userId, deps.weekStart);
-  const existingPlan = cached || freshPlan;
-
-  // Replace only the requested day
-  const mergedPlan = JSON.parse(JSON.stringify(existingPlan));
-  mergedPlan.days[dayIndex] = freshPlan.days[dayIndex];
-  mergedPlan.status = 'active';
-  mergedPlan.generated_at = new Date().toISOString();
-
-  // Update cache
-  setCachedPlan(deps.userId, deps.weekStart, JSON.parse(JSON.stringify(mergedPlan)));
-
-  return { plan: mergedPlan, day: mergedPlan.days[dayIndex], dayIndex, fromCache: false, status: 'active' };
 }
 
 /**
@@ -606,132 +627,142 @@ export async function swapActivity(deps, activityId, dayIndex) {
     throw new AppError('ValidationError', 'dayIndex must be a number between 0 and 6', 400)
   }
 
-  // 2. Get current plan from cache
-  const plan = getCachedPlan(deps.userId, deps.weekStart)
-  if (!plan || !Array.isArray(plan.days)) {
-    throw new AppError('NotFoundError', 'No weekly plan found for this week', 404)
-  }
-
-  if (!plan.days[dayIndex]) {
-    throw new AppError('ValidationError', 'Invalid day index in plan', 400)
-  }
-
-  // 3. Locate the activity within the plan day
-  const day = plan.days[dayIndex]
-  if (day.rest_day === true) {
-    throw new AppError('ValidationError', 'Cannot swap an activity on a rest day', 400)
-  }
-
-  const activityIndex = day.activities.findIndex(a => a.activity_id === activityId)
-  if (activityIndex === -1) {
-    throw new AppError('ValidationError', 'Activity not found in current plan', 400)
-  }
-
-  // 4. Fetch user data
-  let profile, dbActivities
+  // Acquire per-user lock to prevent TOCTOU race on the cache (CR-01)
+  const lockKey = `swap_${deps.userId}_${deps.weekStart}`
+  const release = await acquireLock(lockKey)
   try {
-    [profile, dbActivities] = await Promise.all([
-      deps.getProfile(deps.userId),
-      deps.getActivities(),
-    ])
-  } catch (err) {
-    console.error('[LLM] Failed to fetch user data for swap:', err.message)
-    profile = null
-    dbActivities = []
-  }
+    // 2. Get current plan from cache
+    const plan = getCachedPlan(deps.userId, deps.weekStart)
+    if (!plan || !Array.isArray(plan.days)) {
+      throw new AppError('NotFoundError', 'No weekly plan found for this week', 404)
+    }
 
-  // 5. Build context strings
-  const act = day.activities[activityIndex]
-  const swappedActivity = `${act.name} (${act.duration_min} min, ${act.intensity}, ${act.calories_burned || '?'} cal)`
-  const dayContext = `Day ${dayIndex + 1} (${day.date})`
+    if (!plan.days[dayIndex]) {
+      throw new AppError('ValidationError', 'Invalid day index in plan', 400)
+    }
 
-  const activityDayCount = plan.days.filter(d => d.rest_day === false).length
-  const restDayCount = plan.days.filter(d => d.rest_day === true).length
-  const weekContext = `${activityDayCount} activity days, ${restDayCount} rest days`
+    // 3. Locate the activity within the plan day
+    const day = plan.days[dayIndex]
+    if (day.rest_day === true) {
+      throw new AppError('ValidationError', 'Cannot swap an activity on a rest day', 400)
+    }
 
-  const activitiesText = Array.isArray(dbActivities)
-    ? dbActivities.map(a => `- ${a.name} (${a.estimated_calories} cal, ~${a.duration_min}min)`).join('\n')
-    : ''
+    const activityIndex = day.activities.findIndex(a => a.activity_id === activityId)
+    if (activityIndex === -1) {
+      throw new AppError('ValidationError', 'Activity not found in current plan', 400)
+    }
 
-  // Determine fitness goal and activity level for template variables
-  const fitnessGoal = profile?.fitness_goal || 'maintain'
-  const activityLevel = profile?.activity_level || 'sedentary'
+    // 4. Fetch user data
+    let profile, dbActivities
+    try {
+      [profile, dbActivities] = await Promise.all([
+        deps.getProfile(deps.userId),
+        deps.getActivities(),
+      ])
+    } catch (err) {
+      console.error('[LLM] Failed to fetch user data for swap:', err.message)
+      profile = null
+      dbActivities = []
+    }
 
-  // 6. Build swap prompt
-  const prompt = buildPrompt('activity-swap-prompt.md', {
-    fitnessGoal,
-    activityLevel,
-    swappedActivity,
-    dayContext,
-    weekContext,
-    availableActivities: activitiesText,
-  })
+    // 5. Build context strings
+    const act = day.activities[activityIndex]
+    const swappedActivity = `${act.name} (${act.duration_min} min, ${act.intensity}, ${act.calories_burned || '?'} cal)`
+    const dayContext = `Day ${dayIndex + 1} (${day.date})`
 
-  // Goal tags for fallback random activity selection
-  const goalTagsMap = {
-    'lose weight': ['lose_weight'],
-    'build muscle': ['gain_weight'],
-    'maintain': ['maintain'],
-  }
-  const goalTags = goalTagsMap[fitnessGoal] || ['maintain']
+    const activityDayCount = plan.days.filter(d => d.rest_day === false).length
+    const restDayCount = plan.days.filter(d => d.rest_day === true).length
+    const weekContext = `${activityDayCount} activity days, ${restDayCount} rest days`
 
-  // 7. Call LLM with fallback
-  let replacement
-  try {
-    replacement = await callLlmApi(prompt)
-  } catch (err) {
-    console.warn(`[LLM] Swap LLM call failed: ${err.message}, falling back to random activity`)
-    replacement = null
-  }
+    const activitiesText = Array.isArray(dbActivities)
+      ? dbActivities.map(a => `- ${a.name} (${a.estimated_calories} cal, ~${a.duration_min}min)`).join('\n')
+      : ''
 
-  // 8. Validate replacement; fallback to random on failure
-  const isInvalidReplacement =
-    !replacement ||
-    !replacement.activity_id ||
-    typeof replacement.activity_id !== 'number' ||
-    !replacement.name
+    // Determine fitness goal and activity level for template variables
+    const fitnessGoal = profile?.fitness_goal || 'maintain'
+    const activityLevel = profile?.activity_level || 'sedentary'
 
-  if (isInvalidReplacement) {
-    replacement = await getFallbackReplacement(deps, goalTags)
-  } else {
-    // Validate structure via validateActivities
-    const validationErrors = validateActivities([replacement], 'Swap, ')
-    if (validationErrors.length > 0) {
-      console.warn(`[LLM] Swap replacement validation failed: ${validationErrors.join('; ')}, falling back to random`)
+    // 6. Build swap prompt
+    const prompt = buildPrompt('activity-swap-prompt.md', {
+      fitnessGoal,
+      activityLevel,
+      swappedActivity,
+      dayContext,
+      weekContext,
+      availableActivities: activitiesText,
+    })
+
+    // Goal tags for fallback random activity selection
+    const goalTagsMap = {
+      'lose weight': ['lose_weight'],
+      'build muscle': ['gain_weight'],
+      'maintain': ['maintain'],
+    }
+    const goalTags = goalTagsMap[fitnessGoal] || ['maintain']
+
+    // 7. Call LLM with fallback
+    let replacement
+    try {
+      replacement = await callLlmApi(prompt)
+    } catch (err) {
+      console.warn(`[LLM] Swap LLM call failed: ${err.message}, falling back to random activity`)
+      replacement = null
+    }
+
+    // 8. Validate replacement; fallback to random on failure
+    const isInvalidReplacement =
+      !replacement ||
+      !replacement.activity_id ||
+      typeof replacement.activity_id !== 'number' ||
+      !replacement.name
+
+    if (isInvalidReplacement) {
       replacement = await getFallbackReplacement(deps, goalTags)
-    }
-  }
-
-  // 9. Fuzzy-match the replacement's activity name to a real DB activity
-  if (Array.isArray(dbActivities) && dbActivities.length > 0 && replacement.name) {
-    const matchResult = fuzzyMatchActivityName(replacement.name, dbActivities)
-    if (matchResult.matched) {
-      replacement.activity_id = matchResult.activity.id
-      replacement.name = matchResult.activity.name
     } else {
-      console.warn(`[LLM] Swap replacement "${replacement.name}" not found in DB, using as-is`)
+      // Validate structure via validateActivities
+      const validationErrors = validateActivities([replacement], 'Swap, ')
+      if (validationErrors.length > 0) {
+        console.warn(`[LLM] Swap replacement validation failed: ${validationErrors.join('; ')}, falling back to random`)
+        replacement = await getFallbackReplacement(deps, goalTags)
+      }
     }
-  }
 
-  // 10. Deep-clone plan and replace the activity in-place
-  const mergedPlan = JSON.parse(JSON.stringify(plan))
-  mergedPlan.days[dayIndex].activities[activityIndex] = JSON.parse(JSON.stringify(replacement))
-  mergedPlan.status = 'active'
-  mergedPlan.generated_at = new Date().toISOString()
+    // 9. Fuzzy-match the replacement's activity name to a real DB activity
+    if (Array.isArray(dbActivities) && dbActivities.length > 0 && replacement.name) {
+      const matchResult = fuzzyMatchActivityName(replacement.name, dbActivities)
+      if (matchResult.matched) {
+        replacement.activity_id = matchResult.activity.id
+        replacement.name = matchResult.activity.name
+      } else {
+        console.warn(`[LLM] Swap replacement "${replacement.name}" not found in DB, using as-is`)
+      }
+    }
 
-  // Ensure format_version is present
-  if (mergedPlan.format_version === undefined) {
-    mergedPlan.format_version = 1
-  }
+    // 10. Deep-clone plan and replace the activity in-place
+    const mergedPlan = JSON.parse(JSON.stringify(plan))
+    mergedPlan.days[dayIndex].activities[activityIndex] = JSON.parse(JSON.stringify(replacement))
+    mergedPlan.status = 'active'
+    mergedPlan.generated_at = new Date().toISOString()
 
-  // 11. Return result (cache is updated by caller after DB persist)
-  return {
-    plan: mergedPlan,
-    day: mergedPlan.days[dayIndex],
-    dayIndex,
-    activityIndex,
-    replacement,
-    fromCache: false,
-    status: 'active',
+    // Ensure format_version is present
+    if (mergedPlan.format_version === undefined) {
+      mergedPlan.format_version = 1
+    }
+
+    // 11. Update cache (under lock — prevents TOCTOU race with concurrent swaps)
+    setCachedPlan(deps.userId, deps.weekStart, JSON.parse(JSON.stringify(mergedPlan)))
+
+    // 12. Return result
+    return {
+      plan: mergedPlan,
+      day: mergedPlan.days[dayIndex],
+      dayIndex,
+      activityIndex,
+      replacement,
+      fromCache: false,
+      status: 'active',
+    }
+  } finally {
+    release()
   }
 }
