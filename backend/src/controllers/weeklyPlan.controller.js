@@ -1,5 +1,5 @@
 import { successResponse, errorResponse } from '../utils/response.js';
-import { generateWeeklyPlan, getCachedPlan, regenerateDay } from '../services/llm.service.js';
+import { generateWeeklyPlan, getCachedPlan, regenerateDay, swapActivity } from '../services/llm.service.js';
 import { findByUserId as findProfileByUserId } from '../repositories/profile.repository.js';
 import { pool } from '../config/database.js';
 import { AppError } from '../utils/errors.js';
@@ -7,7 +7,9 @@ import {
   getActivityHistoryWithEntries,
   getAllActivities,
   getTopActivities,
+  getRandomActivities,
 } from '../repositories/activity.repository.js';
+import { upsertPlan } from '../repositories/weeklyPlan.repository.js';
 
 function isValidDateString(str) {
   if (typeof str !== 'string') return false;
@@ -139,8 +141,76 @@ async function regenerateDayHandler(req, res, next) {
   }
 }
 
+async function swapHandler(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const { activityId, dayIndex, weekStart } = req.body;
+
+    // Validate activityId
+    if (activityId === undefined || activityId === null || typeof activityId !== 'number' || activityId < 1) {
+      return errorResponse(res, 'Activity not found in current plan', 400, 'VALIDATION_ERROR');
+    }
+
+    // Validate dayIndex
+    if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {
+      return errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR');
+    }
+
+    // Validate and normalize weekStart
+    let targetWeekStart = weekStart;
+    if (targetWeekStart && !isValidDateString(targetWeekStart)) {
+      return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
+    }
+    targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());
+
+    // Fetch profile for goal tags
+    let goalTags = ['maintain'];
+    try {
+      const profile = await findProfileByUserId(userId);
+      if (profile) {
+        const goalMap = {
+          'lose weight': ['lose_weight'],
+          'build muscle': ['gain_weight'],
+          maintain: ['maintain'],
+        };
+        goalTags = goalMap[profile.fitness_goal] || ['maintain'];
+      }
+    } catch {
+      // Use default goal tags
+    }
+
+    // Assemble deps for swapActivity
+    const deps = {
+      getProfile: (id) => findProfileByUserId(id),
+      getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
+      getActivities: () => getAllActivities(),
+      getTopActivities: (id, limit) => getTopActivities(id, limit),
+      getRandomActivity: (tags) => getRandomActivities(tags, 1),
+      userId,
+      weekStart: targetWeekStart,
+    };
+
+    // Propagate availableDays from cached plan if available
+    const cached = getCachedPlan(userId, targetWeekStart);
+    if (cached && Array.isArray(cached.days)) {
+      const activityDays = cached.days.filter(d => d.rest_day === false).length;
+      if (activityDays > 0) deps.availableDays = activityDays;
+    }
+
+    const result = await swapActivity(deps, activityId, dayIndex);
+
+    // Persist to DB (dual-write: cache + DB)
+    await upsertPlan(userId, targetWeekStart, result.plan, 'active');
+
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export default {
   get,
   generate,
   regenerateDay: regenerateDayHandler,
+  swap: swapHandler,
 };
