@@ -121,7 +121,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 31-01-PLAN.md — Core service & prompt (activity-swap-prompt.md, swapActivity(), swapLimiter)
+- [x] 31-01-PLAN.md — Core service & prompt (activity-swap-prompt.md, swapActivity(), swapLimiter) — completed 2026-05-31
 - [ ] 31-02-PLAN.md — Controller, route, DB persistence & tests (swapHandler, POST /swap, upsertPlan, E2E)
 
 ### Phase 32: Frontend — Days Selector & Swap UI
@@ -180,7 +180,7 @@ Plans:
 | 28. Auto-Generation & Inline Management | v1.5 | 1/1 | Complete | 2026-05-31 |
 | 29. UI Consolidation | v1.5 | 1/1 | Complete | 2026-05-31 |
 | 30. Prompt & Validation Rework | v1.6 | 1/2 | In progress | 2026-05-31 |
-| 31. Activity Swap Endpoint | v1.6 | 0/2 | Not started | - |
+| 31. Activity Swap Endpoint | v1.6 | 1/2 | In progress | 2026-05-31 |
 | 32. Frontend — Days Selector & Swap UI | v1.6 | 0/0 | Not started | - |
 | 33. Plan Migration & Edge Cases | v1.6 | 0/0 | Not started | - |
 
