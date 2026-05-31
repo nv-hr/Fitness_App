@@ -4,12 +4,12 @@ milestone: v1.6
 milestone_name: Activity Planner Rework
 status: in_progress
 stopped_at: Plan 30-01 complete
-last_updated: "2026-05-31T17:55:00.000Z"
-last_activity: 2026-05-31 — Plan 30-01 completed (prompt files + validation/service updates)
+last_updated: "2026-05-31T18:45:00.000Z"
+last_activity: 2026-05-31 — Phase 31 plans created (2 plans: service/prompt + controller/route/tests)
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 2
+  total_plans: 4
   completed_plans: 1
   percent: 0
 ---
@@ -26,12 +26,12 @@ See: .planning/PROJECT.md (updated 2026-05-31)
 
 ## Current Position
 
-Phase: 30-prompt-validation-rework
-Plan: 01 (Core prompt files + LLM service validation/generation overhaul)
-Status: Plan 01 complete
-Last activity: 2026-05-31 — Plan 30-01 completed (prompt files + validation/service updates)
+Phase: 30-prompt-validation-rework (plan 30-02 pending)
+Phase: 31-activity-swap-endpoint (plans created, ready to execute)
+Status: Phase 31 planned (2 plans)
+Last activity: 2026-05-31 — Phase 31 plans created (2 plans: service/prompt + controller/route/tests)
 
-Progress: [█████░░░░░] 50%
+Progress: [█████░░░░░] 25% (1/4 plans complete across v1.6)
 
 ## Performance Metrics
 
