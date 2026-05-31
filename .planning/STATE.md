@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Activity Planner Rework
-status: Phase 31 plan 31-01 complete
-stopped_at: Plan 31-01 complete — Core service & prompt (swap prompt, swapActivity, swapLimiter)
-last_updated: "2026-05-31T18:35:00.000Z"
-last_activity: "2026-05-31 — Plan 31-01 complete (prompt, swapActivity, swapLimiter)"
+status: Plan 32-02 complete — Days selector, rest day cards, swap button, WeeklyPlanPage wiring
+stopped_at: Plan 32-02 complete — Days selector panel, rest day cards, swap buttons, WeeklyPlanPage fully wired
+last_updated: "2026-05-31T19:39:00.000Z"
+last_activity: 2026-05-31 — Plan 32-02 executed (days selector, rest day cards, swap buttons, WeeklyPlanPage wiring)
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 4
-  completed_plans: 3
-  percent: 75
+  completed_phases: 3
+  total_plans: 6
+  completed_plans: 6
+  percent: 100
 ---
 
 # Project State
@@ -28,10 +28,11 @@ See: .planning/PROJECT.md (updated 2026-05-31)
 
 Phase: 30-prompt-validation-rework (complete)
 Phase: 31-activity-swap-endpoint (plan 31-01 complete, 31-02 pending)
-Status: Plan 31-01 complete — Core service & prompt (swap prompt, swapActivity, swapLimiter)
-Last activity: 2026-05-31 — Plan 31-01 executed (prompt, swapActivity, swapLimiter)
+Phase: 32-frontend-days-selector-swap-ui (plans 32-01 and 32-02 complete)
+Status: Plan 32-02 complete — Days selector panel, rest day cards, swap buttons, WeeklyPlanPage fully wired
+Last activity: 2026-05-31 — Plan 32-02 executed (days selector, rest day cards, swap buttons, WeeklyPlanPage wiring)
 
-Progress: [████████░░] 75% (3/4 plans complete across v1.6)
+Progress: [██████████] 100% (6/6 plans complete across v1.6)
 
 ## Performance Metrics
 
@@ -55,6 +56,9 @@ Progress: [████████░░] 75% (3/4 plans complete across v1.6)
 - D-08: swapActivity() uses callLlmApi() for consistent model fallback chain rather than manual model iteration
 - D-09: validateActivities + fuzzyMatchActivityName used to validate LLM replacement before cache merge
 - D-10: format_version: 1 added to old-format plans during swap merge (lazy migration)
+- D-11: Toast accepts `type` prop (success/error/info) for flexible reuse beyond swap errors
+- D-12: Swap countdown managed at WeeklyPlanPage level via swapRetryAfter state + useEffect interval pattern
+- D-13: Toast state uses single {message} object that replaces on new error; rendered in all 5 return branches
 
 ### Pending Todos
 
@@ -75,5 +79,5 @@ Items acknowledged and carried forward from v1.5 milestone close:
 ## Session Continuity
 
 Last session: 2026-05-31
-Stopped at: Plan 31-01 complete — Core service & prompt (swap prompt, swapActivity, swapLimiter) — 1/2 plans done in Phase 31
+Stopped at: Plan 32-02 complete — Days selector panel, rest day cards, swap buttons, WeeklyPlanPage fully wired — 2/2 plans done in Phase 32
 Resume file: None

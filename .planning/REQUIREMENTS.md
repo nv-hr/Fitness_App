@@ -9,9 +9,9 @@ Requirements for v1.6 Activity Planner Rework. Each maps to roadmap phases.
 
 ### Variable-Day Scheduling
 
-- [ ] **SCHD-01**: User can select 4-6 available days per week when generating a plan
+- [x] **SCHD-01**: User can select 4-6 available days per week when generating a plan
 - [ ] **SCHD-02**: System generates plans with variable activity days based on user's available days selection
-- [ ] **SCHD-03**: Rest days are displayed as rest day cards in the weekly plan view
+- [x] **SCHD-03**: Rest days are displayed as rest day cards in the weekly plan view
 
 ### Profile-Driven Selection
 
@@ -21,7 +21,7 @@ Requirements for v1.6 Activity Planner Rework. Each maps to roadmap phases.
 
 ### Activity Swapping
 
-- [ ] **SWAP-01**: User can click a swap button on any activity in the plan
+- [x] **SWAP-01**: User can click a swap button on any activity in the plan
 - [ ] **SWAP-02**: LLM picks a replacement activity when user swaps
 - [ ] **SWAP-03**: Swapped activity replaces in-place in the cached plan without full regeneration
 - [ ] **SWAP-04**: Swap has a dedicated rate limit separate from generate/regenerate
