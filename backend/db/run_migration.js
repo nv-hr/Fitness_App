@@ -1,11 +1,19 @@
 import { pool } from '../src/config/database.js';
 import { readFileSync } from 'fs';
 
-const sql = readFileSync(new URL('add_activity_plans.sql', import.meta.url), 'utf8');
+const migrations = [
+  'add_activity_plans.sql',
+  'add_daily_meal_plans.sql',
+];
 
 try {
-  await pool.query(sql);
-  console.log('Migration completed successfully');
+  for (const file of migrations) {
+    const sql = readFileSync(new URL(file, import.meta.url), 'utf8');
+    console.log(`Running migration: ${file}`);
+    await pool.query(sql);
+    console.log(`  OK`);
+  }
+  console.log('All migrations completed successfully');
 } catch (err) {
   console.error('Migration failed:', err.message);
   process.exit(1);

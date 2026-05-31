@@ -14,6 +14,7 @@ import foodRoutes from './routes/food.routes.js';
 import activityRoutes from './routes/activity.routes.js';
 import weeklyPlanRoutes from './routes/weeklyPlan.routes.js';
 import mealPlanRoutes from './routes/mealPlan.routes.js';
+import dailyMealPlanRoutes from './routes/dailyMealPlan.routes.js';
 import activityPlanRoutes from './routes/activityPlan.routes.js';
 import docsRoutes from './routes/docs.routes.js';
 import { errorResponse } from './utils/response.js';
@@ -133,6 +134,9 @@ app.use('/api/weekly-plans', weeklyPlanRoutes);
 
 // Meal plan routes — rate limited via middleware (REQ-MEAL-RATELIMIT)
 app.use('/api/meal-plans', mealPlanRoutes);
+
+// Daily meal plan routes (v1.5 per-day generation)
+app.use('/api/daily-meal-plans', dailyMealPlanRoutes);
 
 // Activity plan routes
 app.use('/api/activity-plans', activityPlanRoutes);
