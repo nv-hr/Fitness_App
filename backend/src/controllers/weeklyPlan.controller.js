@@ -163,22 +163,6 @@ async function swapHandler(req, res, next) {
     }
     targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());
 
-    // Fetch profile for goal tags
-    let goalTags = ['maintain'];
-    try {
-      const profile = await findProfileByUserId(userId);
-      if (profile) {
-        const goalMap = {
-          'lose weight': ['lose_weight'],
-          'build muscle': ['gain_weight'],
-          maintain: ['maintain'],
-        };
-        goalTags = goalMap[profile.fitness_goal] || ['maintain'];
-      }
-    } catch {
-      // Use default goal tags
-    }
-
     // Assemble deps for swapActivity
     const deps = {
       getProfile: (id) => findProfileByUserId(id),
