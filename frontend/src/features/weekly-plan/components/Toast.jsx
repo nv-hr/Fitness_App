@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 const TYPE_STYLES = {
   success: {
@@ -19,12 +19,15 @@ const TYPE_STYLES = {
 }
 
 export default function Toast({ message, type = 'error', onDismiss }) {
+  const onDismissRef = useRef(onDismiss)
+  onDismissRef.current = onDismiss
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      onDismiss()
+      if (typeof onDismissRef.current === 'function') onDismissRef.current()
     }, 6000)
     return () => clearTimeout(timer)
-  }, [message, onDismiss])
+  }, [message])
 
   const typeStyle = TYPE_STYLES[type] || TYPE_STYLES.error
 

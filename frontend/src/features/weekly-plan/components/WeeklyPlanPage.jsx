@@ -26,6 +26,8 @@ export default function WeeklyPlanPage() {
   const [swapRetryAfter, setSwapRetryAfter] = useState(null);
   const [toast, setToast] = useState(null);
 
+  const dismissToast = useCallback(() => setToast(null), []);
+
   const weekStart = getMonday(new Date());
 
   // Load plan on mount
@@ -145,7 +147,7 @@ export default function WeeklyPlanPage() {
   if (loading) {
     return (
       <div style={{ maxWidth: '600px', margin: '2rem auto', padding: '1rem' }}>
-        {toast && <Toast message={toast.message} onDismiss={() => setToast(null)} />}
+        {toast && <Toast message={toast.message} onDismiss={dismissToast} />}
         {'Loading...'}
       </div>
     );
@@ -155,7 +157,7 @@ export default function WeeklyPlanPage() {
   if (error && !plan && !generating) {
     return (
       <div style={{ maxWidth: '600px', margin: '2rem auto', padding: '1rem' }}>
-        {toast && <Toast message={toast.message} onDismiss={() => setToast(null)} />}
+        {toast && <Toast message={toast.message} onDismiss={dismissToast} />}
         <p style={{ color: 'red', marginBottom: '1rem' }}>{error}</p>
         <button
           onClick={loadPlan}
@@ -180,7 +182,7 @@ export default function WeeklyPlanPage() {
     const seconds = genRetryAfter % 60;
     return (
       <div style={{ maxWidth: '600px', margin: '2rem auto', padding: '1rem', textAlign: 'center' }}>
-        {toast && <Toast message={toast.message} onDismiss={() => setToast(null)} />}
+        {toast && <Toast message={toast.message} onDismiss={dismissToast} />}
         <h3 style={{ marginBottom: '0.75rem', fontSize: '1.25rem', fontWeight: 700 }}>
           {'Weekly Plan'}
         </h3>
@@ -198,7 +200,7 @@ export default function WeeklyPlanPage() {
   if (!plan) {
     return (
       <div style={{ maxWidth: '600px', margin: '2rem auto', padding: '1rem' }}>
-        {toast && <Toast message={toast.message} onDismiss={() => setToast(null)} />}
+        {toast && <Toast message={toast.message} onDismiss={dismissToast} />}
         <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem', fontWeight: 700 }}>
           {'Weekly Activity Plan'}
         </h2>
@@ -211,7 +213,7 @@ export default function WeeklyPlanPage() {
   // Active plan (exists — render day cards)
   return (
     <div style={{ maxWidth: '600px', margin: '2rem auto', padding: '1rem' }}>
-      {toast && <Toast message={toast.message} onDismiss={() => setToast(null)} />}
+      {toast && <Toast message={toast.message} onDismiss={dismissToast} />}
 
       <h2 style={{ marginBottom: '0.5rem', fontSize: '1.5rem', fontWeight: 700 }}>
         {'Weekly Activity Plan'}
