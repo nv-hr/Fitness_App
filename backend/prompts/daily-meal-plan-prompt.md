@@ -26,7 +26,9 @@ Return ONLY valid JSON. No markdown, no explanation, no code fences.
         {
           "food_id": <integer>,
           "food_name": "<exact name from Available Foods>",
-          "portion_grams": <integer>
+          "portion_grams": <integer>,
+          "calories": <integer>,
+          "logged": false
         }
       ]
     },
@@ -36,7 +38,9 @@ Return ONLY valid JSON. No markdown, no explanation, no code fences.
         {
           "food_id": <integer>,
           "food_name": "<exact name from Available Foods>",
-          "portion_grams": <integer>
+          "portion_grams": <integer>,
+          "calories": <integer>,
+          "logged": false
         }
       ]
     },
@@ -46,7 +50,9 @@ Return ONLY valid JSON. No markdown, no explanation, no code fences.
         {
           "food_id": <integer>,
           "food_name": "<exact name from Available Foods>",
-          "portion_grams": <integer>
+          "portion_grams": <integer>,
+          "calories": <integer>,
+          "logged": false
         }
       ]
     },
@@ -56,12 +62,56 @@ Return ONLY valid JSON. No markdown, no explanation, no code fences.
         {
           "food_id": <integer>,
           "food_name": "<exact name from Available Foods>",
-          "portion_grams": <integer>
+          "portion_grams": <integer>,
+          "calories": <integer>,
+          "logged": false
         }
       ]
     }
-  ]
+  ],
+  "total_calories": <integer>,
+  "calorie_target": <integer>
 }
+
+# Example (for illustration only)
+```json
+{
+  "meals": [
+    {
+      "meal_type": "breakfast",
+      "items": [
+        { "food_id": 12, "food_name": "Oatmeal", "portion_grams": 150, "calories": 195, "logged": false },
+        { "food_id": 5, "food_name": "Banana", "portion_grams": 120, "calories": 107, "logged": false }
+      ]
+    },
+    {
+      "meal_type": "lunch",
+      "items": [
+        { "food_id": 23, "food_name": "Chicken Breast", "portion_grams": 180, "calories": 297, "logged": false },
+        { "food_id": 45, "food_name": "Brown Rice", "portion_grams": 150, "calories": 173, "logged": false },
+        { "food_id": 67, "food_name": "Broccoli", "portion_grams": 100, "calories": 35, "logged": false }
+      ]
+    },
+    {
+      "meal_type": "dinner",
+      "items": [
+        { "food_id": 30, "food_name": "Salmon", "portion_grams": 200, "calories": 416, "logged": false },
+        { "food_id": 52, "food_name": "Sweet Potato", "portion_grams": 150, "calories": 129, "logged": false },
+        { "food_id": 70, "food_name": "Asparagus", "portion_grams": 100, "calories": 20, "logged": false }
+      ]
+    },
+    {
+      "meal_type": "snack",
+      "items": [
+        { "food_id": 15, "food_name": "Greek Yogurt", "portion_grams": 150, "calories": 97, "logged": false },
+        { "food_id": 8, "food_name": "Almonds", "portion_grams": 30, "calories": 173, "logged": false }
+      ]
+    }
+  ],
+  "total_calories": 1642,
+  "calorie_target": 2000
+}
+```
 
 # Constraints
 - Exactly 4 meal slots: breakfast, lunch, dinner, snack
@@ -70,7 +120,14 @@ Return ONLY valid JSON. No markdown, no explanation, no code fences.
 - `food_name` MUST match the exact name from Available Foods (case-sensitive)
 - `portion_grams` MUST be an integer between 10 and 500
 - Total calories should be within 80-120% of the Daily Calorie Target
-- Distribute calories: breakfast ~20-25%, lunch ~30-35%, dinner ~30-35%, snack ~10-15%
+- Distribute calories: breakfast ~20-25%, lunch ~30-35%, dinner ~30-35%, snack ~5-15%
+- Estimate `calories` for each item based on portion_grams and typical calories_per_100g
+- Set `total_calories` to the sum of all item calories
+- Set `calorie_target` to the {{calorieTarget}} value
+- Recommend a balanced macro split: ~15-25% protein, ~45-55% carbs, ~20-30% fat of total calories
+- Ensure each meal has at least one protein or dairy source
+- Avoid repeating the same food item across different meals (e.g., chicken in lunch AND dinner)
+- Include at least 3 different food categories across the day
+- Portion sizes should be realistic for a single meal: 100-250g for protein, 50-200g for carbs, 50-150g for vegetables
 - Include a variety: at least 1 protein, 1 carb, 1 vegetable or fruit
 - Do NOT include foods not in the Available Foods list
-- Portion sizes should be realistic for a single meal serving
