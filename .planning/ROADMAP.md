@@ -1,9 +1,9 @@
 # ROADMAP: Fitness_App
 
 **Created:** 2026-05-17
-**Updated:** 2026-05-31 (v1.5 Smart Auto-Logging started)
-**Phases:** 23 complete (v1.0-v1.4), 6 planned (v1.5)
-**Milestones:** 5 shipped, 1 active
+**Updated:** 2026-05-31 (v1.5 Smart Auto-Logging shipped)
+**Phases:** 29 complete (v1.0-v1.5)
+**Milestones:** 6 shipped
 
 ## Milestones
 
@@ -71,15 +71,15 @@
 
 ## v1.5 Smart Auto-Logging (Phases 24-29)
 
-<details open>
-<summary>🚧 v1.5 Smart Auto-Logging (Phases 24-29) — IN PLANNING</summary>
+<details>
+<summary>✅ v1.5 Smart Auto-Logging (Phases 24-29) — SHIPPED 2026-05-31</summary>
 
-- [ ] **Phase 24: Activity Plan Backend** — Persist activity plans to DB with completed tracking per item
-- [ ] **Phase 25: Activity Plan Logging** — Batch-log activities from plan to activity_logs with one click
-- [ ] **Phase 26: 3-Day Meal Plan Backend** — Generate 3-day meal plans and persist to daily_meal_plans table
-- [ ] **Phase 27: Meal Plan Logging** — Batch-log meals from plan to food_logs with logged tracking
-- [ ] **Phase 28: Auto-Generation & Inline Management** — Auto-gen on page visit, regenerate button, rate-limit awareness, one-shot guard
-- [ ] **Phase 29: UI Consolidation** — Merge Activity Plan into Activities page, Meal Plan into Food Log page, route redirects
+- [x] **Phase 24: Activity Plan Backend** — Persist activity plans to DB with completed tracking per item
+- [x] **Phase 25: Activity Plan Logging** — Batch-log activities from plan to activity_logs with one click
+- [x] **Phase 26: 3-Day Meal Plan Backend** — Generate 3-day meal plans and persist to daily_meal_plans table
+- [x] **Phase 27: Meal Plan Logging** — Batch-log meals from plan to food_logs with logged tracking
+- [x] **Phase 28: Auto-Generation & Inline Management** — Auto-gen on page visit, regenerate button, rate-limit awareness, one-shot guard
+- [x] **Phase 29: UI Consolidation** — Merge Activity Plan into Activities page, Meal Plan into Food Log page, route redirects
 
 </details>
 
@@ -110,12 +110,12 @@
 | 21. Backend API Layer | v1.4 | 1/1 | Complete | 2026-05-31 |
 | 22. Meal Plan Frontend | v1.4 | 1/1 | Complete | 2026-05-31 |
 | 23. Testing & Edge Cases | v1.4 | 1/1 | Complete | 2026-05-31 |
-| 24. Activity Plan Backend | v1.5 | 0/2 | Not started | - |
-| 25. Activity Plan Logging | v1.5 | 0/0 | Not started | - |
-| 26. 3-Day Meal Plan Backend | v1.5 | 0/0 | Not started | - |
-| 27. Meal Plan Logging | v1.5 | 0/0 | Not started | - |
-| 28. Auto-Generation & Inline Management | v1.5 | 0/0 | Not started | - |
-| 29. UI Consolidation | v1.5 | 0/0 | Not started | - |
+| 24. Activity Plan Backend | v1.5 | 2/2 | Complete | 2026-05-31 |
+| 25. Activity Plan Logging | v1.5 | 1/1 | Complete | 2026-05-31 |
+| 26. 3-Day Meal Plan Backend | v1.5 | 1/1 | Complete | 2026-05-31 |
+| 27. Meal Plan Logging | v1.5 | 1/1 | Complete | 2026-05-31 |
+| 28. Auto-Generation & Inline Management | v1.5 | 1/1 | Complete | 2026-05-31 |
+| 29. UI Consolidation | v1.5 | 1/1 | Complete | 2026-05-31 |
 
 ---
 
