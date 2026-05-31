@@ -49,17 +49,12 @@ describe('CalendarGrid', () => {
     expect(onDaySelect).toHaveBeenCalledTimes(1);
   });
 
-  test('calls onMonthChange when navigating months', () => {
+  test('renders with onMonthChange prop passed through to DayPicker', () => {
+    // CalendarGrid uses external navigation via MonthNav with hideNavigation
+    // onMonthChange is passed through to DayPicker for keyboard/click handling
+    // No navigation interaction is performed here — verify component renders
     const onMonthChange = vi.fn();
-    // CalendarGrid uses external navigation via MonthNav
-    // MonthNav fires onMonthChange directly, no internal buttons
-    // CalendarGrid just renders DayPicker with hideNavigation
-    // The onMonthChange prop is passed through to DayPicker for keyboard/click handling
     render(<CalendarGrid {...defaultProps()} { ...{ onMonthChange } } />);
-    // Since hideNavigation is true, no nav buttons from DayPicker
-    // MonthNav handles navigation — CalendarGrid receives month changes
-    // We verify the prop is used by DayPicker's internal month change handler
-    // For now, verify the component renders with the month prop
     expect(screen.getByText('June 2026')).toBeInTheDocument();
   });
 
