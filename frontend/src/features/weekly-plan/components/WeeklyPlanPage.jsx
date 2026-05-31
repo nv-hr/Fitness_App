@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getWeeklyPlan, generateWeeklyPlan, regenerateDay } from '../api/weeklyPlanApi.js';
+import { getWeeklyPlan, generateWeeklyPlan, regenerateDay, swapActivity } from '../api/weeklyPlanApi.js';
 import DayCard from './DayCard.jsx';
 import EmptyStatePlan from './EmptyStatePlan.jsx';
 import FallbackBanner from './FallbackBanner.jsx';
+import Toast from './Toast.jsx';
 
 function getMonday(date) {
   const d = new Date(date);
@@ -21,6 +22,9 @@ export default function WeeklyPlanPage() {
   const [regeneratingDayIndex, setRegeneratingDayIndex] = useState(null);
   const [genRetryAfter, setGenRetryAfter] = useState(null);  // rate-limit for first-time generation
   const [dayRetryAfters, setDayRetryAfters] = useState({});  // { dayIndex: seconds }
+  const [swappingActivityId, setSwappingActivityId] = useState(null);
+  const [swapRetryAfter, setSwapRetryAfter] = useState(null);
+  const [toast, setToast] = useState(null);
 
   const weekStart = getMonday(new Date());
 
@@ -46,13 +50,29 @@ export default function WeeklyPlanPage() {
 
   useEffect(() => { loadPlan(); }, [loadPlan]);
 
+  // Swap countdown effect
+  useEffect(() => {
+    if (swapRetryAfter != null && swapRetryAfter > 0) {
+      const interval = setInterval(() => {
+        setSwapRetryAfter((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [swapRetryAfter]);
+
   // Handle first-time generation
-  const handleGenerate = async () => {
+  const handleGenerate = async (availableDays) => {
     try {
       setGenerating(true);
       setError('');
       setGenRetryAfter(null);
-      const res = await generateWeeklyPlan(weekStart);
+      const res = await generateWeeklyPlan(weekStart, availableDays);
       if (res.data?.plan) {
         setPlan(res.data.plan);
         setStatus(res.data.plan.status || 'active');
@@ -94,10 +114,38 @@ export default function WeeklyPlanPage() {
     }
   };
 
+  // Handle single-activity swap
+  const handleSwap = async (activityId, dayIndex) => {
+    if (swapRetryAfter > 0) return;
+
+    try {
+      setSwappingActivityId(activityId);
+      setError('');
+      const res = await swapActivity(weekStart, activityId, dayIndex);
+      if (res.data?.plan) {
+        setPlan(res.data.plan);
+        setStatus(res.data.plan.status || 'active');
+      }
+    } catch (err) {
+      if (err.retryAfter || err.code === 'RATE_LIMITED') {
+        const retryAfter = err.retryAfter || 300;
+        setSwapRetryAfter(retryAfter);
+        setToast({ message: `Swap limit reached. Please wait ${retryAfter}s before trying again.` });
+      } else if (err.message?.includes('not found') || err.message?.includes('removed')) {
+        setToast({ message: 'Activity not found in current plan. It may have been removed.' });
+      } else {
+        setToast({ message: 'Could not swap activity. Please try again.' });
+      }
+    } finally {
+      setSwappingActivityId(null);
+    }
+  };
+
   // Loading state
   if (loading) {
     return (
       <div style={{ maxWidth: '600px', margin: '2rem auto', padding: '1rem' }}>
+        {toast && <Toast message={toast.message} onDismiss={() => setToast(null)} />}
         {'Loading...'}
       </div>
     );
@@ -107,6 +155,7 @@ export default function WeeklyPlanPage() {
   if (error && !plan && !generating) {
     return (
       <div style={{ maxWidth: '600px', margin: '2rem auto', padding: '1rem' }}>
+        {toast && <Toast message={toast.message} onDismiss={() => setToast(null)} />}
         <p style={{ color: 'red', marginBottom: '1rem' }}>{error}</p>
         <button
           onClick={loadPlan}
@@ -131,6 +180,7 @@ export default function WeeklyPlanPage() {
     const seconds = genRetryAfter % 60;
     return (
       <div style={{ maxWidth: '600px', margin: '2rem auto', padding: '1rem', textAlign: 'center' }}>
+        {toast && <Toast message={toast.message} onDismiss={() => setToast(null)} />}
         <h3 style={{ marginBottom: '0.75rem', fontSize: '1.25rem', fontWeight: 700 }}>
           {'Weekly Plan'}
         </h3>
@@ -148,6 +198,7 @@ export default function WeeklyPlanPage() {
   if (!plan) {
     return (
       <div style={{ maxWidth: '600px', margin: '2rem auto', padding: '1rem' }}>
+        {toast && <Toast message={toast.message} onDismiss={() => setToast(null)} />}
         <h2 style={{ marginBottom: '1rem', fontSize: '1.5rem', fontWeight: 700 }}>
           {'Weekly Activity Plan'}
         </h2>
@@ -160,6 +211,8 @@ export default function WeeklyPlanPage() {
   // Active plan (exists — render day cards)
   return (
     <div style={{ maxWidth: '600px', margin: '2rem auto', padding: '1rem' }}>
+      {toast && <Toast message={toast.message} onDismiss={() => setToast(null)} />}
+
       <h2 style={{ marginBottom: '0.5rem', fontSize: '1.5rem', fontWeight: 700 }}>
         {'Weekly Activity Plan'}
       </h2>
@@ -182,9 +235,13 @@ export default function WeeklyPlanPage() {
         <DayCard
           key={day.date}
           day={day}
+          dayIndex={index}
           onRegenerateDay={handleRegenerateDay}
           isRegenerating={regeneratingDayIndex === index}
           retryAfter={dayRetryAfters[index] ?? null}
+          onSwapActivity={handleSwap}
+          swappingActivityId={swappingActivityId}
+          swapRetryAfter={swapRetryAfter}
         />
       ))}
     </div>
