@@ -194,8 +194,9 @@ async function swapHandler(req, res, next) {
 
     const result = await swapActivity(deps, activityId, dayIndex);
 
-    // Persist to DB (dual-write: cache + DB)
+    // Persist to DB FIRST, then update cache (prevent dual-write inconsistency)
     await upsertPlan(userId, targetWeekStart, result.plan, 'active');
+    setCachedPlan(userId, targetWeekStart, result.plan);
 
     return successResponse(res, result);
   } catch (err) {

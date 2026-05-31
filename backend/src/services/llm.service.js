@@ -724,10 +724,7 @@ export async function swapActivity(deps, activityId, dayIndex) {
     mergedPlan.format_version = 1
   }
 
-  // 11. Update cache
-  setCachedPlan(deps.userId, deps.weekStart, JSON.parse(JSON.stringify(mergedPlan)))
-
-  // 12. Return result
+  // 11. Return result (cache is updated by caller after DB persist)
   return {
     plan: mergedPlan,
     day: mergedPlan.days[dayIndex],
