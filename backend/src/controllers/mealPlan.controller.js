@@ -21,7 +21,7 @@ async function get(req, res, next) {
       return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
     }
     weekStart = getMonday(weekStart ? new Date(weekStart) : new Date());
-    const cached = getCachedPlan(userId, weekStart);
+    const cached = getCachedPlan(userId, weekStart, 'meal');
     if (cached && cached.status !== 'fallback') {
       return successResponse(res, { plan: cached, fromCache: true });
     }
