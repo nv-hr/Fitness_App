@@ -96,7 +96,7 @@
 <details open>
 <summary>🔄 v1.7 Calendar-Based Plan UI (Phases 34-37) — IN PROGRESS</summary>
 
-- [ ] Phase 34: Calendar Shared Components — 0/0 plans
+- [x] Phase 34: Calendar Shared Components — 2/2 plans (33 tests)
 - [ ] Phase 35: Activity Calendar Page — 0/0 plans
 - [ ] Phase 36: Meal Calendar Page — 0/0 plans
 - [ ] Phase 37: Cleanup — Remove Old Components & Update Nav — 0/0 plans
@@ -176,8 +176,12 @@ Plans:
    3. Users can navigate between months using prev/next arrow buttons, and CalendarGrid renders the correct month after navigation
    4. Clicking any day cell selects it and populates the CalendarPageLayout's detail panel slot with day information
    5. calendarUtils correctly compute day status from plan data via getWeekStartsForMonth(), buildMonthGrid(), and computeDayStatus() — verified by unit tests
-**Plans**: TBD
+**Plans**: 2 plans
 **UI hint**: yes
+
+Plans:
+- [x] 34-01-PLAN.md — Calendar utilities + CalendarGrid + MonthNav — completed 2026-05-31
+- [x] 34-02-PLAN.md — CalendarPageLayout + DayDetailPanel + useMonthData hook + tests — completed 2026-05-31
 
 ### Phase 35: Activity Calendar Page
 **Goal**: Users can browse, generate, and manage weekly activity plans through a calendar-driven interface
@@ -254,7 +258,7 @@ Plans:
 | 31. Activity Swap Endpoint | v1.6 | 2/2 | Complete | 2026-05-31 |
 | 32. Frontend — Days Selector & Swap UI | v1.6 | 2/2 | Complete | 2026-05-31 |
 | 33. Plan Migration & Edge Cases | v1.6 | 2/2 | Complete | 2026-05-31 |
-| 34. Calendar Shared Components | v1.7 | 0/0 | Not started | - |
+| 34. Calendar Shared Components | v1.7 | 2/2 | Complete | 2026-05-31 |
 | 35. Activity Calendar Page | v1.7 | 0/0 | Not started | - |
 | 36. Meal Calendar Page | v1.7 | 0/0 | Not started | - |
 | 37. Cleanup — Remove Old Components & Update Nav | v1.7 | 0/0 | Not started | - |

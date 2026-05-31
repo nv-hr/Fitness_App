@@ -9,14 +9,14 @@ Requirements for milestone v1.7 Calendar-Based Plan UI. Each maps to roadmap pha
 
 ### Calendar Foundation
 
-- [ ] **CAL-FND-01**: Month calendar grid renders using CSS Grid with day cells for all days in the current month
-- [ ] **CAL-FND-02**: Day cells are color-coded: blue for incomplete/planned, green for all completed, grey for past incomplete days
-- [ ] **CAL-FND-03**: Month navigation with prev/next month arrow buttons
-- [ ] **CAL-FND-04**: Clicking a day cell selects it and populates the detail panel below
-- [ ] **CAL-FND-05**: Calendar defaults to showing today's date on page load
-- [ ] **CAL-FND-06**: Calendar utility functions compute day status client-side from existing plan endpoints (5-6 weekly plan fetches per month range)
-- [ ] **CAL-FND-07**: "Today" visual indicator on the current day cell
-- [ ] **CAL-FND-08**: CalendarPageLayout component wraps CalendarGrid + DayDetailPanel
+- [x] **CAL-FND-01**: Month calendar grid renders using react-day-picker DayPicker with day cells for all days in the current month (implemented in CalendarGrid.jsx)
+- [x] **CAL-FND-02**: Day cells are color-coded: blue for incomplete/planned, green for all completed, grey for past incomplete days (via modifierStyles)
+- [x] **CAL-FND-03**: Month navigation with prev/next month arrow buttons (implemented in MonthNav.jsx)
+- [x] **CAL-FND-04**: Clicking a day cell selects it and populates the detail panel below (CalendarGrid mode="single" + DayDetailPanel)
+- [x] **CAL-FND-05**: Calendar defaults to showing today's date on page load (CalendarPageLayout useState(() => startOfMonth(new Date())))
+- [x] **CAL-FND-06**: Calendar utility functions compute day status client-side from existing plan endpoints (useMonthData fetches 5-6 weekly plans per month range)
+- [x] **CAL-FND-07**: "Today" visual indicator on the current day cell (today modifier with outline: '2px solid #2563eb')
+- [x] **CAL-FND-08**: CalendarPageLayout component wraps CalendarGrid + DayDetailPanel (implemented in CalendarPageLayout.jsx)
 
 ### Activity Calendar
 
@@ -74,14 +74,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CAL-FND-01 | Phase 34 | Pending |
-| CAL-FND-02 | Phase 34 | Pending |
-| CAL-FND-03 | Phase 34 | Pending |
-| CAL-FND-04 | Phase 34 | Pending |
-| CAL-FND-05 | Phase 34 | Pending |
-| CAL-FND-06 | Phase 34 | Pending |
-| CAL-FND-07 | Phase 34 | Pending |
-| CAL-FND-08 | Phase 34 | Pending |
+| CAL-FND-01 | Phase 34 | Complete |
+| CAL-FND-02 | Phase 34 | Complete |
+| CAL-FND-03 | Phase 34 | Complete |
+| CAL-FND-04 | Phase 34 | Complete |
+| CAL-FND-05 | Phase 34 | Complete |
+| CAL-FND-06 | Phase 34 | Complete |
+| CAL-FND-07 | Phase 34 | Complete |
+| CAL-FND-08 | Phase 34 | Complete |
 | CAL-ACT-01 | Phase 35 | Pending |
 | CAL-ACT-02 | Phase 35 | Pending |
 | CAL-ACT-03 | Phase 35 | Pending |
