@@ -311,7 +311,7 @@ describe('Weekly Plan E2E - Real LLM', () => {
     console.log(`✓ Replacement: "${replacement.name}" (id=${replacement.activity_id}, ${replacement.duration_min}min, ${replacement.intensity})`);
   }, 180000); // 180s: real LLM generate + swap
 
-  it('POST /api/weekly-plans/swap returns 400 when activity not found', async () => {
+  it('POST /api/weekly-plans/swap returns 404 when activity not found', async () => {
     // Generate a plan first
     const genRes = await agent
       .post('/api/weekly-plans/generate')
@@ -322,7 +322,7 @@ describe('Weekly Plan E2E - Real LLM', () => {
 
     const plan = genRes.body.data.plan;
     if (!plan.days || plan.days.length === 0) {
-      console.warn('⚠ Cannot test swap 400 — generated plan has 0 days');
+      console.warn('⚠ Cannot test swap 404 — generated plan has 0 days');
       return;
     }
 
@@ -333,10 +333,11 @@ describe('Weekly Plan E2E - Real LLM', () => {
       .post('/api/weekly-plans/swap')
       .send({ activityId: 99999, dayIndex: 0, weekStart });
 
-    expect(swapRes.status).toBe(400);
+    // CR-04: swapActivity throws NotFoundError (statusCode=404), not 400
+    expect(swapRes.status).toBe(404);
     expect(swapRes.body.success).toBe(false);
     expect(swapRes.body.error.message).toMatch(/Activity not found in current plan/i);
-    console.log('✓ 400 returned for non-existent activity ID');
+    console.log('✓ 404 returned for non-existent activity ID');
   }, 120000); // 120s: real LLM generate + swap
 
   // Rate limit test skipped: test mode uses max=1000 which prevents triggering
