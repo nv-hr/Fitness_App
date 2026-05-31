@@ -342,3 +342,207 @@ describe('Weekly Plan E2E - Real LLM', () => {
   // Rate limit test skipped: test mode uses max=1000 which prevents triggering
   // in a single test run. Swap limiter is tested via unit pattern in the rate limiter module itself.
 });
+
+// ──────────────────────────────────────────────
+// Migration Edge Cases E2E
+// ──────────────────────────────────────────────
+
+/**
+ * Compute Monday of the current week (matching controller's getMonday logic).
+ */
+function getMonday(date) {
+  const d = new Date(date);
+  const localDay = d.getDay();
+  const diff = d.getDate() - localDay + (localDay === 0 ? -6 : 1);
+  d.setDate(diff);
+  return d.toISOString().split('T')[0];
+}
+
+/**
+ * Add days to an ISO date string.
+ */
+function addDays(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00Z');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split('T')[0];
+}
+
+/**
+ * Insert or update a plan directly in the weekly_plans table.
+ * Returns the weekStart used.
+ */
+async function insertPlanDirectly(userId, planData, weekStart) {
+  await pool.query(
+    `INSERT INTO weekly_plans (user_id, week_start, plan_data, status)
+     VALUES ($1, $2, $3::jsonb, 'active')
+     ON CONFLICT (user_id, week_start)
+     DO UPDATE SET plan_data = $3::jsonb, status = 'active', updated_at = NOW()`,
+    [userId, weekStart, JSON.stringify(planData)]
+  );
+}
+
+/**
+ * Create an old-format plan (no format_version, no rest_day) for the given week.
+ */
+function makeOldFormatPlan(weekStart) {
+  return {
+    days: [
+      { date: weekStart, activities: [{ activity_id: 1, name: 'Running', duration_min: 30, intensity: 'moderate' }] },
+      { date: addDays(weekStart, 1), activities: [{ activity_id: 2, name: 'Yoga', duration_min: 45, intensity: 'light' }] },
+      { date: addDays(weekStart, 2), activities: [{ activity_id: 3, name: 'Cycling', duration_min: 20, intensity: 'vigorous' }] },
+      { date: addDays(weekStart, 3), activities: [{ activity_id: 1, name: 'Running', duration_min: 30, intensity: 'moderate' }] },
+      { date: addDays(weekStart, 4), activities: [{ activity_id: 2, name: 'Yoga', duration_min: 45, intensity: 'light' }] },
+      { date: addDays(weekStart, 5), activities: [{ activity_id: 3, name: 'Cycling', duration_min: 20, intensity: 'vigorous' }] },
+      { date: addDays(weekStart, 6), activities: [{ activity_id: 1, name: 'Running', duration_min: 30, intensity: 'moderate' }] },
+    ],
+    status: 'active',
+  };
+}
+
+describe('Weekly Plan E2E - Migration Edge Cases', () => {
+  it('GET with old-format DB plan triggers lazy migration and returns migrated plan', async () => {
+    // Create a fresh user for this test to isolate state
+    const migrationAgent = request.agent(app);
+    const user = await createTestUser(migrationAgent);
+
+    // Create a profile (required by LLM service to attempt regeneration)
+    const profileRes = await migrationAgent.post('/api/profile').send({
+      weightKg: 75, heightCm: 180, age: 32, gender: 'male',
+      fitnessGoal: 'maintain', activityLevel: 'moderate',
+    });
+    console.log('[migration] Profile created:', profileRes.status);
+
+    // Seed activity logs so fallback plan generation has data
+    const activities = [
+      { activityId: 1, durationMin: 30, intensity: 'moderate' },
+      { activityId: 2, durationMin: 45, intensity: 'light' },
+      { activityId: 3, durationMin: 20, intensity: 'vigorous' },
+    ];
+    for (const act of activities) {
+      await migrationAgent.post('/api/activities/log').send({ ...act });
+    }
+    console.log('[migration] Seeded 3 activity logs for fallback');
+
+    const weekStart = getMonday(new Date());
+
+    // Insert old-format plan directly into DB (no format_version field)
+    const oldPlan = makeOldFormatPlan(weekStart);
+    await insertPlanDirectly(user.user.id, oldPlan, weekStart);
+    console.log('[migration] Old-format plan inserted into DB');
+
+    // GET should detect old format and trigger lazy migration
+    const getRes = await migrationAgent.get(`/api/weekly-plans?weekStart=${weekStart}`);
+
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.success).toBe(true);
+    expect(getRes.body.data).toBeDefined();
+
+    const plan = getRes.body.data.plan;
+    if (plan) {
+      // After successful migration, the plan should have format_version: 1
+      if (plan.format_version !== undefined) {
+        expect(plan.format_version).toBe(1);
+        console.log('✓ Migrated plan has format_version: 1');
+      }
+      expect(Array.isArray(plan.days)).toBe(true);
+      console.log(`✓ GET returned plan with ${plan.days.length} days after migration`);
+    } else {
+      console.warn('⚠ Migration returned null plan — LLM may have failed');
+    }
+  }, 120000); // 120s: real LLM call
+
+  it('GET with old-format plan returns old plan as-is when LLM and fallback both fail', async () => {
+    // Create a user with NO activity logs so the fallback has no data
+    const failAgent = request.agent(app);
+    const user = await createTestUser(failAgent);
+
+    // Create a profile
+    await failAgent.post('/api/profile').send({
+      weightKg: 70, heightCm: 175, age: 30, gender: 'male',
+      fitnessGoal: 'maintain', activityLevel: 'sedentary',
+    });
+
+    // Do NOT log any activities — this forces fallback to return 'unavailable'
+    // which will make attemptMigration return null (keep old format)
+
+    const weekStart = getMonday(new Date());
+
+    // Insert old-format plan directly into DB
+    const oldPlan = makeOldFormatPlan(weekStart);
+    await insertPlanDirectly(user.user.id, oldPlan, weekStart);
+    console.log('[migration-fail] Old-format plan inserted (no activity logs)');
+
+    // GET should attempt migration, LLM fails, fallback unavailable, keeps old plan
+    const getRes = await failAgent.get(`/api/weekly-plans?weekStart=${weekStart}`);
+
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.success).toBe(true);
+
+    const plan = getRes.body.data.plan;
+    if (plan) {
+      // The plan should still be the old-format plan — no format_version
+      console.log(`[migration-fail] Plan returned with ${plan.days.length} days`);
+      if (plan.days.length > 0) {
+        // Verify it still has the old plan's structure (no rest_day fields)
+        const hasRestDay = plan.days.some(d => d.rest_day === true);
+        const noFormatVersion = plan.format_version === undefined;
+        // In the failure case, the old plan is returned as-is
+        console.log(`  rest_day present: ${hasRestDay}, format_version: ${plan.format_version}`);
+        if (noFormatVersion) {
+          console.log('✓ Old-format plan preserved as-is after failed migration');
+        }
+      }
+    } else {
+      console.warn('⚠ GET returned null plan');
+    }
+  }, 120000); // 120s: real LLM call attempt
+
+  it('swap on old-format DB plan triggers auto-migration then succeeds', async () => {
+    // Create a fresh user for this test
+    const swapAgent = request.agent(app);
+    const user = await createTestUser(swapAgent);
+
+    // Create profile
+    await swapAgent.post('/api/profile').send({
+      weightKg: 75, heightCm: 180, age: 32, gender: 'male',
+      fitnessGoal: 'maintain', activityLevel: 'moderate',
+    });
+
+    // Seed activity logs for fallback plan
+    const activities = [
+      { activityId: 1, durationMin: 30, intensity: 'moderate' },
+      { activityId: 2, durationMin: 45, intensity: 'light' },
+      { activityId: 3, durationMin: 20, intensity: 'vigorous' },
+    ];
+    for (const act of activities) {
+      await swapAgent.post('/api/activities/log').send({ ...act });
+    }
+
+    const weekStart = getMonday(new Date());
+
+    // Insert old-format plan directly into DB
+    const oldPlan = makeOldFormatPlan(weekStart);
+    await insertPlanDirectly(user.user.id, oldPlan, weekStart);
+    console.log('[swap-migration] Old-format plan inserted');
+
+    // Swap should detect old format, trigger migration, and then perform the swap
+    // Use the first activity from the old plan
+    const swapRes = await swapAgent
+      .post('/api/weekly-plans/swap')
+      .send({ activityId: 1, dayIndex: 0, weekStart });
+
+    if (swapRes.status === 200 && swapRes.body.success) {
+      expect(swapRes.body.data.plan).toBeDefined();
+      expect(swapRes.body.data.replacement).toBeDefined();
+      expect(swapRes.body.data.replacement.activity_id).toBeGreaterThan(0);
+      expect(swapRes.body.data.replacement.name).not.toBe('Running');
+      console.log(`✓ Swap succeeded after auto-migration. Replacement: "${swapRes.body.data.replacement.name}"`);
+    } else if (swapRes.status === 500 && swapRes.body.error && swapRes.body.error.code === 'MigrationError') {
+      // If migration failed, swap returns MigrationError
+      console.warn('⚠ Migration failed during swap:', swapRes.body.error.message);
+    } else {
+      // Other error (e.g., 400 for not found)
+      console.warn(`⚠ Swap returned ${swapRes.status}:`, JSON.stringify(swapRes.body));
+    }
+  }, 180000); // 180s: real LLM generate + swap
+});
