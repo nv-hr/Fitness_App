@@ -1030,59 +1030,75 @@ describe('Activity Endpoints', () => {
   });
 
   describe('GET /api/activities/history', () => {
-    let historyAgent;
-    let seededActivityId;
-    const today = new Date().toISOString().split('T')[0];
+    describe('with logged activity', () => {
+      let historyAgent;
+      let seededActivityId;
 
-    beforeAll(async () => {
-      historyAgent = request.agent(app);
-      const email = `activity_history_${Date.now()}@example.com`;
-      await historyAgent
-        .post('/api/auth/register')
-        .send({ email, password: 'TestP@ss123', pdpConsent: true });
+      beforeAll(async () => {
+        historyAgent = request.agent(app);
+        const email = `activity_history_${Date.now()}@example.com`;
+        await historyAgent
+          .post('/api/auth/register')
+          .send({ email, password: 'TestP@ss123', pdpConsent: true });
 
-      await historyAgent.post('/api/profile').send({
-        weightKg: 70, heightCm: 175, age: 30, gender: 'male',
-        fitnessGoal: 'maintain', activityLevel: 'moderate',
-      });
+        await historyAgent.post('/api/profile').send({
+          weightKg: 70, heightCm: 175, age: 30, gender: 'male',
+          fitnessGoal: 'maintain', activityLevel: 'moderate',
+        });
 
-      const getRes = await historyAgent.get('/api/activities');
-      if (getRes.body.data?.activities?.length) {
+        const getRes = await historyAgent.get('/api/activities');
+        expect(getRes.body.data?.activities?.length).toBeGreaterThan(0);
         seededActivityId = getRes.body.data.activities[0].id;
-      }
 
-      // Log an activity for today
-      if (seededActivityId) {
+        // Log an activity for today
         await historyAgent.post('/api/activities/log').send({
           activityId: seededActivityId,
           durationMin: 25,
           intensity: 'moderate',
           loggedDate: today,
         });
-      }
+      });
+
+      it('should return grouped history with entries after logging → 200 + array', async () => {
+        const res = await historyAgent.get('/api/activities/history?days=7&includeEntries=true');
+
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(Array.isArray(res.body.data)).toBe(true);
+        expect(res.body.data.length).toBeGreaterThan(0);
+        expect(res.body.data[0].logged_date).toBeDefined();
+        expect(res.body.data[0].total_minutes).toBeGreaterThan(0);
+        expect(res.body.data[0].total_burned).toBeGreaterThan(0);
+        expect(Array.isArray(res.body.data[0].entries)).toBe(true);
+        expect(res.body.data[0].entries.length).toBeGreaterThan(0);
+      });
     });
 
-    it('should return grouped history with entries after logging → 200 + array', async () => {
-      if (!seededActivityId) throw new Error('No seeded activity found');
-      const res = await historyAgent.get('/api/activities/history?days=7&includeEntries=true');
+    describe('with no logged activity', () => {
+      let historyAgent;
 
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(Array.isArray(res.body.data)).toBe(true);
-      expect(res.body.data.length).toBeGreaterThan(0);
-      expect(res.body.data[0].logged_date).toBeDefined();
-      expect(res.body.data[0].total_minutes).toBeGreaterThan(0);
-      expect(res.body.data[0].total_burned).toBeGreaterThan(0);
-      expect(Array.isArray(res.body.data[0].entries)).toBe(true);
-      expect(res.body.data[0].entries.length).toBeGreaterThan(0);
-    });
+      beforeAll(async () => {
+        historyAgent = request.agent(app);
+        const email = `activity_history_empty_${Date.now()}@example.com`;
+        await historyAgent
+          .post('/api/auth/register')
+          .send({ email, password: 'TestP@ss123', pdpConsent: true });
 
-    it('should return empty history when no logs exist → 200 + []', async () => {
-      const res = await historyAgent.get('/api/activities/history?days=1&includeEntries=true');
+        await historyAgent.post('/api/profile').send({
+          weightKg: 70, heightCm: 175, age: 30, gender: 'male',
+          fitnessGoal: 'maintain', activityLevel: 'moderate',
+        });
+        // NOTE: No activity logged — testing the empty history case
+      });
 
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(Array.isArray(res.body.data)).toBe(true);
+      it('should return empty history when no logs exist → 200 + []', async () => {
+        const res = await historyAgent.get('/api/activities/history?days=1&includeEntries=true');
+
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(Array.isArray(res.body.data)).toBe(true);
+        expect(res.body.data.length).toBe(0);
+      });
     });
   });
 });
