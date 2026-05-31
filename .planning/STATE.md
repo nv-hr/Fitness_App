@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: Activity Tracking & Smart Suggestions
-status: shipped
-stopped_at: milestone complete
-last_updated: "2026-05-31T02:30:00.000Z"
-last_activity: "2026-05-31 - Completed quick task: update stale documentation (ARCHITECTURE.md, STACK.md, CONVENTIONS.md, API.md, README.md)"
+milestone: v1.4
+milestone_name: LLM Food Recommendations
+status: planning
+last_updated: "2026-05-31T02:18:49.567Z"
+last_activity: 2026-05-31
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 9
-  completed_plans: 9
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -125,3 +124,10 @@ Stopped at: Milestone v1.3 complete and archived
 
 - Milestone v1.3 (Activity Tracking & Smart Suggestions) is complete and archived
 - Run `/gsd-new-milestone` to define next milestone requirements and roadmap
+
+## Current Position
+
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-31 — Milestone v1.4 started

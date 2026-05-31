@@ -18,9 +18,17 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 - **LLM Weekly Activity Plans** — AI-generated 7-day personalized plans via OpenRouter with day-by-day cards, single-day regeneration, and rate-limit UX
 - **260/260 tests passing** — backend 134 + frontend 126
 
-## Next Milestone Goals
+## Current Milestone: v1.4 LLM Food Recommendations
 
-(TBD — define during next milestone scoping with `/gsd-new-milestone`)
+**Goal:** LLM-powered daily meal recommendations based on fitness goal, using ingredients from the existing database with auto-calculated portions aligned to the user's calorie target.
+
+**Target features:**
+- Generate a full day of simple meals (breakfast, lunch, dinner, snacks) via LLM
+- Ingredients selected exclusively from the existing 200+ ingredient database
+- Portions auto-calculated to meet user's TDEE/calorie target
+- View generated meal plan (like weekly activity plans)
+- One-click log: auto-log recommended ingredients with calculated portions to daily food log
+- Weekly generation pattern with caching and rate limiting
 
 ## Requirements
 
@@ -170,4 +178,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-31 after v1.3 milestone*
+*Last updated: 2026-05-31 after starting v1.4 milestone*
