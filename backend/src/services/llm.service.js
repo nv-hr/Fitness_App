@@ -169,6 +169,9 @@ export function validateActivities(activities, prefix, allowEmpty = false) {
     if (!['light', 'moderate', 'vigorous'].includes(act.intensity)) {
       errors.push(`${prefix}activity ${j + 1}: intensity must be light/moderate/vigorous`);
     }
+    if (act.calories_burned !== undefined && (typeof act.calories_burned !== 'number' || act.calories_burned < 0 || act.calories_burned > 3000)) {
+      errors.push(`${prefix}activity ${j + 1}: calories_burned must be a positive number (max 3000)`);
+    }
   });
   return errors;
 }
