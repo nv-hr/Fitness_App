@@ -3,7 +3,9 @@ import DayActivityRow from './DayActivityRow.jsx'
 import RateLimitedButton from './RateLimitedButton.jsx'
 
 function formatDayHeader(dateStr) {
+  if (!dateStr) return 'Unknown date'
   const d = new Date(dateStr + 'T00:00:00')
+  if (isNaN(d.getTime())) return 'Unknown date'
   const options = { weekday: 'long', month: 'long', day: 'numeric' }
   return d.toLocaleDateString('en-US', options)
 }
