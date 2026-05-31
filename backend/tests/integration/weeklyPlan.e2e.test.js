@@ -538,7 +538,7 @@ describe('Weekly Plan E2E - Migration Edge Cases', () => {
       expect(swapRes.body.data.replacement.activity_id).toBeGreaterThan(0);
       expect(swapRes.body.data.replacement.name).not.toBe('Running');
       console.log(`✓ Swap succeeded after auto-migration. Replacement: "${swapRes.body.data.replacement.name}"`);
-    } else if (swapRes.status === 500 && swapRes.body.error && swapRes.body.error.code === 'MigrationError') {
+    } else if (swapRes.status === 500 && swapRes.body.error && swapRes.body.error.code === 'MIGRATION_ERROR') {
       // If migration failed, swap returns MigrationError
       console.warn('⚠ Migration failed during swap:', swapRes.body.error.message);
     } else {

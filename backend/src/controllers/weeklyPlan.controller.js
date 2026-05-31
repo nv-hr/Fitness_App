@@ -269,6 +269,7 @@ async function swapHandler(req, res, next) {
         console.log(`[Migration] Using inferred availableDays=${inferredDays} from old plan (${planForSwap.days?.length || 0} total days, ${planForSwap.days?.filter(d => d.activities?.length > 0).length || 0} activity days).`);
         const migrationResult = await generateWeeklyPlan(migrationDeps);
         if (!migrationResult.plan || !Array.isArray(migrationResult.plan.days) || migrationResult.plan.days.length === 0) {
+          migrationFailCooldown.set(`${userId}_${targetWeekStart}`, Date.now());
           throw new AppError('MigrationError', 'Failed to migrate old-format plan. Cannot proceed with swap.', 500);
         }
         // Persist migrated plan to DB and cache
