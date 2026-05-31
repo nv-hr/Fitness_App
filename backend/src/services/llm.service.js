@@ -3,7 +3,7 @@ import NodeCache from 'node-cache';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { AppError } from '../utils/errors.js';
+import { AppError, ValidationError } from '../utils/errors.js';
 import { levenshteinDistance } from '../utils/string.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -545,4 +545,384 @@ export async function regenerateDay(deps, dayIndex) {
   setCachedPlan(deps.userId, deps.weekStart, JSON.parse(JSON.stringify(mergedPlan)));
 
   return { plan: mergedPlan, day: mergedPlan.days[dayIndex], dayIndex, fromCache: false, status: 'active' };
+}
+
+function buildSwapPrompt(profile, swappedActivity, dayActivities, weekDaysSummary, availableActivities, goalTags, activityLevel) {
+  const dayContext = JSON.stringify({ date: dayActivities.date, activities: dayActivities.activities })
+  const weekContext = weekDaysSummary.map(d =>
+    `${d.date}: ${d.rest_day ? 'rest day' : `${d.activities.length} activities`}`
+  ).join('\n')
+  const goalLabel = goalTags && goalTags.length > 0 ? goalTags[0] : 'maintain'
+  const goalMap = {
+    lose_weight: 'lose weight',
+    gain_weight: 'build muscle',
+    maintain: 'maintain',
+  }
+  const fitnessGoal = goalMap[goalLabel] || 'maintain'
+
+  return buildPrompt('activity-swap-prompt.md', {
+    fitnessGoal,
+    activityLevel: activityLevel || 'moderate',
+    swappedActivity: JSON.stringify(swappedActivity),
+    dayContext,
+    weekContext,
+    availableActivities: availableActivities.map(a =>
+      `- ${a.name} (${a.estimated_calories} cal/30min)`
+    ).join('\n'),
+  })
+}
+
+export async function swapActivity(deps, activityId, dayIndex) {
+  // Validate inputs
+  if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {
+    throw new AppError('ValidationError', 'dayIndex must be a number between 0 and 6', 400)
+  }
+  if (typeof activityId !== 'number' || activityId < 1) {
+    throw new AppError('ValidationError', 'Activity not found in current plan', 400)
+  }
+
+  // Get the cached plan
+  const cached = getCachedPlan(deps.userId, deps.weekStart)
+  if (!cached || !Array.isArray(cached.days)) {
+    throw new AppError('NotFoundError', 'No weekly plan found', 404)
+  }
+
+  // Defensively propagate availableDays from the cached plan
+  if (!deps.availableDays) {
+    const activityDays = cached.days.filter(d => d.rest_day === false).length
+    if (activityDays > 0) deps.availableDays = activityDays
+  }
+
+  // Find the day and activity
+  const day = cached.days[dayIndex]
+  if (!day || day.rest_day === true) {
+    throw new AppError('ValidationError', 'Cannot swap activity on a rest day', 400)
+  }
+  if (!Array.isArray(day.activities) || day.activities.length === 0) {
+    throw new AppError('ValidationError', 'No activities to swap in this day', 400)
+  }
+
+  const activityIndex = day.activities.findIndex(a => a.activity_id === activityId)
+  if (activityIndex === -1) {
+    throw new AppError('ValidationError', 'Activity not found in current plan', 400)
+  }
+
+  const oldActivity = day.activities[activityIndex]
+
+  // Try to get a replacement via LLM
+  let replacement = null
+  try {
+    const { getProfile, getActivityHistory, getActivities } = deps
+    const [profile, , dbActivities] = await Promise.all([
+      getProfile ? getProfile(deps.userId) : null,
+      getActivityHistory ? getActivityHistory(deps.userId, 14) : Promise.resolve([]),
+      getActivities ? getActivities() : Promise.resolve([]),
+    ])
+
+    let goalTags = ['maintain']
+    let activityLevel = 'moderate'
+    if (profile) {
+      activityLevel = profile.activity_level || 'moderate'
+      const goalMap = {
+        'lose weight': ['lose_weight'],
+        'build muscle': ['gain_weight'],
+        'maintain': ['maintain'],
+      }
+      goalTags = goalMap[profile.fitness_goal] || ['maintain']
+    }
+
+    const prompt = buildSwapPrompt(
+      profile,
+      oldActivity,
+      day,
+      cached.days,
+      dbActivities,
+      goalTags,
+      activityLevel
+    )
+
+    const client = getClient()
+    if (client) {
+      const models = [CONFIG.model, CONFIG.fallbackModel, CONFIG.fallbackModel2].filter(Boolean)
+      for (const model of models) {
+        try {
+          const response = await callLlmWithModel(client, model, prompt)
+          if (response && response.activity_id && response.name) {
+            replacement = {
+              activity_id: response.activity_id,
+              name: response.name,
+              duration_min: response.duration_min || 30,
+              intensity: response.intensity || 'moderate',
+              logged: false,
+              calories_burned: response.calories_burned || 0,
+            }
+            break
+          }
+        } catch (err) {
+          console.warn(`[LLM] Swap model ${model} failed: ${err.message}`)
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`[LLM] Swap data fetch failed: ${err.message}`)
+  }
+
+  // Fall back to random activity if LLM failed
+  if (!replacement) {
+    const { getRandomActivity } = deps
+    if (getRandomActivity) {
+      let goalTags = ['maintain']
+      try {
+        const profile = deps.getProfile ? await deps.getProfile(deps.userId) : null
+        if (profile) {
+          const goalMap = {
+            'lose weight': ['lose_weight'],
+            'build muscle': ['gain_weight'],
+            'maintain': ['maintain'],
+          }
+          goalTags = goalMap[profile.fitness_goal] || ['maintain']
+        }
+      } catch {
+        // use default
+      }
+      const randomActs = await getRandomActivity(goalTags)
+      if (randomActs && randomActs.length > 0) {
+        const randAct = randomActs[0]
+        replacement = {
+          activity_id: randAct.id,
+          name: randAct.name,
+          duration_min: randAct.duration_min || 30,
+          intensity: 'moderate',
+          logged: false,
+          calories_burned: randAct.estimated_calories || 0,
+        }
+      }
+    }
+  }
+
+  if (!replacement) {
+    throw new AppError('GenerationError', 'Failed to generate replacement activity', 500)
+  }
+
+  // Merge the replacement into the plan
+  const mergedPlan = JSON.parse(JSON.stringify(cached))
+  mergedPlan.days[dayIndex].activities[activityIndex] = replacement
+  mergedPlan.status = 'active'
+  mergedPlan.generated_at = new Date().toISOString()
+
+  // Update cache
+  setCachedPlan(deps.userId, deps.weekStart, JSON.parse(JSON.stringify(mergedPlan)))
+
+  return {
+    plan: mergedPlan,
+    day: mergedPlan.days[dayIndex],
+    dayIndex,
+    activityIndex,
+    replacement,
+    fromCache: false,
+    status: 'active',
+  }
+}
+
+/**
+ * Swap a single activity in the cached weekly plan with an LLM-generated replacement.
+ *
+ * @param {object} deps - Data-fetching callbacks and context.
+ * @param {Function} deps.getProfile - (userId) => profile object or null
+ * @param {Function} deps.getActivityHistory - (userId, days) => array of activity log entries
+ * @param {Function} deps.getActivities - () => array of all db activities
+ * @param {Function} deps.getTopActivities - (userId, limit) => array of top activities
+ * @param {Function} deps.getRandomActivity - (goalTags) => array of random activities
+ * @param {number|string} deps.userId - User identifier
+ * @param {string} deps.weekStart - ISO date string (YYYY-MM-DD) for the week start
+ * @param {number} [deps.availableDays] - Optional count of activity days (inferred from plan if absent)
+ * @param {number} activityId - The database activity_id to replace
+ * @param {number} dayIndex - The plan day index (0-6) containing the activity
+ * @returns {Promise<{plan: object, day: object, dayIndex: number, activityIndex: number, replacement: object, fromCache: boolean, status: string}>}
+ * @throws {AppError} If plan not found, activity not in plan, or validation failure
+ */
+export async function swapActivity(deps, activityId, dayIndex) {
+  // 1. Validate inputs
+  if (typeof activityId !== 'number' || !Number.isInteger(activityId) || activityId < 1) {
+    throw new AppError('ValidationError', 'activityId must be a positive integer', 400)
+  }
+
+  if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {
+    throw new AppError('ValidationError', 'dayIndex must be a number between 0 and 6', 400)
+  }
+
+  // 2. Get current plan from cache
+  const plan = getCachedPlan(deps.userId, deps.weekStart)
+  if (!plan || !Array.isArray(plan.days)) {
+    throw new AppError('NotFoundError', 'No weekly plan found for this week', 404)
+  }
+
+  if (!plan.days[dayIndex]) {
+    throw new AppError('ValidationError', 'Invalid day index in plan', 400)
+  }
+
+  // 3. Locate the activity within the plan day
+  const day = plan.days[dayIndex]
+  if (day.rest_day === true) {
+    throw new AppError('ValidationError', 'Cannot swap an activity on a rest day', 400)
+  }
+
+  const activityIndex = day.activities.findIndex(a => a.activity_id === activityId)
+  if (activityIndex === -1) {
+    throw new AppError('ValidationError', 'Activity not found in current plan', 400)
+  }
+
+  // 4. Fetch user data
+  let profile, dbActivities, history
+  try {
+    [profile, dbActivities, history] = await Promise.all([
+      deps.getProfile(deps.userId),
+      deps.getActivities(),
+      deps.getActivityHistory ? deps.getActivityHistory(deps.userId, 14) : Promise.resolve([]),
+    ])
+  } catch (err) {
+    console.error('[LLM] Failed to fetch user data for swap:', err.message)
+    profile = null
+    dbActivities = []
+    history = []
+  }
+
+  // 5. Build context strings
+  const act = day.activities[activityIndex]
+  const swappedActivity = `${act.name} (${act.duration_min} min, ${act.intensity}, ${act.calories_burned || '?'} cal)`
+  const dayContext = `Day ${dayIndex + 1} (${day.date})`
+
+  const activityDayCount = plan.days.filter(d => d.rest_day === false).length
+  const restDayCount = plan.days.filter(d => d.rest_day === true).length
+  const weekContext = `${activityDayCount} activity days, ${restDayCount} rest days`
+
+  const activitiesText = Array.isArray(dbActivities)
+    ? dbActivities.map(a => `- ${a.name} (${a.estimated_calories} cal, ~${a.duration_min}min)`).join('\n')
+    : ''
+
+  // Determine fitness goal and activity level for template variables
+  const fitnessGoal = profile?.fitness_goal || 'maintain'
+  const activityLevel = profile?.activity_level || 'sedentary'
+
+  // 6. Build swap prompt
+  const prompt = buildPrompt('activity-swap-prompt.md', {
+    fitnessGoal,
+    activityLevel,
+    swappedActivity,
+    dayContext,
+    weekContext,
+    availableActivities: activitiesText,
+  })
+
+  // Goal tags for fallback random activity selection
+  const goalTagsMap = {
+    'lose weight': ['lose_weight'],
+    'build muscle': ['gain_weight'],
+    'maintain': ['maintain'],
+  }
+  const goalTags = goalTagsMap[fitnessGoal] || ['maintain']
+
+  // 7. Call LLM with fallback
+  let replacement
+  try {
+    replacement = await callLlmApi(prompt)
+  } catch (err) {
+    console.warn(`[LLM] Swap LLM call failed: ${err.message}, falling back to random activity`)
+    replacement = null
+  }
+
+  // 8. Validate replacement; fallback to random on failure
+  const isInvalidReplacement =
+    !replacement ||
+    !replacement.activity_id ||
+    typeof replacement.activity_id !== 'number' ||
+    !replacement.name
+
+  if (isInvalidReplacement) {
+    if (typeof deps.getRandomActivity === 'function') {
+      try {
+        const randomActs = await deps.getRandomActivity(goalTags)
+        if (randomActs && randomActs.length > 0) {
+          replacement = {
+            activity_id: randomActs[0].id,
+            name: randomActs[0].name,
+            duration_min: randomActs[0].duration_min || 30,
+            intensity: 'moderate',
+            logged: false,
+            calories_burned: randomActs[0].estimated_calories || 100,
+          }
+        } else {
+          throw new AppError('SwapFallbackError', 'No fallback activity available', 500)
+        }
+      } catch (fallbackErr) {
+        throw new AppError('SwapFallbackError', 'No fallback activity available', 500)
+      }
+    } else {
+      throw new AppError('SwapFallbackError', 'No fallback activity available', 500)
+    }
+  } else {
+    // Validate structure via validateActivities
+    const validationErrors = validateActivities([replacement], 'Swap, ')
+    if (validationErrors.length > 0) {
+      console.warn(`[LLM] Swap replacement validation failed: ${validationErrors.join('; ')}, falling back to random`)
+      // Fallback to random
+      if (typeof deps.getRandomActivity === 'function') {
+        try {
+          const randomActs = await deps.getRandomActivity(goalTags)
+          if (randomActs && randomActs.length > 0) {
+            replacement = {
+              activity_id: randomActs[0].id,
+              name: randomActs[0].name,
+              duration_min: randomActs[0].duration_min || 30,
+              intensity: 'moderate',
+              logged: false,
+              calories_burned: randomActs[0].estimated_calories || 100,
+            }
+          } else {
+            throw new AppError('SwapFallbackError', 'No fallback activity available', 500)
+          }
+        } catch (fallbackErr) {
+          throw new AppError('SwapFallbackError', 'No fallback activity available', 500)
+        }
+      } else {
+        throw new AppError('SwapFallbackError', 'No fallback activity available', 500)
+      }
+    }
+  }
+
+  // 9. Fuzzy-match the replacement's activity name to a real DB activity
+  if (Array.isArray(dbActivities) && dbActivities.length > 0 && replacement.name) {
+    const matchResult = fuzzyMatchActivityName(replacement.name, dbActivities)
+    if (matchResult.matched) {
+      replacement.activity_id = matchResult.activity.id
+      replacement.name = matchResult.activity.name
+    } else {
+      console.warn(`[LLM] Swap replacement "${replacement.name}" not found in DB, using as-is`)
+    }
+  }
+
+  // 10. Deep-clone plan and replace the activity in-place
+  const mergedPlan = JSON.parse(JSON.stringify(plan))
+  mergedPlan.days[dayIndex].activities[activityIndex] = JSON.parse(JSON.stringify(replacement))
+  mergedPlan.status = 'active'
+  mergedPlan.generated_at = new Date().toISOString()
+
+  // Ensure format_version is present
+  if (mergedPlan.format_version === undefined) {
+    mergedPlan.format_version = 1
+  }
+
+  // 11. Update cache
+  setCachedPlan(deps.userId, deps.weekStart, JSON.parse(JSON.stringify(mergedPlan)))
+
+  // 12. Return result
+  return {
+    plan: mergedPlan,
+    day: mergedPlan.days[dayIndex],
+    dayIndex,
+    activityIndex,
+    replacement,
+    fromCache: false,
+    status: 'active',
+  }
 }
