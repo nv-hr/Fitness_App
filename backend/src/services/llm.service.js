@@ -34,8 +34,8 @@ function getClient() {
 }
 
 const CONFIG = {
-  model: process.env.LLM_MODEL || 'nvidia/nemotron-nano-30b-a3b',
-  fallbackModel: process.env.LLM_FALLBACK_MODEL || null,
+  model: process.env.LLM_MODEL || 'nvidia/nemotron-3-nano-30b-a3b:free',
+  fallbackModel: process.env.LLM_FALLBACK_MODEL || 'openai/gpt-oss-20b:free',
   temperature: 0.2,
   maxTokens: 2000,
   retryDelayMs: 1000,
