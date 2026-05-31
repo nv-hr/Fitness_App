@@ -53,6 +53,7 @@ The API uses httpOnly JWT cookie authentication (per D-01).
 | Profile   | 15 per 15 minutes  | All `/api/profile` routes           |
 | Food      | 200 per 15 minutes | All `/api/food` routes              |
 | Activities| 60 per 15 minutes  | All `/api/activities` routes        |
+| Meal Plans| 5/15, 3/30, 30/15 | Meal plan endpoints (see Section 9)  |
 
 Rate-limited requests return a 429 status with `RATE_LIMITED` error code.
 
@@ -66,6 +67,15 @@ Rate-limited requests return a 429 status with `RATE_LIMITED` error code.
 | 429         | `RATE_LIMITED`        | Too many requests (rate limit hit)   |
 | 404         | `NOT_FOUND`           | Route not found (generic 404)        |
 | 500         | `HTTP_SERVER_ERROR`   | Internal server error                |
+
+---
+
+## Rate Limiting (Weekly Plans)
+
+| Group              | Limit              | Applied To                                  |
+|--------------------|--------------------|---------------------------------------------|
+| Weekly Plan        | 5 per 15 minutes   | `/api/weekly-plans/generate`                |
+| Regenerate Day     | 5 per 15 minutes   | `/api/weekly-plans/regenerate-day`          |
 
 ---
 
@@ -653,8 +663,522 @@ All activity endpoints require authentication. Rate limit: Activities (60 per 15
         "description": "Backend API for Fitness App — BMI, TDEE, food logging, activity recommendations",
         "version": "1.0.0",
         "baseUrl": "http://localhost:3001",
+      "endpoints": [ ... ]
+    }
+  }
+}
+```
+
+---
+
+### 6. Documentation
+
+#### GET /api/docs
+
+- **Auth:** No
+- **Rate Limit:** None
+- **Description:** Returns the full API documentation in JSON format for programmatic consumption by tools and automation.
+- **Query Parameters:** None
+- **Response 200:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "api": {
+        "name": "Fitness App API",
+        "description": "Backend API for Fitness App — BMI, TDEE, food logging, activity recommendations, activity logging, LLM weekly plans, LLM meal recommendations",
+        "version": "1.0.0",
+        "baseUrl": "http://localhost:3001",
         "endpoints": [ ... ]
       }
     }
   }
   ```
+
+---
+
+### 7. Activity Log — `/api/activities`
+
+All activity log endpoints require authentication. Rate limit: Activities (60 per 15 minutes).
+
+#### POST /api/activities/log
+
+- **Auth:** Required
+- **Rate Limit:** Activities
+- **Description:** Log a completed activity with duration and intensity. Calories burned calculated server-side using intensity multiplier.
+- **Field Constraints:**
+  - `activityId`: Required integer. Must reference an existing activity.
+  - `durationMin`: Required integer, minimum 1, maximum 1440.
+  - `intensity`: Required. One of `'light'`, `'moderate'`, `'vigorous'`.
+  - `loggedDate`: Optional. Format `YYYY-MM-DD`. Defaults to today if omitted.
+- **Intensity Multipliers (server-authoritative):**
+  - `light`: 0.7
+  - `moderate`: 1.0
+  - `vigorous`: 1.3
+- **Calorie Formula:** `calories_per_hour x (durationMin / 60) x intensity_multiplier`
+- **Request Body:**
+  ```json
+  {
+    "activityId": 1,
+    "durationMin": 30,
+    "intensity": "moderate",
+    "loggedDate": "2026-05-28"
+  }
+  ```
+- **Response 201:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": 42,
+      "user_id": "uuid",
+      "activity_id": 1,
+      "duration_min": 30,
+      "intensity": "moderate",
+      "calories_burned": 165,
+      "logged_date": "2026-05-28"
+    }
+  }
+  ```
+- **Error Codes:** `VALIDATION_ERROR` (400), `NOT_FOUND` (404), `AUTHENTICATION_ERROR` (401)
+
+#### GET /api/activities/logs
+
+- **Auth:** Required
+- **Rate Limit:** Activities
+- **Description:** Get activity log entries for a specific date.
+- **Query Parameters:**
+  - `date` (optional): Format `YYYY-MM-DD`. Defaults to today.
+- **Response 200:**
+  ```json
+  {
+    "success": true,
+    "data": [
+      {
+        "id": 42,
+        "user_id": "uuid",
+        "activity_id": 1,
+        "activity_name": "Brisk Walking",
+        "duration_min": 30,
+        "intensity": "moderate",
+        "calories_burned": 165,
+        "logged_date": "2026-05-28"
+      }
+    ]
+  }
+  ```
+- **Error Codes:** `AUTHENTICATION_ERROR` (401)
+
+#### GET /api/activities/history
+
+- **Auth:** Required
+- **Rate Limit:** Activities
+- **Description:** Get grouped activity history for the past N days. Optionally includes detailed entries per day.
+- **Query Parameters:**
+  - `days` (optional): Number of days to look back. Defaults to 7.
+  - `includeEntries` (optional): `'true'` to include per-entry details. Defaults to `'false'`.
+- **Response 200 (without entries):**
+  ```json
+  {
+    "success": true,
+    "data": [
+      {
+        "logged_date": "2026-05-28",
+        "total_minutes": 60,
+        "total_burned": 330
+      }
+    ]
+  }
+  ```
+- **Response 200 (with entries):**
+  ```json
+  {
+    "success": true,
+    "data": [
+      {
+        "logged_date": "2026-05-28",
+        "total_minutes": 60,
+        "total_burned": 330,
+        "entries": [
+          {
+            "id": 42,
+            "activity_name": "Brisk Walking",
+            "duration_min": 30,
+            "intensity": "moderate",
+            "calories_burned": 165
+          }
+        ]
+      }
+    ]
+  }
+  ```
+- **Error Codes:** `AUTHENTICATION_ERROR` (401)
+
+#### DELETE /api/activities/log/:id
+
+- **Auth:** Required
+- **Rate Limit:** Activities
+- **Description:** Delete a specific activity log entry. Only the owning user can delete their own logs.
+- **Path Parameters:**
+  - `id`: Integer log entry ID.
+- **Response 200:**
+  ```json
+  {
+    "success": true,
+    "data": null
+  }
+  ```
+- **Error Codes:** `VALIDATION_ERROR` (400), `NOT_FOUND` (404), `AUTHENTICATION_ERROR` (401)
+
+#### GET /api/activities/summary
+
+- **Auth:** Required
+- **Rate Limit:** Activities
+- **Description:** Get a daily summary combining activity burn and food consumption, with net calorie calculation.
+- **Query Parameters:**
+  - `date` (optional): Format `YYYY-MM-DD`. Defaults to today.
+- **Response 200:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "date": "2026-05-28",
+      "totalActiveMinutes": 60,
+      "totalCaloriesBurned": 330,
+      "totalConsumed": 1850,
+      "calorieTarget": 2000,
+      "netCalories": 1520,
+      "netVsTarget": -480
+    }
+  }
+  ```
+- **Notes:**
+  - `calorieTarget` is `null` if no profile exists.
+  - `netCalories = totalConsumed - totalCaloriesBurned`.
+  - `netVsTarget = netCalories - calorieTarget` (negative = deficit).
+- **Error Codes:** `AUTHENTICATION_ERROR` (401)
+
+---
+
+### 8. Weekly Plans (LLM) — `/api/weekly-plans`
+
+All weekly plan endpoints require authentication. Rate limit: Weekly Plan (5 per 15 minutes for generate, separate limit for regenerate-day).
+
+#### POST /api/weekly-plans/generate
+
+- **Auth:** Required
+- **Rate Limit:** Weekly Plan (5 per 15 minutes)
+- **Description:** Generate a 7-day weekly activity plan using LLM (OpenRouter). The plan is personalized based on the user's profile, fitness goal, activity history (past 30 days), and available activities. Results are cached in-memory and persisted to the database.
+- **Request Body:**
+  ```json
+  {
+    "weekStart": "2026-05-25"
+  }
+  ```
+- **Notes:** `weekStart` is optional. If omitted, defaults to the current ISO week's Monday. Automatically normalized to the Monday of the specified week.
+- **Response 200:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "plan": {
+        "days": [
+          {
+            "day": 0,
+            "label": "Monday",
+            "activities": [
+              {
+                "name": "Brisk Walking",
+                "durationMin": 30,
+                "intensity": "moderate",
+                "caloriesBurned": 165,
+                "category": "Cardio"
+              }
+            ],
+            "totalCaloriesBurned": 165,
+            "totalMinutes": 30
+          }
+        ],
+        "weekStart": "2026-05-25",
+        "weekLabel": "May 25 - May 31",
+        "status": "active",
+        "generated_at": "2026-05-31T12:00:00.000Z"
+      },
+      "fromCache": false
+    }
+  }
+  ```
+- **Error Codes:** `VALIDATION_ERROR` (400), `RATE_LIMITED` (429), `AUTHENTICATION_ERROR` (401)
+
+---
+
+### 9. Meal Plans (LLM) — `/api/meal-plans`
+
+All meal plan endpoints require authentication.
+
+**Rate Limiters:**
+
+| Group              | Limit              | Applied To                              |
+|--------------------|--------------------|-----------------------------------------|
+| Meal Plan Generate | 5 per 15 minutes   | `POST /api/meal-plans/generate`         |
+| Regenerate Day     | 3 per 30 minutes   | `POST /api/meal-plans/regenerate-day`   |
+| Log Day            | 30 per 15 minutes  | `POST /api/meal-plans/log-day`          |
+
+#### GET /api/meal-plans
+
+- **Auth:** Required
+- **Rate Limit:** Global
+- **Description:** Retrieve the current meal plan. Checks in-memory cache first (using `planType='meal'` namespace to avoid collision with activity plans), then falls back to the `meal_plans` database table.
+- **Query Parameters:**
+  - `weekStart` (optional): Format `YYYY-MM-DD`. Defaults to the current ISO week's Monday.
+- **Response 200 (cached):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "plan": {
+        "days": [
+          {
+            "date": "2026-05-25",
+            "meals": [
+              {
+                "meal_type": "breakfast",
+                "items": [
+                  {
+                    "food_id": 42,
+                    "food_name": "Oatmeal",
+                    "portion_grams": 150,
+                    "calories": 255
+                  }
+                ],
+                "total_calories": 255
+              },
+              {
+                "meal_type": "lunch",
+                "items": [
+                  {
+                    "food_id": 18,
+                    "food_name": "Chicken Breast",
+                    "portion_grams": 200,
+                    "calories": 330
+                  },
+                  {
+                    "food_id": 55,
+                    "food_name": "Brown Rice",
+                    "portion_grams": 180,
+                    "calories": 200
+                  }
+                ],
+                "total_calories": 530
+              },
+              {
+                "meal_type": "dinner",
+                "items": [ ... ]
+              },
+              {
+                "meal_type": "snack",
+                "items": [ ... ]
+              }
+            ],
+            "total_calories": 1950,
+            "logged": false
+          }
+        ],
+        "weekStart": "2026-05-25",
+        "calorie_target": 2000,
+        "generated_at": "2026-05-31T12:00:00.000Z",
+        "llm_model": "nvidia/nemotron-3-nano-30b-a3b:free"
+      },
+      "fromCache": true
+    }
+  }
+  ```
+- **Response 200 (no plan):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "plan": null,
+      "fromCache": false
+    }
+  }
+  ```
+- **Error Codes:** `VALIDATION_ERROR` (400), `AUTHENTICATION_ERROR` (401)
+
+#### POST /api/meal-plans/generate
+
+- **Auth:** Required
+- **Rate Limit:** Meal Plan Generate (5 per 15 minutes)
+- **Description:** Generate a 7-day meal plan using LLM (OpenRouter). Each day contains 4 meals (breakfast, lunch, dinner, snack) with 1-4 food items per meal. Ingredients are selected exclusively from the existing food database. Portions are auto-calculated to meet the user's calorie target. Uses correction loop (max 2 LLM attempts) with template fallback on failure. Food names are fuzzy-matched against the database with server-authoritative calorie recalculation.
+- **Request Body:**
+  ```json
+  {
+    "weekStart": "2026-05-25"
+  }
+  ```
+- **Notes:** `weekStart` is optional. If omitted, defaults to the current ISO week's Monday.
+- **Response 200:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "plan": {
+        "days": [ ... ],
+        "calorie_target": 2000,
+        "generated_at": "2026-05-31T12:00:00.000Z",
+        "llm_model": "nvidia/nemotron-3-nano-30a3b:free"
+      },
+      "fromCache": false,
+      "status": "active"
+    }
+  }
+  ```
+- **Error Codes:** `VALIDATION_ERROR` (400), `RATE_LIMITED` (429), `AUTHENTICATION_ERROR` (401)
+
+#### POST /api/meal-plans/regenerate-day
+
+- **Auth:** Required
+- **Rate Limit:** Regenerate Day (3 per 30 minutes)
+- **Description:** Regenerate a single day within an existing meal plan. The LLM generates a full new plan, but only the specified day's data is merged into the existing cached plan — other days remain untouched.
+- **Request Body:**
+  ```json
+  {
+    "weekStart": "2026-05-25",
+    "dayIndex": 2
+  }
+  ```
+- **Constraints:**
+  - `weekStart`: Optional. Defaults to current week's Monday.
+  - `dayIndex`: Required. Integer between 0 (Monday) and 6 (Sunday).
+- **Response 200:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "plan": {
+        "days": [ ... ],
+        "calorie_target": 2000,
+        "generated_at": "2026-05-31T12:00:00.000Z",
+        "llm_model": "nvidia/nemotron-3-nano-30a3b:free"
+      },
+      "day": { "meals": [ ... ] },
+      "dayIndex": 2,
+      "fromCache": false,
+      "status": "active"
+    }
+  }
+  ```
+- **Error Codes:** `VALIDATION_ERROR` (400), `RATE_LIMITED` (429), `AUTHENTICATION_ERROR` (401), `NOT_FOUND` (404)
+
+#### POST /api/meal-plans/log-day
+
+- **Auth:** Required
+- **Rate Limit:** Log Day (30 per 15 minutes)
+- **Description:** Log all meal items from a specific day in the meal plan to the food log. Uses an explicit BEGIN/COMMIT/ROLLBACK database transaction for atomicity. Items with `logged: true` are skipped (idempotent). The meal plan's `logged` flag is updated after successful logging.
+- **Request Body:**
+  ```json
+  {
+    "weekStart": "2026-05-25",
+    "dayIndex": 2,
+    "mealType": "lunch"
+  }
+  ```
+- **Constraints:**
+  - `weekStart`: Optional. Defaults to current week's Monday.
+  - `dayIndex`: Required. Integer between 0 (Monday) and 6 (Sunday).
+  - `mealType`: Optional. One of `'breakfast'`, `'lunch'`, `'dinner'`, `'snack'`. If omitted, all meals in the day are logged.
+- **Response 200:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "logged": 3,
+      "items": [
+        {
+          "id": "uuid",
+          "user_id": "uuid",
+          "food_id": 42,
+          "calories": 255,
+          "portion_grams": 150,
+          "log_date": "2026-05-27",
+          "meal_type": "lunch"
+        }
+      ]
+    }
+  }
+  ```
+- **Response 200 (already logged):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "logged": 0,
+      "message": "All items already logged."
+    }
+  }
+  ```
+- **Error Codes:** `VALIDATION_ERROR` (400), `NOT_FOUND` (404), `RATE_LIMITED` (429), `AUTHENTICATION_ERROR` (401)
+
+---
+
+
+- **Auth:** Required
+- **Rate Limit:** Global
+- **Description:** Retrieve the current weekly plan. Checks in-memory cache first (node-cache, fast, no DB query), then falls back to the database.
+- **Query Parameters:**
+  - `weekStart` (optional): Format `YYYY-MM-DD`. Defaults to the current ISO week's Monday.
+- **Response 200 (cached):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "plan": {
+        "days": [ ... ],
+        "weekStart": "2026-05-25",
+        "weekLabel": "May 25 - May 31",
+        "status": "active",
+        "generated_at": "2026-05-31T12:00:00.000Z"
+      },
+      "fromCache": true
+    }
+  }
+  ```
+- **Response 200 (no plan):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "plan": null,
+      "fromCache": false
+    }
+  }
+  ```
+- **Error Codes:** `VALIDATION_ERROR` (400), `AUTHENTICATION_ERROR` (401)
+
+#### POST /api/weekly-plans/regenerate-day
+
+- **Auth:** Required
+- **Rate Limit:** Regenerate Day (5 per 15 minutes)
+- **Description:** Regenerate a single day within an existing weekly plan. The LLM generates a full new plan but only the specified day is merged into the cached plan; other days remain unchanged. Tracks per-day retry timestamps for independent rate limit display.
+- **Request Body:**
+  ```json
+  {
+    "weekStart": "2026-05-25",
+    "dayIndex": 2
+  }
+  ```
+- **Constraints:**
+  - `weekStart`: Optional. Defaults to current week's Monday.
+  - `dayIndex`: Required. Integer between 0 (Monday) and 6 (Sunday).
+- **Response 200:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "plan": { "days": [ ... ] },
+      "regeneratedDay": 2,
+      "fromCache": false
+    }
+  }
+  ```
+- **Error Codes:** `VALIDATION_ERROR` (400), `RATE_LIMITED` (429), `AUTHENTICATION_ERROR` (401)
