@@ -1,9 +1,9 @@
 # ROADMAP: Fitness_App
 
 **Created:** 2026-05-17
-**Updated:** 2026-05-31 (v1.3 archived)
-**Phases:** 17 complete (v1.0 + v1.1 + v1.2 + v1.3)
-**Milestones:** 4 shipped (v1.0, v1.1, v1.2, v1.3)
+**Updated:** 2026-05-31 (v1.4 shipped)
+**Phases:** 23 complete (v1.0 + v1.1 + v1.2 + v1.3 + v1.4)
+**Milestones:** 5 shipped (v1.0, v1.1, v1.2, v1.3, v1.4)
 
 ## Milestones
 
@@ -11,7 +11,7 @@
 - ✅ **v1.1 International Ingredient Logging** — Phases 6-8 (shipped 2026-05-18)
 - ✅ **v1.2 Supabase Migration** — Phases 9-12 (shipped 2026-05-28)
 - ✅ **v1.3 Activity Tracking & Smart Suggestions** — Phases 13-17 (shipped 2026-05-31)
-- 🚧 **v1.4 LLM Food Recommendations** — Phases 18-23 (planning)
+- ✅ **v1.4 LLM Food Recommendations** — Phases 18-23 (shipped 2026-05-31)
 
 ## Phases
 
@@ -56,15 +56,15 @@
 
 </details>
 
-<details open>
-<summary>🚧 v1.4 LLM Food Recommendations (Phases 18-23) — PLANNING</summary>
+<details>
+<summary>✅ v1.4 LLM Food Recommendations (Phases 18-23) — SHIPPED 2026-05-31</summary>
 
-- [ ] **Phase 18: Database & Prompt Foundation** — meal_plans table migration and LLM prompt files for meal generation
-- [ ] **Phase 19: Core Meal Plan Service** — LLM generation, validation pipeline, fuzzy matching, calorie recalculation, fallback plan, day regeneration
-- [ ] **Phase 20: Batch Log Integration** — one-click food diary logging with atomic PostgreSQL transactions
-- [ ] **Phase 21: Backend API Layer** — controllers, routes, rate limiting middleware
-- [ ] **Phase 22: Meal Plan Frontend** — day-by-day view, meal cards, log buttons, visual indicators, state machine
-- [ ] **Phase 23: Testing & Edge Cases** — backend + frontend tests, prompt QA, edge case coverage
+- [x] Phase 18: Database & Prompt Foundation (1/1 plan) — completed 2026-05-31
+- [x] Phase 19: Core Meal Plan Service (1/1 plan) — completed 2026-05-31
+- [x] Phase 20: Batch Log Integration (1/1 plan) — completed 2026-05-31
+- [x] Phase 21: Backend API Layer (1/1 plan) — completed 2026-05-31
+- [x] Phase 22: Meal Plan Frontend (1/1 plan) — completed 2026-05-31
+- [x] Phase 23: Testing & Edge Cases (1/1 plan) — completed 2026-05-31
 
 </details>
 
@@ -89,12 +89,12 @@
 | 15. LLM Backend Integration | v1.3 | 3/3 | Complete | 2026-05-29 |
 | 16. Weekly Plan Frontend | v1.3 | 3/3 | Complete | 2026-05-30 |
 | 17. Testing & Polish | v1.3 | 1/1 | Complete | 2026-05-31 |
-| 18. Database & Prompt Foundation | v1.4 | 0/0 | Not started | - |
-| 19. Core Meal Plan Service | v1.4 | 0/0 | Not started | - |
-| 20. Batch Log Integration | v1.4 | 0/0 | Not started | - |
-| 21. Backend API Layer | v1.4 | 0/0 | Not started | - |
-| 22. Meal Plan Frontend | v1.4 | 0/0 | Not started | - |
-| 23. Testing & Edge Cases | v1.4 | 0/0 | Not started | - |
+| 18. Database & Prompt Foundation | v1.4 | 1/1 | Complete | 2026-05-31 |
+| 19. Core Meal Plan Service | v1.4 | 1/1 | Complete | 2026-05-31 |
+| 20. Batch Log Integration | v1.4 | 1/1 | Complete | 2026-05-31 |
+| 21. Backend API Layer | v1.4 | 1/1 | Complete | 2026-05-31 |
+| 22. Meal Plan Frontend | v1.4 | 1/1 | Complete | 2026-05-31 |
+| 23. Testing & Edge Cases | v1.4 | 1/1 | Complete | 2026-05-31 |
 
 ---
 

@@ -140,8 +140,7 @@ export function validateAndFixMealPlan(plan, dbFoods) {
       for (const item of meal.items) {
         const result = fuzzyMatchFoodName(item.food_name, dbFoods);
         if (!result.matched) {
-          errors.push(`Day ${di + 1}, ${meal.meal_type}: "${item.food_name}" not found in database — removed`);
-          warnings.push(`Removed "${item.food_name}" from Day ${di + 1} ${meal.meal_type}`);
+          warnings.push(`Day ${di + 1}, ${meal.meal_type}: "${item.food_name}" not found in database — removed`);
           continue;
         }
         item.food_id = result.food.id;
