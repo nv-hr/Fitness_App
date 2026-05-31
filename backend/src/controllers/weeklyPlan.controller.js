@@ -147,8 +147,11 @@ async function swapHandler(req, res, next) {
     const { activityId, dayIndex, weekStart } = req.body;
 
     // Validate activityId
-    if (activityId === undefined || activityId === null || typeof activityId !== 'number' || activityId < 1) {
-      return errorResponse(res, 'Activity not found in current plan', 400, 'VALIDATION_ERROR');
+    if (activityId === undefined || activityId === null) {
+      return errorResponse(res, 'activityId is required', 400, 'VALIDATION_ERROR');
+    }
+    if (typeof activityId !== 'number' || activityId < 1) {
+      return errorResponse(res, 'activityId must be a positive integer', 400, 'VALIDATION_ERROR');
     }
 
     // Validate dayIndex
