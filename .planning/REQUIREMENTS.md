@@ -1,41 +1,83 @@
-# Requirements
+# Requirements: Fitness_App
 
-> Milestone: v1.4 LLM Food Recommendations
-> Last updated: 2026-05-31
+**Defined:** 2026-05-31
+**Core Value:** Users can accurately calculate their BMI and TDEE, log daily food intake by ingredients, log physical activities with calorie tracking, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
 
-## REQ-MEAL-GENERATE — Full-week meal plan generation
-LLM generates a full week of simple meals (breakfast, lunch, dinner, snacks) using ONLY ingredients from the existing food database. Portions are auto-calculated to meet the user's daily calorie target (80-120% tolerance). User triggers generation, gets 7 days at once.
+## v1.5 Requirements
 
-## REQ-MEAL-VIEW — Day-by-day meal plan view
-Users can view their generated meal plan day-by-day. Each day shows 3-4 meal rows with ingredient name, portion (grams), and calories. Current day is expanded by default. Uses the same page/state-machine pattern as activity plans.
+### Activity Plan Persistence & Auto-Log
 
-## REQ-MEAL-LOG — One-click food diary logging
-Users can log all recommended ingredients for a day (or a single meal) to their food diary with one click. Runs as an atomic PostgreSQL transaction to prevent partial commits. Server recalculates calories from stored `calories_per_100g × portion / 100` — never trusts LLM-computed values.
+- [ ] **ACT-01**: System persists generated activity plans to activity_plans table (mirrors meal_plans pattern)
+- [ ] **ACT-02**: User can batch-log activities from plan to activity_logs with single click (completed toggle)
+- [ ] **ACT-03**: System tracks logged/completed status of each activity item in plan_data JSONB
 
-## REQ-MEAL-REGENERATE — Regenerate a single day
-Users can replace any single day's meal suggestions without regenerating the whole week. Rate-limited separately from full generation (3/30min).
+### 3-Day Meal Plan Backend
 
-## REQ-MEAL-FALLBACK — Template-based fallback plan
-When the LLM is unreachable or fails, the system generates a template-based fallback: 6-8 random diverse ingredients (2 proteins, 2 carbs, 2 vegetables, 1 fruit, 1 dairy) distributed across 4 meals. Portions are calculated to hit the calorie target. Always returns something, never shows an error to the user.
+- [ ] **MEAL-01**: System generates 3-day meal recommendations (changed from 7-day)
+- [ ] **MEAL-02**: System persists daily meal plans to daily_meal_plans table
+- [ ] **MEAL-03**: User can batch-log meals from plan to food_logs
+- [ ] **MEAL-04**: System tracks logged status of each meal item in plan_data JSONB
 
-## REQ-MEAL-PERMEAL — Per-meal partial logging
-Users can log a single meal (e.g., just "breakfast") without committing the entire day. The same atomic transaction pattern applies to the subset of items.
+### Auto-Generation & Inline Management
 
-## REQ-MEAL-INDICATORS — Already-logged visual indicators
-Food items already logged to today's food diary show a visual checkmark in the meal plan view. Color-coded: green for logged, gray for not logged.
+- [ ] **AUTO-01**: System auto-generates plan on page visit when no plan exists for current period
+- [ ] **AUTO-02**: Always-visible regenerate button on merged pages
+- [ ] **AUTO-03**: Auto-generation respects rate limits (shows countdown when exhausted)
+- [ ] **AUTO-04**: One-shot guard prevents infinite regeneration loop on failed LLM calls
 
-## REQ-MEAL-RATELIMIT — Rate limiting
-Meal plan generation is rate-limited to 5 requests per 15 minutes per user (matching activity plans). Day regeneration: 3 per 30 minutes. Log-day: 30 per 15 minutes.
+### UI Consolidation
+
+- [ ] **UI-01**: Activity Plan section embedded in Activities page (no separate route)
+- [ ] **UI-02**: Meal Plan section embedded in Food Log page (no separate route)
+- [ ] **UI-03**: Old /weekly-plan and /meal-plan routes redirect to /activities and /food-log
+
+## v2.0 / Future Requirements
+
+### Meal Plan Enhancements
+
+- **MEAL-05**: User can select alternative meals for individual meal slots
+- **MEAL-06**: User can customize generated meal portions
+
+### Social & Sharing
+
+- **SOC-01**: User can share meal plans with others
+- **SOC-02**: Community meal ratings and reviews
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Select alternatives for meals | Deferred to v1.6 — complex UX, not blocking main merge |
+| Custom activity entry | Existing deferred item — not needed for plan-to-log flow |
+| Edit logged activities | Delete-and-recreate sufficient |
+| Notifications (email/push) | Out of scope for health tracking |
+| Real-time sync / wearables | No wearable integration |
+| Supabase Auth / RLS | Current auth architecture works |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REQ-MEAL-GENERATE | Phase 19: Core Meal Plan Service | Pending |
-| REQ-MEAL-VIEW | Phase 22: Meal Plan Frontend | Pending |
-| REQ-MEAL-LOG | Phase 20: Batch Log Integration | Pending |
-| REQ-MEAL-REGENERATE | Phase 19: Core Meal Plan Service | Pending |
-| REQ-MEAL-FALLBACK | Phase 19: Core Meal Plan Service | Pending |
-| REQ-MEAL-PERMEAL | Phase 20: Batch Log Integration | Pending |
-| REQ-MEAL-INDICATORS | Phase 22: Meal Plan Frontend | Pending |
-| REQ-MEAL-RATELIMIT | Phase 21: Backend API Layer | Pending |
+| ACT-01 | — | Pending |
+| ACT-02 | — | Pending |
+| ACT-03 | — | Pending |
+| MEAL-01 | — | Pending |
+| MEAL-02 | — | Pending |
+| MEAL-03 | — | Pending |
+| MEAL-04 | — | Pending |
+| AUTO-01 | — | Pending |
+| AUTO-02 | — | Pending |
+| AUTO-03 | — | Pending |
+| AUTO-04 | — | Pending |
+| UI-01 | — | Pending |
+| UI-02 | — | Pending |
+| UI-03 | — | Pending |
+
+**Coverage:**
+- v1.5 requirements: 14 total
+- Mapped to phases: 0
+- Unmapped: 14 ⚠️
+
+---
+*Requirements defined: 2026-05-31*
+*Last updated: 2026-05-31 after initial definition*
