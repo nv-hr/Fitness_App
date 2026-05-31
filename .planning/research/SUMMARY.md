@@ -1,355 +1,277 @@
-# Research Summary: v1.5 Smart Auto-Logging
+# Project Research Summary
 
-**Project:** Fitness_App
-**Milestone:** v1.5 Smart Auto-Logging
-**Domain:** Health & Fitness — Auto-Logging of LLM-Generated Plans, Page Merges, Inline Management
+**Project:** Fitness_App — v1.7 Calendar-Based Plan UI
+**Domain:** Fitness tracking — Month-grid calendar for activity and meal plans
 **Researched:** 2026-05-31
-**Confidence:** HIGH (overall)
-
----
+**Confidence:** HIGH
 
 ## Executive Summary
 
-Fitness_App v1.5 bridges the gap between "view your generated plan" and "live your plan." Currently, activity plans and meal plans live on separate pages from the actual logging tools (Activities page, Food Log page). Users must generate plans on one page, then manually log items on another. This release converges these into two unified pages, auto-generates plans on visit (no empty state), enables one-click logging from plan items with completed tracking, and shifts meal plans from 7-day to 1-day for higher daily relevance.
+The v1.7 Calendar-Based Plan UI replaces the existing section-based plan displays (ActivityPlanSection, DailyMealPlanSection) with standalone calendar-driven pages. Two new pages — **Activity Calendar** (`/activity-calendar`) and **Meal Calendar** (`/meal-calendar`) — each show a month-grid with color-coded day cells (blue=incomplete, green=completed, grey=past/missed) and a detail panel that opens on day click. The core UX pattern is established across health apps (MyFitnessPal, TrainingPeaks, Apple Health, Strava): users browse months to see plan status at a glance, then drill into days for detail.
 
-**The research recommends a zero-new-packages approach** — the existing React 19 + Express 5 + Supabase PostgreSQL + OpenRouter LLM stack handles every new feature through architectural changes alone. The core work splits into: (1) new database tables for daily meal plans and activity plan persistence, (2) new backend service files for daily meal generation and activity batch-logging, (3) frontend section extraction and route merging, and (4) auto-generation triggers with careful guard logic.
+**The recommended approach:** Build a custom month-grid calendar using **CSS Grid + date-fns** (no full calendar library — they model events, not day status, creating a paradigm mismatch). Share a `CalendarGrid` component across both pages. Compute day status client-side from existing weekly-plan endpoints (5-6 `Promise.all` calls per month, not 28-31 daily calls). Reuse existing leaf components (`DayActivityRow`, `MealRow`, `FallbackBanner`, `RateLimitedButton`) in the detail panels — no duplication, no backend changes. Follow the existing feature-based directory pattern, local useState conventions, and auto-generation logic already proven in v1.3-v1.6.
 
-**The top risks** are: (A) **Double-logging** — every page visit could trigger log inserts if generation and logging aren't separated; (B) **Infinite regeneration loops** — if auto-generation fails, React effects can retry endlessly; (C) **State explosion** — naively merging two page components creates unmaintainable God components. All three are preventable with known patterns: separate sub-components with independent state, `useRef` one-shot guards, and a strict "generation creates `logged: false` items; only explicit user toggle inserts DB rows" policy.
-
-**Key architectural decision made:** Create two new tables (`daily_meal_plans`, `activity_plans`) instead of modifying existing schemas. This isolates risk, preserves backward compatibility with v1.4 data, and enables gradual migration. "Select alternatives" for meal items is deferred to v1.6 to keep scope contained.
-
----
+**Key risks and mitigations:** (1) N+1 API calls — prevented by using weekly endpoints, fetching 5-6 overlapping weeks per month. (2) CalendarGrid coupled to domain logic — prevented by passing precomputed status enums, keeping the grid pure. (3) Week boundary misalignment — prevented by a tested `getWeekStartsForMonth()` utility that captures edge weeks. (4) Plan/log status mismatch — prevented by cross-referencing plan `logged` flags with activity/food history data. (5) Stale data after log/swap actions — prevented by re-fetching the affected week's plan and merging into the month map.
 
 ## Key Findings
 
-### Stack Recommendations
+### Recommended Stack
 
-**Zero new npm packages required.** Every v1.5 feature maps to existing capabilities in the current stack.
+The research confirms that **no new major library is needed** for the calendar UI. Full calendar libraries (react-big-calendar, @mantine/dates, antd Calendar, trud-calendar) model **events** (start/end times), but this project needs **day status** (completion state) — fundamentally different data models. Using any would add 30-95KB bundle cost while using <20% of features.
 
-| Technology | Role in v1.5 | Why No Change Needed |
-|------------|-------------|---------------------|
-| React 19 + Vite 8 | Frontend rendering | Route merging follows existing component patterns; no version change needed |
-| Express 5 ESM | Backend API | New `log-day` and `daily-meal-plans` endpoints follow existing controller/route patterns |
-| Supabase PostgreSQL 17 | Database | Two new tables (`daily_meal_plans`, `activity_plans`); same `pg` driver + JSONB patterns |
-| OpenRouter (OpenAI SDK) | LLM provider | Meal prompt switches from 7-day to 1-day; same SDK, same call pattern, fewer tokens |
-| TanStack React Query | Data fetching | Not used on plan pages currently; plain `useState` + `useEffect` sufficient for single-page plan state |
-| node-cache | In-memory caching | Key namespace change only (`plan_meal_` → `plan_daily_meal_`, `plan_activity_`); same TTL/maxKeys |
-| react-router-dom | Client routing | Remove 2 routes, add 2 redirects; simpler routing tree |
-| Jest + Vitest | Testing | New tests for batch-log endpoints, daily validation, merged component rendering |
+**Core technology additions:**
 
-**What NOT to add:**
-- No ORMs (Prisma, Drizzle, Knex) — JSONB updates via raw pg is simpler
-- No state management library (Redux, Zustand) — sub-components manage their own state
-- No Supabase Auth/RLS — server-side Passport JWT remains
-- No WebSockets/SSE — generation is request/response
-- No Redis — node-cache with 1h TTL handles scale
-- No background job queue — single-user generation is fast enough
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| **date-fns** | ^3.6.0 | Date manipulation (month grid, day math, formatting, comparison) | Tree-shakeable (~1-2KB gzip for 12 functions), zero dependencies, immutable, TypeScript-first, works with existing Vite tree-shaking |
+| **clsx** (optional) | ^2.1.1 | Conditional className construction for day cells | 239B gzipped, useful if using CSS class-based styling instead of inline styles |
 
-**Required backend changes:**
-- `activity.repository.js` — NEW `batchLogActivities()` (pattern: `food.repository.js:batchLogItems`)
-- `weeklyPlan.controller.js` — NEW `logDay` handler (pattern: `mealPlan.controller.js:logDay`)
-- `dailyMealPlan.service.js` — NEW file: 1-day generation, validation, fallback, per-meal regeneration
-- `activityPlan.repository.js` — NEW file: CRUD for activity_plans table
-- `meal-plan-prompt.md` — CHANGE "7 consecutive days" to "1 day"
-- Rate limiters — ADD for new endpoints (follow existing patterns)
+**What NOT to use:**
+- No full calendar libraries (wrong paradigm — events vs status)
+- No Moment.js (deprecated, no tree-shaking) or dayjs (less ecosystem, no tree-shaking)
+- No Redux/Zustand (local useState is sufficient and matches existing patterns)
+- No tailwind-merge (project has no Tailwind)
+- No classnames (clsx is smaller and faster)
 
-**Required frontend changes:**
-- `ActivitiesPage.jsx` — IMPORT `ActivityPlanSection` component + auto-generation trigger
-- `FoodLogPage.jsx` — IMPORT `MealPlanSection` component + auto-generation trigger
-- `Router.jsx` — REMOVE `/weekly-plan`, `/meal-plan`; ADD redirects `/weekly-plan → /activities`
-- `WeeklyPlanPage.jsx` — REFACTOR into `ActivityPlanSection` for embedding
-- `MealPlanPage.jsx` — REFACTOR into `MealPlanSection` for embedding
+**date-fns functions needed:** `startOfMonth`, `endOfMonth`, `startOfWeek`, `endOfWeek`, `eachDayOfInterval`, `format`, `isSameDay`, `isSameMonth`, `isToday`, `isBefore`, `isAfter`, `addMonths`, `subMonths`, `getDay` — each individually importable, combined ~1-2KB gzip.
 
----
+**Existing stack remains:** React 19 + Vite 8 + TanStack React Query + React Hook Form + Zod (frontend), Express 5 ESM + Passport JWT + Supabase PostgreSQL (backend). No stack migrations needed.
 
-### Feature Analysis
+### Expected Features
 
-The 7 targets are grouped into three categories:
+**Must have (table stakes)** — features users expect from any calendar-based plan view:
 
-#### Category A: Auto-Save & Completed Tracking (Targets 1, 2)
+| Feature | Why Expected | Complexity |
+|---------|--------------|------------|
+| Month grid with day numbers | Non-negotiable — every calendar starts here | LOW |
+| Current day highlighted | Users need immediate orientation | LOW |
+| Status color coding (blue/green/grey) | Primary value: "how am I doing at a glance" | LOW |
+| Click day → detail panel | Fundamental calendar interaction pattern | MEDIUM |
+| Navigate between months (arrows + Today button) | Browse past/future plans | LOW |
+| Read-only past days (grey, disabled actions) | Cannot edit the past — baseline expectation | LOW |
+| Generate button visible (contextual: Week for activity, Day for meal) | Users must be able to initiate plan creation | LOW |
+| Auto-generate on empty today | "Why do I have to click Generate?" — carry forward v1.5 pattern | MEDIUM |
+| Loading states, error states, rate-limit UX | Existing patterns from current pages | LOW-MEDIUM |
+| Activity swap in detail panel | Core interaction from v1.6 | MEDIUM |
+| Meal log in detail panel | Core interaction from v1.4/1.5 | MEDIUM |
 
-| Feature | Status | Complexity |
-|---------|--------|------------|
-| Auto-save activity plan → activity_logs | **NEW** | MEDIUM |
-| Auto-save meals → food_log with toggle | Builds on v1.4 `logDay` | MEDIUM |
-| "Select alternatives" for meal items | **DEFERRED to v1.6** | HIGH (deferred) |
-| Completed tracking via `logged` flag in plan_data JSONB | **NEW** (activity plan) | MEDIUM |
+**Should have (differentiators)** — features that create competitive advantage:
 
-**State machine per day:** PENDING → LOGGING (spinner) → COMPLETED (green) → regenerate resets to PENDING.
+| Feature | Value Proposition | Complexity |
+|---------|-------------------|------------|
+| LLM-generated plans accessible through calendar history | Past months show AI recommendations — unique vs manual planners | MEDIUM |
+| Per-activity swap in calendar detail | Change individual activities without full regeneration | MEDIUM |
+| Unified completion status across calendar and logs | Shows both what was planned AND what was logged | HIGH |
+| Two calendar types (activity + meal) in single app | Consistent visual language across both domains | MEDIUM |
+| Three-way color coding (incomplete/completed/missed) | Richer feedback than binary status | LOW |
+| Rest days visually distinct in calendar cells | v1.6 rest day concept integrated into calendar | LOW |
 
-**Critical rule:** Generation sets `logged: false` on every item. Only explicit user toggle inserts DB rows. Never auto-log during generation.
+**Defer (v2+):**
+- Drag-and-drop activity scheduling
+- Week/agenda view toggle
+- Streak counter / GitHub heatmap
+- Month-over-month comparison charts
+- Calendar export (iCal/PDF)
+- Custom day notes/reflections
+- Month picker dropdown (stretch for v1.7.x)
 
-#### Category B: 1-Day Meal Plans & Auto-Generate (Targets 3, 4, 5)
+### Architecture Approach
 
-| Feature | Status | Complexity |
-|---------|--------|------------|
-| 1-day meal plans (was 7-day) | **CHANGE** | HIGH (foundation) |
-| Auto-generate plan on page visit | **NEW** | MEDIUM |
-| Always-visible regenerate button | **CHANGE** | LOW |
+The architecture follows a **four-layer separation**: (1) shared calendar primitives (`features/calendar/` — pure presentational), (2) page-specific assemblies (`features/activity-calendar/`, `features/meal-calendar/`), (3) existing component reuse layer (DayActivityRow, MealRow, Toast, etc.), and (4) existing API client layer (unchanged). The CalendarGrid receives **precomputed status enums** rather than raw domain data, keeping it reusable across both calendars. Data composition happens in page-specific hooks (`useActivityMonthData`, `useMealMonthData`) that fetch 5-6 weekly plans in parallel via `Promise.all`, aggregate them into a flat `date → planData` map, and compute per-day status by cross-referencing plan data with activity/food history.
 
-**Table stakes users expect:**
-- Plans auto-appear on page load (no "click Generate" empty state)
-- One-click log from plan (see it → log it)
-- Single-screen workflow (no page switching)
-- Plan adapts to today (yesterday's meal plan is irrelevant)
-- Always-available regenerate ("I don't like this suggestion")
-- Completion tracking ("Did I do this already?")
+**Major components:**
 
-**Differentiators:**
-- Rate-limit-aware auto-generation (respects quota without confusing user)
-- Unified activity + plan view (single page shows what you planned AND what you logged)
-- Auto-calculated calorie adjustments when toggling items
+1. **CalendarGrid** (shared) — 7-column CSS Grid, renders DayCell per day, handles month layout. Pure presentational — receives `year`, `month`, `dayStatusMap`, `onDayClick`.
+2. **CalendarPageLayout** (shared) — Layout shell combining MonthNav + generate button + CalendarGrid + DayDetailPanel. Manages selected-day and current-month state.
+3. **DayDetailPanel** (shared) — Generic detail panel container that renders page-specific content (ActivityDayDetail or MealDayDetail) based on which calendar is active.
+4. **ActivityCalendarPage / ActivityDayDetail** — Activity-specific: fetches weekly plans, computes status, renders DayActivityRow in detail panel with swap + completion toggle.
+5. **MealCalendarPage / MealDayDetail** — Meal-specific: fetches weekly meal plans, computes status, renders MealRow in detail panel with log action.
 
-#### Category C: Page Merges (Targets 6, 7)
+**Key data flow:** On mount, `getWeekStartsForMonth()` computes 5-6 Monday weekStarts that overlap the viewed month. `Promise.all` fetches all weeks in parallel. Responses aggregate into `Map<dateString, planDayData>`. `computeDayStatus(dateStr, planDay, loggedEntries, isPast)` produces the status enum for each cell. On day click, plan data is already in memory — no additional fetch.
 
-| Feature | Status | Complexity |
-|---------|--------|------------|
-| Merge Activity Plan → Activities page | **CHANGE** | HIGH |
-| Merge Meal Plan → Food Log page | **CHANGE** | HIGH |
+### Critical Pitfalls
 
-**Recommendation: Section-based merge** (not tabs). Plan section appears as an inline section on the target page. This keeps everything visible on a single scroll, requires no tab state management, and allows acting on plan items without switching views.
+1. **N+1 API Calls for Month Data (CRITICAL)** — Fetching 28-31 daily endpoints instead of 5-6 weekly endpoints. **Prevention:** Use `getWeekStartsForMonth()` to compute the 5-6 overlapping weeks. Fetch all in parallel with `Promise.all`. Weekly endpoints return 7 days of plan data each. Verify with devtools: ≤8 network calls per page load.
 
-**Anti-features (do not build):**
-- ❌ Drag-and-drop meal planning — too complex for v1.5
-- ❌ Auto-log without confirmation — user must own their diary
-- ❌ Calendar view for plans — over-engineered for mobile-first
-- ❌ Fitness goal auto-adjustment from completed plans — v2+ scope
+2. **Making CalendarGrid Domain-Aware (CRITICAL)** — Passing raw activity/meal data into CalendarGrid and computing status inside it. **Prevention:** CalendarGrid receives **precomputed status enums** from `computeDayStatus()`. Grid only maps enum → color. Activity and meal pages call `computeDayStatus` with their own data. Grid stays pure and reusable.
 
----
+3. **Week Boundary Misalignment (CRITICAL)** — Month grid starts on a partial week from the previous month; fetch misses edge weeks. **Prevention:** `getWeekStartsForMonth()` finds the first Monday **on or before** the 1st of the month. Always fetches the leading partial week (from prev month) and trailing partial week (into next month). Unit test with June 2026 (covers month boundary case — May 25 start, July 5 end).
 
-### Architecture Changes
+4. **Status Computation Mismatch: Plans vs Actual Logs (CRITICAL)** — Plan shows "incomplete" (blue) because user logged food/activity manually instead of through the plan's log button. **Prevention:** `computeDayStatus()` cross-references both `planDay` (plan-internal flags) and `loggedEntries` (actual history). If plan says incomplete but history has entries, use history as source of truth. Fetch `GET /api/activities/history?days=62` and `GET /api/food/history?days=62` alongside weekly plans.
 
-#### Current Architecture (v1.4)
+5. **Auto-Generate Fires on Every Month Navigation (MODERATE)** — Switching back to current month triggers unwanted regeneration. **Prevention:** Auto-generate only when `dayStatuses[today]` is `MISSED_PAST` or `EMPTY_FUTURE`. Use a ref guard (same `autoGenGuard` pattern from v1.5) to prevent re-fire. Condition: "is today visible AND has no plan AND no generation in progress."
 
-```
-Frontend Routes (4 separate pages):
-  /activities     → ActivitiesPage   (manual activity log + recommendations)
-  /weekly-plan    → WeeklyPlanPage   (LLM activity plan, 7 days, cache-only)
-  /food-log       → FoodLogPage      (manual food log + search)
-  /meal-plan      → MealPlanPage     (LLM meal plan, 7 days, DB persisted)
-```
-
-#### Target Architecture (v1.5)
-
-```
-Frontend Routes (2 unified pages):
-  /activities     → ActivitiesPage   (recommendations + auto-generated plan + log)
-  /food-log       → FoodLogPage      (food search + auto-generated meals + log)
-
-Backend:
-  daily_meal_plans table   (NEW — 1-day generation, single-day key)
-  activity_plans table     (NEW — persistence for auto-log tracking)
-  weekly_plans             (KEPT — read-compatible for archive, no new writes)
-  meal_plans               (KEPT — read-compatible, no new writes)
-```
-
-#### Major Components
-
-| Component | Responsibility |
-|-----------|---------------|
-| `ActivityPlanSection` (NEW) | Extracted from `WeeklyPlanPage`; shows today's generated activities with inline log toggles |
-| `MealPlanSection` (NEW) | Extracted from `MealPlanPage`; shows today's meals with per-item log/regenerate |
-| `dailyMealPlan.service.js` (NEW) | 1-day generation pipeline, validation, fallback, per-meal regeneration |
-| `activityPlan.repository.js` (NEW) | CRUD for activity_plans table; `markActivitiesLogged` for JSONB flag updates |
-| `activityPlan.controller.js` (NEW) | Handlers: generate, get, log-activities for activity plans |
-| `dailyMealPlan.controller.js` (NEW) | Handlers: generate, get, log-meals, regenerate-meal |
-
-#### Key Data Flows
-
-**Activity Plan (NEW persistence + auto-log):**
-```
-Page mount → GET /api/activity-plans?date=today → null → auto-trigger POST generate
-  → LLM returns 1-day plan → stored in activity_plans (DB) + node-cache
-  → User toggles activity "completed" → POST /api/activity-plans/log-activities
-    → batch inserts to activity_logs table → marks logged=true in plan_data JSONB
-```
-
-**Meal Plan (1-day generation):**
-```
-Page mount → GET /api/daily-meal-plans?date=today → null → auto-trigger POST generate
-  → LLM returns 1-day, 4-meal plan → stored in daily_meal_plans (DB) + cache
-  → User clicks "Log Breakfast" → POST log-meals { date, mealType }
-    → batchLogItems to food_logs → markItemsLogged in plan_data
-```
-
-#### Integration Point Map
-
-```
-ActivitiesPage (merged)
-├── ActivitySummary (existing)
-├── ActivityPlanSection (NEW) ← auto-gen, inline toggle, always-visible regenerate
-└── Activity Logging (existing: log form, pool, history)
-
-FoodLogPage (merged)
-├── CalorieSummary (existing)
-├── MealPlanSection (NEW) ← auto-gen, per-meal log, always-visible regenerate
-└── Food Logging (existing: search, log table, history)
-```
-
----
-
-### Critical Pitfalls & Mitigations
-
-#### Top 5 Risks
-
-1. **DOUBLE-LOGGING ON EVERY VISIT** (Critical)
-   - *What:* Auto-generation triggers logging to DB on every page load
-   - *Why:* Ambiguity between "auto-save as DB row" vs "auto-save as UI pre-fill"
-   - *Prevention:* **Separate generation from logging.** Generation sets `logged: false` on all items. Only explicit user toggle calls the log endpoint. Never auto-insert to `food_logs`/`activity_logs` during generation.
-
-2. **INFINITE REGENERATION LOOP** (Critical)
-   - *What:* Auto-gen fails → state remains "no plan" → effect re-fires → endless API calls
-   - *Prevention:* Use `useRef` one-shot guard (`autoGenAttempted.current`) that persists across renders. After a failed auto-gen, show manual "Retry" — never auto-retry.
-
-3. **STATE EXPLOSION IN MERGED PAGES** (Critical)
-   - *What:* Merging two pages creates 15+ state variables in one component
-   - *Prevention:* **Keep sub-components independent.** Use `TodayActivityPlan.jsx` and `TodayMealPlan.jsx` as self-contained components with their own state. Extract plan logic into `useActivityPlan()` / `useMealPlan()` custom hooks. The container page only passes shared context (selected date).
-
-4. **RATE LIMITER STACKING — AUTO-GEN CONSUMES USER QUOTA** (Critical)
-   - *What:* Auto-gen on page visit consumes the same rate limit bucket as manual regenerate
-   - *Prevention:* Auto-gen only when absolutely needed (no plan exists at all). Don't auto-gen if a plan exists (even stale). Use stricter limiter for auto-triggered requests (header-based: `x-auto-gen: true`).
-
-5. **WEEKLY-TO-DAILY MIGRATION GAP** (High)
-   - *What:* Existing `meal_plans` table uses `(user_id, week_start)` UNIQUE — incompatible with daily generation
-   - *Prevention:* **Create separate `daily_meal_plans` table** with `UNIQUE(user_id, date)`. Leave old table untouched. No migration of existing data needed. New code reads/writes new table; old code remains functional during transition.
-
-#### Phase-Specific Warnings
-
-| Phase | Pitfall | Prevention |
-|-------|---------|------------|
-| Daily Meal Plan | Schema collision with weekly plans | New table, don't modify existing |
-| Activity Plan Log | No `logged` flag in plan_data (currently absent) | Add `logged: boolean` to activity plan items; create `markActivitiesLogged()` |
-| Page Merge | ProfileGuard mismatch (missing on activities route) | Add ProfileGuard to merged route or show prompt banner |
-| Auto-Gen on Visit | Auto-gen fires when user just wants to log | Debounce 2s; cancel if user interacts with log section |
-| Completed Toggle | Manual log + toggle create duplicates | Cross-reference plan items with already-logged entries |
-
----
+6. **Stale Weekly Plan Data After Log/Swap (MODERATE)** — Log action updates DB but the in-memory month aggregation map still has old data. **Prevention:** After any log or swap, re-fetch the affected week's plan and merge the updated week into the `planDays` map. Alternatively, optimistically update local state (matching existing `DayMealCard` pattern).
 
 ## Implications for Roadmap
 
-### Phase Structure (6 Phases Recommended)
+Based on research, here is the recommended phase structure:
 
-The build order follows a strict dependency chain: daily meal foundation → activity plan persistence → auto-log endpoints → frontend merges.
+### Phase 1: Foundation — Calendar Shared Components
+**Rationale:** Both calendar pages depend on the shared calendar grid. Building the shared layer first decouples grid logic from domain-specific code and allows parallel development of the two calendar pages in Phase 2/3.
 
-#### Phase 1: Foundation — Daily Meal Plan Service
-**Rationale:** The shift from 7-day to 1-day meal generation is the most invasive change. Everything else (auto-generation, auto-save, merging) builds on it. Getting this right unblocks all other work.
-**Delivers:** New `daily_meal_plans` DB table, `dailyMealPlan.service.js` (generate, validate, fallback, per-meal regenerate), new prompt file, new controller/routes/rate-limiters.
-**Addresses:** Target 3 (1-day meal plans)
-**Avoids:** Pitfall 7 (weekly-to-daily migration gap) — new table isolates risk
-**Risk:** MEDIUM — new code path but follows existing `mealPlan.service.js` pattern exactly
-**Test target:** 10-12 backend tests (validation, fallback, regeneration)
+**Delivers:**
+- `features/calendar/utils/calendarUtils.js` — `getWeekStartsForMonth()`, `buildMonthGrid()`, `computeDayStatus()`, `DAY_STATUS` enum
+- `features/calendar/components/DayCell.jsx` — Individual cell with color coding
+- `features/calendar/components/MonthNav.jsx` — Prev/next month + Today button
+- `features/calendar/components/CalendarGrid.jsx` — 7-column CSS grid using DayCells
+- `features/calendar/components/DayDetailPanel.jsx` — Generic detail panel shell
+- `features/calendar/components/CalendarPageLayout.jsx` — Layout combining grid + nav + generate button + detail panel
+- `features/calendar/hooks/useMonthRange.js` — Year/month state management + navigation
+- Unit tests for all of the above
 
-#### Phase 2: Persistence — Activity Plan DB Storage
-**Rationale:** Activity plans are currently cache-only (node-cache). v1.5 needs DB persistence for `logged` flags that survive cache eviction and page refreshes.
-**Delivers:** `activity_plans` DB table, `activityPlan.repository.js`, `activityPlan.service.js`.
-**Addresses:** Foundation for Target 1 (auto-save activity plans)
-**Avoids:** Pitfall 8 (completed toggle disappears on refresh)
-**Risk:** LOW — mirrors existing `mealPlan.repository.js` pattern
-**Test target:** 5-8 backend tests (DB read/write, upsert)
+**Addresses features from FEATURES.md:**
+- Category A (Calendar Grid Foundation): Month grid, day click, month navigation, color coding
+- CAL-01/CAL-02 foundation: The shared grid that both pages will use
 
-#### Phase 3: Logging — Batch Activity Log + Meal Log Extensions
-**Rationale:** Needs Phases 1-2 for persistence. Adds the actual auto-log endpoints.
-**Delivers:** `POST /api/activity-plans/log-activities` (batch insert + capacity recalculation), `POST /api/daily-meal-plans/log-meals` (extend existing meal log), `POST /api/daily-meal-plans/regenerate-meal`.
-**Addresses:** Targets 1 (activity auto-save), 2 (meal auto-save with completed toggle)
-**Avoids:** Pitfall 1 (double-logging) — generation creates `logged: false`; only toggle inserts rows
-**Risk:** MEDIUM — transaction patterns exist but need careful idempotency
-**Test target:** 10-12 backend tests (transaction rollback, idempotency, duplicate prevention)
+**Avoids pitfalls from PITFALLS.md:**
+- Pitfall 2 (Domain-Aware Grid): By keeping CalendarGrid pure — receives status enums, not raw data
+- Pitfall 3 (Week Boundary Misalignment): `getWeekStartsForMonth()` is unit-tested
 
-#### Phase 4: Frontend — Merge Activity Plan into Activities Page
-**Rationale:** Phase 3 provides the backend endpoint for the inline completed toggle. Pattern established here is reused for Food Log merge.
-**Delivers:** `TodayActivityPlan.jsx`, `ActivityPlanCard.jsx` components; modified `ActivitiesPage.jsx` with plan section; removed `/weekly-plan` route + redirect.
-**Addresses:** Target 6 (merge Activity Plan), Target 5 (always-visible regenerate)
-**Avoids:** Pitfall 5 (state explosion) — sub-component with own state, not merged into parent
-**Risk:** MEDIUM — refactoring working page requires careful preservation
-**Test target:** 8-10 frontend tests (section rendering, auto-gen trigger, toggle integration)
+**Research flag:** LOW — Standard CSS Grid + date-fns pattern. Well-documented in habit tracker and health app tutorials. No API dependencies. Skip research-phase during planning.
 
-#### Phase 5: Frontend — Merge Meal Plan into Food Log Page
-**Rationale:** Follows Phase 4 pattern. Daily meal backend exists from Phase 1.
-**Delivers:** `TodayMealPlan.jsx`, `MealPlanItem.jsx` components; modified `FoodLogPage.jsx` with meal plan section; removed `/meal-plan` route + redirect.
-**Addresses:** Target 7 (merge Meal Plan), Target 4 (auto-generate on visit), Target 5 (always-visible regenerate)
-**Avoids:** Pitfall 4 (routing breakage) — redirect routes; Pitfall 11 (ProfileGuard) — check guard placement
-**Risk:** MEDIUM — follows Phase 4 pattern, lower risk
-**Test target:** 8-10 frontend tests (section rendering, per-meal log, auto-gen trigger)
+### Phase 2: Activity Calendar Page
+**Rationale:** Activity calendar is the higher-priority page (matches the v1.6 Activity Planner Rework). Builds on Phase 1's shared components. Requires minor extension to `DayActivityRow` for the completion toggle.
 
-#### Phase 6: Polish & Rate Limit Tuning
-**Rationale:** Non-functional improvements and cleanup after all features work.
-**Delivers:** Tuned rate limits (auto-gen vs manual buckets), dead code removal, cache key namespace verification, README update.
-**Addresses:** Target 5 (rate-limit UX for always-visible regenerate)
-**Avoids:** Pitfall 9 (rate limiter stacking) — separate auto-gen limiter from manual; Pitfall 18 (test debt)
-**Risk:** LOW
-**Test target:** Audit existing tests pass; verify rate limiter isolation
+**Delivers:**
+- `features/activity-calendar/api/activityCalendarApi.js` — Month-range data composition
+- `features/activity-calendar/hooks/useActivityMonthData.js` — Fetch + aggregate activity plans, compute day status map, auto-generation trigger
+- `features/activity-calendar/components/ActivityDayDetail.jsx` — Detail panel rendering DayActivityRow per activity, swap + toggle log, read-only past state
+- `features/activity-calendar/components/ActivityCalendarPage.jsx` — Full page assembly
+- `features/activity-calendar/index.js` — Export
+- Extension to `DayActivityRow.jsx` — Add `onToggleLog` prop + logged/unlogged rendering
+- Update `app/Router.jsx` — Add `/activity-calendar` route
+- Tests: useActivityMonthData aggregation, ActivityDayDetail past/empty rendering, full-page integration
+
+**Addresses features:**
+- CAL-01: Activity Calendar page (month grid, color coding, detail panel)
+- CAL-03 (activity): Generate Week button above calendar
+- CAL-04 (activity): Auto-generate on view today
+- CAL-05: Past days read-only (shared behavior)
+- CAL-06: Activity swap preserved in detail panel
+- CAL-08 (activity portion): Remove deprecated interactions (single-day regenerate)
+
+**Uses from STACK.md:** date-fns, existing TanStack Query pattern (or local useState), DayActivityRow component
+
+**Avoids from PITFALLS.md:**
+- Pitfall 1 (N+1 Calls): Uses weekly endpoints, 5-6 parallel fetches
+- Pitfall 4 (Status Mismatch): Cross-references activity history
+- Pitfall 5 (Auto-Gen Fires): ref guard prevents re-trigger
+- Pitfall 7 (Stale Data): Re-fetches affected week after swap/log
+
+**Research flag:** MEDIUM — `DayActivityRow` needs design work for the `onToggleLog` prop. Auto-generation logic must exactly match existing v1.5 behavior. Consider `/gsd-research-phase` if the extension surface is uncertain.
+
+### Phase 3: Meal Calendar Page
+**Rationale:** Follows the same pattern as Phase 2 but for meals. Can be built in parallel with Phase 2 or sequentially after. `MealRow` already handles logged state — no component extension needed.
+
+**Delivers:**
+- `features/meal-calendar/api/mealCalendarApi.js` — Month-range data composition
+- `features/meal-calendar/hooks/useMealMonthData.js` — Fetch + aggregate meal plans, compute day status map
+- `features/meal-calendar/components/MealDayDetail.jsx` — Detail panel rendering MealRow per meal, per-item log action, read-only past state
+- `features/meal-calendar/components/MealCalendarPage.jsx` — Full page assembly
+- `features/meal-calendar/index.js` — Export
+- Update `app/Router.jsx` — Add `/meal-calendar` route
+- Tests: useMealMonthData aggregation, MealDayDetail rendering, log interaction end-to-end
+
+**Addresses features:**
+- CAL-02: Meal Calendar page (month grid, color coding, detail panel)
+- CAL-03 (meal): Generate Day button above calendar
+- CAL-04 (meal): Auto-generate on view today
+- CAL-05: Past days read-only (shared behavior)
+- CAL-07: Meal log preserved in detail panel
+- CAL-08 (meal portion): Remove deprecated interactions (alternative selector)
+
+**Uses from STACK.md:** date-fns, existing MealRow component, dailyMealPlanApi
+
+**Avoids from PITFALLS.md:**
+- Pitfall 1 (N+1 Calls): Uses weekly meal plan endpoints (5-6 calls), not daily
+- Pitfall 4 (Status Mismatch): Cross-references food history
+- Pitfall 6 (Detail Panel Content): Handles "no plan but logged entries" edge case
+
+**Research flag:** LOW — Same architecture as Phase 2. `MealRow` already supports logged state. No component extension needed. Skip research-phase during planning.
+
+### Phase 4: Cleanup — Remove Replaced Components & Update Navigation
+**Rationale:** Must wait until both calendar pages are deployed and verified. Prevents breaking the app during transition — old pages remain functional until calendar replacement is confirmed working.
+
+**Delivers:**
+- Remove `features/activities/components/ActivityPlanSection.jsx`
+- Remove `features/weekly-plan/components/WeeklyPlanPage.jsx`, `DayCard.jsx`, `EmptyStatePlan.jsx`
+- Remove `features/meal-plan/components/MealPlanPage.jsx`, `DayMealCard.jsx`, `EmptyStateMealPlan.jsx`
+- Remove `features/food-log/components/DailyMealPlanSection.jsx`
+- Remove associated tests
+- Update navigation links to point to `/activity-calendar` and `/meal-calendar`
+- Verify no remaining imports of removed components (glob search)
+
+**Addresses features:**
+- CAL-08 completion: Full removal of deprecated patterns and their tests
+- Navigation update: Dashboard/menu now links to calendar pages
+
+**Avoids from PITFALLS.md:**
+- Pitfall 7 (Removed Components Still Imported): Glob search for imports before deletion
+- Phase 4 warning from ARCHITECTURE.md: Coordinate test removal
+
+**Research flag:** MEDIUM — Must audit the entire codebase for import references. Use `rg "ActivityPlanSection|WeeklyPlanPage|DayCard|MealPlanPage|DailyMealPlanSection"` to detect any remaining usage. Consider executing this in a separate verification pass.
 
 ### Phase Ordering Rationale
 
-1. **Daily meal plan first** because it's the foundational schema change — get the DB right before building on it
-2. **Activity plan persistence second** because it's low-risk (pattern duplication) and unblocks auto-log
-3. **Backend logging endpoints third** because frontend merges depend on them
-4. **Activity merge before meal merge** because the activity plan is simpler (no per-meal regeneration)
-5. **Meal merge follows the same pattern** as activity merge, reducing risk
-6. **Polish last** — rate limiting, cleanup, and docs after all features are stable
+1. **Phase 1 must come first** — Both calendar pages depend on CalendarGrid, DayCell, CalendarPageLayout, and the utility functions. These have zero dependencies on existing feature code (pure presentational) and can be built and tested independently.
+
+2. **Phase 2 and Phase 3 are independent** — They share the same CalendarGrid foundation but differ only in detail panel content and data-fetching hook. They can be built in parallel workstreams or sequentially. Phase 2 (activity) is slightly higher priority because it replaces the more complex v1.6 Activity Planner Rework.
+
+3. **Phase 4 must come last** — Deleting components that are still referenced will break the build. Both calendar pages must be fully deployed and the old pages confirmed unused before cleanup. The old pages remain functional during transition, providing a safety net.
+
+4. **DayActivityRow extension belongs in Phase 2, not Phase 1** — The `onToggleLog` prop is activity-specific. Extending it before Phase 1 would couple the shared foundation to activity domain logic.
 
 ### Research Flags
 
-| Phase | Needs Research? | Reason |
-|-------|----------------|--------|
-| Phase 1 (Daily Meal Service) | **Standard patterns** | Direct mirror of existing `mealPlan.service.js` — well-documented |
-| Phase 2 (Activity Plan Persistence) | **Standard patterns** | Mirror of `mealPlan.repository.js` — well-documented |
-| Phase 3 (Logging Endpoints) | **Caution: auto-gen rate limit** | Need to verify header-based rate limiter separation (`x-auto-gen: true`) — `/gsd-research-phase` on rate limiter design |
-| Phase 4 (Activity Merge) | **Standard patterns** | Section extraction pattern is React best practice |
-| Phase 5 (Meal Merge) | **Caution: ProfileGuard** | Need to verify guard placement for merged route — `/gsd-research-phase` on routing security |
-| Phase 6 (Polish) | **Standard patterns** | Cleanup and rate limit tuning |
+Phases likely needing deeper research during planning:
+- **Phase 2 (Activity Calendar):** MEDIUM — The `onToggleLog` prop extension for `DayActivityRow` needs design. Review existing `DayActivityRow.jsx` to determine the exact prop interface. Auto-generation logic must match v1.5 exactly — review `ActivityPlanSection.jsx` autoGenGuard pattern.
+- **Phase 4 (Cleanup):** MEDIUM — Full import graph audit needed. Use `rg` or IDE to find all references to components being deleted.
 
-### Items Deferred to v1.6
-
-| Feature | Reason |
-|---------|--------|
-| "Select alternatives" for meal items | Significant UI complexity, new endpoint, LLM prompt changes — risks scope creep |
-| Un-log / undo completed toggle | Adds delete/rollback logic to food_logs — edge cases need design |
-| Auto-calculated portion adjustment for alternatives | Depends on alternatives feature |
-| Meal plan week-overview (what's for dinner this week) | Anti-pattern for daily generation — revisit if users request it |
-
----
+Phases with standard patterns (skip research-phase):
+- **Phase 1 (Foundation):** LOW — Pure CSS Grid + date-fns pattern. Dozens of working examples in habit tracker tutorials. Standard calendar utility functions.
+- **Phase 3 (Meal Calendar):** LOW — Follows identical pattern to Phase 2. `MealRow` already handles logged state (no extension needed). Straightforward replication.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| **Stack** | HIGH | Zero new packages — all patterns verified via code inspection in STACK.md. 18 package.json files checked, 30+ existing patterns mapped |
-| **Features** | HIGH | Based on existing v1.3 (activity plan) and v1.4 (meal plan) implementations. All 7 targets have clear current/desired state mapping. "Select alternatives" flagged as HIGH complexity — deferred |
-| **Architecture** | HIGH | Complete codebase analysis of current architecture. Integration points (controllers, routes, repositories, services, cache) mapped in detail. 6-phase build order with dependency justification |
-| **Pitfalls** | HIGH | 20 pitfalls documented (4 critical, 11 moderate, 5 minor). Each has prevention strategy rooted in existing code patterns. Top 5 have both detection and prevention |
-| **Overall** | **HIGH** | All four research files reached HIGH confidence independently. Convergent recommendations across files (zero new packages, section-based merging, new tables instead of schema changes, defer alternatives) |
+| Stack | **HIGH** | date-fns v3.6.0 verified via Context7 CDN references. All calendar libraries evaluated and rejected with clear bundle/paradigm rationale. CSS Grid-based custom implementation has dozens of working references. |
+| Features | **HIGH** | All 8 CAL requirements mapped to specific components in build order. Color scheme validated against visual accessibility standards and fitness app UX research (PaletteRx, UXmatters). Past-day read-only behavior matches MyFitnessPal, TrainingPeaks, Apple Health. MVP definition clear with v2+ differentiation. |
+| Architecture | **HIGH** | Component hierarchy, data flow, and build order verified against existing codebase patterns (directory structure, state management, API patterns). Anti-patterns identified from real calendar implementations. Scaling considerations documented. 698 lines of detailed architecture reasoning. |
+| Pitfalls | **HIGH** | 10 pitfalls identified with severity classification, prevention strategies, and detection methods. N+1 API pitfall has clear mitigation (5-6 weekly calls vs 28-31 daily calls). Status mismatch between plans and actual logs addressed with cross-referencing approach. Auto-generation guard pattern carries forward from proven v1.5 implementation. |
+
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-| Gap | How to Handle |
-|-----|---------------|
-| **Rate limiter separation for auto-gen vs manual gen** | Needs planning-level design. Current `express-rate-limit` instances key by user ID; adding header-based (`x-auto-gen: true`) differentiation needs verification. Flagged for Phase 3 research |
-| **ProfileGuard placement after merge** | `/activities` and `/food-log` currently lack ProfileGuard. Plan generation requires user profile (BMI, goals). Need to decide: add ProfileGuard to merged route, or show inline prompt. Flagged for Phase 5 research |
-| **`logged` flag migration for existing plans** | Existing weekly plans lack `logged` flags. Soft migration: treat missing `logged` as `logged: false`. New plans include `logged: false` by default. No schema migration needed |
-| **Cache key collision between old weekly and new daily keys** | Low risk — existing keys use `plan_meal_` prefix, new keys use `plan_daily_meal_` and `plan_activity_`. Verify during Phase 6 |
-| **LLM token cost comparison (7-day vs 1-day)** | Weekly meal plans cost ~2K tokens; daily estimated ~300-500. Monitor OpenRouter logs after Phase 1 deployment to validate cost reduction |
+1. **DayActivityRow extension design** — The `onToggleLog` prop needs its exact TypeScript-type interface determined during Phase 2 planning. Review `DayActivityRow.jsx` current props, the existing log activity API (`POST /api/activity-plans/log`), and the calendar detail panel interaction design. Estimated: small surface area, but must be correct.
 
----
+2. **Auto-generation exact behavior in month context** — The existing auto-generation logic fires when the page loads and finds no plan for today. In the calendar context, the page loads showing a full month grid. The auto-generation should still fire for "today" specifically, but the implementation needs to check: "is today visible in the current month view AND does today have no plan." The ref guard pattern from v1.5 should carry over directly.
+
+3. **Month data cache invalidation** — The recommended LRU cache (`Map<yearMonth, planData[]>`) for preventing re-fetches during month navigation needs detail: what triggers invalidation? After generate (the plan changed — clear cache for that month)? After log/swap (only the day changed — merge into cache without full re-fetch)? Research suggests optimistic local updates + targeted week re-fetch, but the cache strategy should be explicitly designed in Phase 1.
+
+4. **CSS Grid cross-browser testing** — The calendar uses CSS Grid (`display: grid; grid-template-columns: repeat(7, 1fr)`) which is widely supported but should be tested at 3 viewport widths (mobile 375px, tablet 768px, desktop 1280px+) during each phase. The `aspect-ratio: 1` on day cells ensures square cells but may need `min-height` fallback for older browsers.
+
+5. **History over-fetching** — `GET /api/activities/history?days=62` and `GET /api/food/history?days=62` are recommended for cross-referencing plan vs actual log status. The exact `days` parameter calculation should be refined: grid boundaries may need only ~40 days, not 62. Check if the history endpoints support date-range params instead.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- **Existing codebase**: `mealPlan.controller.js` — `logDay` handler pattern
-- **Existing codebase**: `food.repository.js` — `batchLogItems` transaction pattern
-- **Existing codebase**: `mealPlan.repository.js` — `markItemsLogged` JSONB update pattern
-- **Existing codebase**: `mealPlan.service.js` — meal generation pipeline
-- **Existing codebase**: `WeeklyPlanPage.jsx` — frontend state machine for plan generation
-- **Existing codebase**: `MealPlanPage.jsx` — frontend logging + regenerate UX
-- **Existing codebase**: `ActivitiesPage.jsx` — activity logging with history and summary
-- **Existing codebase**: `FoodLogPage.jsx` — food logging with ingredient search
-- **Existing codebase**: `Router.jsx` — route definitions, ProfileGuard placement
-- **Existing codebase**: `add_meal_plans.sql`, `schema.sql` — DB schema and constraints
-- **Existing codebase**: `activity.repository.js` — activity log CRUD patterns
-- **Existing codebase**: `package.json` (backend + frontend) — dependency manifests (no changes)
+- **Codebase analysis** — `frontend/src/features/` directory structure, WeeklyPlanPage.jsx, MealPlanPage.jsx, ActivitiesPage.jsx, FoodLogPage.jsx, DayActivityRow.jsx, MealRow.jsx — Component composition, state management, API patterns verified
+- **Context7 `/date-fns/date-fns`** — Verified v3.6.0 CDN references, function signatures, tree-shaking documentation
+- **Context7 `/lukeed/clsx`** — Verified v2.1.1, 239B gzip, zero dependencies
 
 ### Secondary (MEDIUM confidence)
-- No external sources needed — all patterns exist in the current codebase
+- **WebSearch — Health/fitness calendar patterns** — MyFitnessPal, TrainingPeaks, Apple Health, Strava color coding and month grid navigation patterns confirmed across multiple sources
+- **WebSearch — Habit tracker calendar tutorials** — Custom CSS Grid + date-fns pattern standard for status-based calendars (confirmed in 5+ tutorials)
+- **WebSearch — Calendar library evaluation** — trud-calendar, react-big-calendar, mantine/dates, antd Calendar, Zesor/calendarkit-pro, svar-widgets evaluated and rejected per bundle/paradigm mismatch
+- **Color psychology for fitness apps (PaletteRx, UXmatters)** — Green=completion, Blue=calm/neutral, Grey=inactive validated for accessibility and UX
+- **UX Patterns (uxpatterns.dev)** — Calendar View pattern documented: header, date grid, event cell, selection state
+- **Strava calendar UX case study (mreniewicki.com)** — Month/year dropdown usability findings, day selection behavior
+
+### Tertiary (LOW confidence)
+- **RapidNative habit tracker patterns** — Day cell color coding patterns referenced but not directly verified against production apps. Needs validation during implementation.
 
 ---
 
