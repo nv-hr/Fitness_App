@@ -33,20 +33,6 @@ Consider the user's activity level "{{activityLevel}}" when assigning duration a
 - active: Higher duration (30-90 min), moderate-to-vigorous intensity
 - very_active: Higher duration (45-120 min), moderate-to-vigorous intensity
 
-# Goal-Specific Activity Selection
-Select activities based on the user's fitness goal of "{{fitnessGoal}}":
-- For "lose weight": Prioritize cardio activities like walking, running, cycling, swimming, jump rope, HIIT. Maximize calorie burn.
-- For "maintain": Balance cardio and strength activities. Mix of walking, cycling, yoga, bodyweight exercises, swimming.
-- For "build muscle": Prioritize strength training, resistance exercises, bodyweight exercises, weight lifting. Include adequate recovery.
-
-# Activity Level Guidance
-Consider the user's activity level "{{activityLevel}}" when assigning duration and intensity:
-- sedentary: Lower duration (15-30 min), light-to-moderate intensity
-- light: Moderate duration (20-40 min), light-to-moderate intensity
-- moderate: Moderate duration (30-60 min), moderate intensity
-- active: Higher duration (30-90 min), moderate-to-vigorous intensity
-- very_active: Higher duration (45-120 min), moderate-to-vigorous intensity
-
 # Available Activities (select ONLY from this list)
 {{availableActivities}}
 
