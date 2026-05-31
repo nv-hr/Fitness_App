@@ -123,6 +123,11 @@ describe('Weekly Plan E2E - Real LLM', () => {
       expect(() => new Date(plan.generated_at)).not.toThrow();
     }
 
+    // ── format_version (new format) ──
+    if (plan.format_version !== undefined) {
+      expect(plan.format_version).toBe(1);
+    }
+
     // ── Per-day validation ──
     const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const dayActivityCounts = [];
@@ -134,10 +139,18 @@ describe('Weekly Plan E2E - Real LLM', () => {
       expect(() => new Date(day.date + 'T00:00:00Z')).not.toThrow();
 
       expect(Array.isArray(day.activities)).toBe(true);
-      expect(day.activities.length).toBeGreaterThanOrEqual(1);
-      expect(day.activities.length).toBeLessThanOrEqual(4);
+      expect(typeof day.rest_day).toBe('boolean');
 
-      dayActivityCounts.push(day.activities.length);
+      if (day.rest_day === true) {
+        // Rest day — must have empty activities
+        expect(day.activities.length).toBe(0);
+      } else {
+        // Activity day — must have 1-4 activities
+        expect(day.activities.length).toBeGreaterThanOrEqual(1);
+        expect(day.activities.length).toBeLessThanOrEqual(4);
+      }
+
+      dayActivityCounts.push(day.rest_day === true ? 0 : day.activities.length);
 
       for (const act of day.activities) {
         expect(typeof act.activity_id).toBe('number');
