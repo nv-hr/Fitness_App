@@ -92,7 +92,7 @@ None yet.
 | 260531-107 | run all test and report the result | 2026-05-30 | — | [260531-107-run-all-test-and-report-the-result](./quick/260531-107-run-all-test-and-report-the-result/) |
 | 260531-qm8 | Full test suite: backend 134 + frontend 126 = 260/260 pass | 2026-05-31 | ed9340f | — |
 | 260531-baw | Test OpenRouter LLM integration (API key verified, 42/42 tests pass) | 2026-05-31 | 81e61bf | [260531-baw-open-router-api-is-set-can-you-test-the-](./quick/260531-baw-open-router-api-is-set-can-you-test-the-/) |
-| 260531-bhb | Create real LLM weekly plan E2E test (DB unavailable — test created but not executed) | 2026-05-31 | b9112ce | [260531-bhb-try-testing-the-recommendation-feature-w](./quick/260531-bhb-try-testing-the-recommendation-feature-w/) |
+| 260531-bhb | Real LLM weekly plan E2E test — 2/2 pass, 7-day plan generated (active), model IDs fixed | 2026-05-31 | e51beeb | [260531-bhb-try-testing-the-recommendation-feature-w](./quick/260531-bhb-try-testing-the-recommendation-feature-w/) |
 
 ## Session Continuity
 
