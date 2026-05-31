@@ -148,7 +148,14 @@ export default function EmptyStatePlan({ onGenerate, isGenerating }) {
                       checked={checked}
                       onChange={() => toggleDay(index)}
                       disabled={isGenerating}
-                      style={{ display: 'none' }}
+                      style={{
+                        position: 'absolute',
+                        opacity: 0,
+                        width: 0,
+                        height: 0,
+                        pointerEvents: 'none',
+                      }}
+                      aria-label={label}
                     />
                     {label}
                   </label>
