@@ -10,8 +10,17 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 
 ## Current State
 
-**Shipped:** v1.4 LLM Food Recommendations (2026-05-31)
-**Phases:** 23 complete (v1.0: 5, v1.1: 3, v1.2: 4, v1.3: 5, v1.4: 6) | **Plans:** 62 | **Commits:** 220+
+**Shipped:** v1.5 Smart Auto-Logging (2026-05-31)
+**Phases:** 29 complete (v1.0: 5, v1.1: 3, v1.2: 4, v1.3: 5, v1.4: 6, v1.5: 6) | **Plans:** 68 | **Commits:** 230+
+
+### v1.5 shipped:
+- **Activity Plan Logging** — Generated activities auto-save to activity log with completed toggle
+- **Daily Meal Plan Logging** — Generated meals auto-save to food log with completed/regenerate actions
+- **3-Day Meal Plan Backend** — Meal recommendations generate for 1 day (not weekly), with LLM correction loop and fuzzy ingredient matching
+- **Auto-Generation & Inline Management** — Auto-generate plan when visiting page if none exists, manual regenerate always available
+- **UI Consolidation** — Activity Plan UI merged into Activities page, Meal Plan UI merged into Food Log page
+- **Legacy Cleanup** — Old `meal_plans` system removed (service/controller/repository/routes/feature directory); shared utilities extracted to `utils/food.js`
+- **Test Status** — 127 tests passing (frontend 113 + backend 14); 46 backend integration tests require running DB
 
 ### v1.3 shipped:
 - **Activity Logger** — Log activity type + duration + intensity with server-authoritative calorie calculation (light/moderate/vigorous multipliers)
@@ -189,4 +198,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-31 after starting v1.5 milestone*
+*Last updated: 2026-05-31 after completing v1.5 milestone*

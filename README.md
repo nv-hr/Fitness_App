@@ -11,6 +11,11 @@ Built with React 19, Express 5, and Supabase PostgreSQL.
 - **Food Logging** — Search a database of 200+ ingredients, log by ingredient and weight, calculate exact calorie and macronutrient values.
 - **Calorie Tracking** — Daily summary with caloric balance, history view, and progress bar toward your TDEE goal.
 - **Activity Recommendations** — Get simple physical activity suggestions tailored to your profile.
+- **Activity Logging** — Log completed activities with duration and intensity, track daily active minutes and calories burned.
+- **LLM Weekly Plans** — AI-generated 7-day activity plans powered by OpenRouter, personalized to your profile and history.
+- **Daily Meal Plans** — AI-generated 1-day meal recommendations with auto-calculated portions to meet your calorie target.
+- **Activity Plan Auto-Logging** — Generated activities auto-save to activity log with one-click completion toggle.
+- **Meal Plan Auto-Logging** — Generated meals auto-save to food log with batch-log and per-day logging.
 
 ## Tech Stack
 
@@ -48,6 +53,10 @@ Edit `backend/.env` with your settings:
 | `GOOGLE_CLIENT_ID`     | Google OAuth 2.0 client ID             |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth 2.0 client secret         |
 | `GOOGLE_CALLBACK_URL`  | OAuth callback URL                     |
+| `OPENROUTER_API_KEY`   | OpenRouter API key for LLM features    |
+| `OPENROUTER_BASE_URL`  | `https://openrouter.ai/api/v1`         |
+| `LLM_MODEL`            | Primary model for weekly plan generation |
+| `LLM_FALLBACK_MODEL`   | Fallback model when primary unavailable |
 | `DATABASE_URL`         | Supabase PostgreSQL connection string  |
 
 ### 2. Install dependencies

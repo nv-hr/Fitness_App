@@ -4,7 +4,7 @@ milestone: v1.5
 milestone_name: Smart Auto-Logging
 status: shipped
 last_updated: "2026-05-31T12:00:00.000Z"
-last_activity: 2026-05-31
+last_activity: 2026-05-31 - Completed quick task 260531-jng: update all documentation
 progress:
   total_phases: 6
   completed_phases: 6
@@ -72,8 +72,16 @@ Progress: [██████████] 100%
 | future_feature | Auto-calculated portion adjustment for alternatives — deferred to v1.6 | deferred |
 | future_feature | Meal plan week-overview — deferred (anti-pattern for daily) | deferred |
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260531-jng | Update all documentation to reflect completed cleanup of legacy meal_plans system and v1.5 state | 2026-05-31 | c0601b0 | [260531-jng-update-all-documentation](./quick/260531-jng-update-all-documentation/) |
+
 ## Notes
 
 - Two new database tables: `activity_plans` and `daily_meal_plans` (both idempotent, UNIQUE(user_id, plan_date))
 - Migration SQL not executed — Supabase unreachable from dev environment. Run `node backend/db/run_migration.js` when DB is accessible.
-- Old `/weekly-plan` and `/meal-plan` routes still active (no redirect configured) — consistent with "keep read-compatible for archive" design
+- Legacy `/api/meal-plans` routes removed (backend service/controller/repository/routes/rate limiter deleted, frontend meal-plan feature directory deleted, nav link removed)
+- `/weekly-plan` route still active for LLM activity plans
+- `daily_meal_plans` and `activity_plans` handle all new plan generation
