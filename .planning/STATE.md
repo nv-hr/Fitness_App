@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Activity Planner Rework
 status: completed
-stopped_at: Plan 32-02 complete — Days selector panel, rest day cards, swap buttons, WeeklyPlanPage fully wired — 2/2 plans done in Phase 32
-last_updated: "2026-05-31T12:55:37.943Z"
-last_activity: 2026-05-31 — Plan 32-02 executed (days selector, rest day cards, swap buttons, WeeklyPlanPage wiring)
+stopped_at: Plan 33-02 complete — Unit tests for isOldFormat() and E2E migration edge case tests — 2/2 plans done in Phase 33
+last_updated: "2026-05-31T19:55:00.000Z"
+last_activity: 2026-05-31 — Plan 33-02 executed (unit tests for isOldFormat, E2E migration tests)
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 8
-  completed_plans: 7
-  percent: 75
+  completed_plans: 8
+  percent: 100
 ---
 
 # Project State
@@ -29,10 +29,11 @@ See: .planning/PROJECT.md (updated 2026-05-31)
 Phase: 30-prompt-validation-rework (complete)
 Phase: 31-activity-swap-endpoint (plan 31-01 complete, 31-02 pending)
 Phase: 32-frontend-days-selector-swap-ui (plans 32-01 and 32-02 complete)
-Status: Plan 32-02 complete — Days selector panel, rest day cards, swap buttons, WeeklyPlanPage fully wired
-Last activity: 2026-05-31 — Plan 32-02 executed (days selector, rest day cards, swap buttons, WeeklyPlanPage wiring)
+Phase: 33-plan-migration-edge-cases (plans 33-01 and 33-02 complete)
+Status: Plan 33-02 complete — Unit tests for isOldFormat() and E2E migration edge case tests
+Last activity: 2026-05-31 — Plan 33-02 executed (unit tests for isOldFormat, E2E migration tests)
 
-Progress: [█████████░] 88%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -80,6 +81,6 @@ Items acknowledged and carried forward from v1.5 milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-31T12:55:07.058Z
-Stopped at: Plan 32-02 complete — Days selector panel, rest day cards, swap buttons, WeeklyPlanPage fully wired — 2/2 plans done in Phase 32
+Last session: 2026-05-31T19:55:00.000Z
+Stopped at: Plan 33-02 complete — Unit tests for isOldFormat() and E2E migration edge case tests — 2/2 plans done in Phase 33
 Resume file: None
