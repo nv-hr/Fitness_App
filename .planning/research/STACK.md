@@ -1,135 +1,101 @@
-# Technology Stack: Supabase Migration
+# Technology Stack — LLM Food Recommendations
 
-**Project:** Fitness_App v1.2
-**Researched:** 2026-05-27
+**Project:** Fitness_App — v1.4 LLM Food Recommendations
+**Researched:** 2026-05-31
 
-## Current Stack (v1.1)
+## Stack Decision: No New Technology Added
 
-| Layer | Technology | Version | Status |
-|-------|-----------|---------|--------|
-| Database | MySQL | 8.4 | **TO BE REMOVED** |
-| Database Driver | mysql2 | ^3.22.0 | **TO BE REPLACED** |
-| DB Admin | Adminer | latest | **TO BE REMOVED** |
-| Backend | Express | ^5.2.0 | Keep |
-| Frontend | React | ^19.2.0 | Keep |
-| Frontend Build | Vite | ^8.0.0 | Keep |
-| Auth | Passport + JWT + bcrypt | various | Keep |
-| Containerization | Docker Compose | 4 services | **TO BE SIMPLIFIED** |
+The v1.4 feature uses the **existing stack** exclusively. No new languages, databases, or external services are introduced.
 
-## Target Stack (v1.2)
+## Current Stack (Unchanged)
 
-### Core Framework (Unchanged)
+| Technology | Version | Purpose | Why Still Correct |
+|------------|---------|---------|-------------------|
+| React | 19 | Frontend UI | Meal plan components follow same patterns |
+| Vite | 8 | Build tool | Already configured, no changes needed |
+| TanStack React Query | latest | Data fetching | Already in project |
+| Express | 5 | Backend API | New routes follow weeklyPlan pattern |
+| Supabase PostgreSQL | 17 | Database | New `meal_plans` table schema matches existing |
+| pg | latest | DB driver | Repository pattern continues |
+| OpenRouter (OpenAI SDK) | latest | LLM provider | Already integrated, meal plans use same client |
+| node-cache | latest | In-memory caching | Same cache as activity plans, separate keys |
+| express-rate-limit | latest | Rate limiting | New limiter follows same pattern |
+| Helmet | latest | Security headers | Unchanged |
+| morgan | latest | Request logging | Unchanged |
+| compression | latest | Gzip | Unchanged |
+| Jest | latest | Backend testing | Tests follow existing patterns |
+| Vitest | latest | Frontend testing | Tests follow existing patterns |
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Express | ^5.2.0 | HTTP server framework | Already in use; no reason to change |
-| React | ^19.2.0 | UI framework | Already in use; no reason to change |
-| Vite | ^8.0.0 | Frontend build tool | Already in use; multi-stage build uses `npm run build` |
+## What Changes
 
-### Database (Replacement)
+| Component | Change | Rationale |
+|-----------|--------|-----------|
+| `backend/src/services/` | NEW: `mealPlan.service.js` | Keeps food LLM logic separate from activity LLM logic |
+| `backend/src/repositories/` | NEW: `mealPlan.repository.js` | CRUD for new `meal_plans` table |
+| `backend/src/repositories/food.repository.js` | MODIFIED: add `batchLogItems()` | One new method for batch logging |
+| `backend/src/controllers/` | NEW: `mealPlan.controller.js` | Follows `weeklyPlan.controller.js` |
+| `backend/src/routes/` | NEW: `mealPlan.routes.js` | Follows `weeklyPlan.routes.js` |
+| `backend/src/middlewares/` | NEW: `mealPlanRateLimiter.js` | Follows `weeklyPlanRateLimiter.js` |
+| `backend/src/app.js` | MODIFIED: add meal-plans route | One line |
+| `backend/prompts/` | NEW: `meal-plan-prompt.md`, `meal-correction-prompt.md` | Domain-specific prompts |
+| `backend/db/` | NEW: `add_meal_plans.sql` | Migration |
+| `frontend/src/features/` | NEW: `meal-plan/` | Follows `weekly-plan/` structure |
+| `frontend/src/app/Router.jsx` | MODIFIED: add meal-plan route | One route entry |
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| **Supabase PostgreSQL** | 15.x (managed) | Primary database | Managed PostgreSQL; built-in connection pooling (Supavisor); free tier available |
-| **pg (node-postgres)** | ^8.13.0 | PostgreSQL driver for Node.js | Closest API to mysql2/promise; Pool-based; well-maintained; ESM support |
+## LLM Model Selection
 
-**Why not alternatives:**
-- **Prisma**: Overkill for 4 simple repository files; would require learning new query API
-- **pg-promise**: Extra abstraction layer not needed; pg is sufficient
-- **Supabase JS client**: Designed for browser/client-side with RLS; not appropriate for server-side raw SQL
-- **Drizzle**: Same argument as Prisma — unnecessary ORM for this scale
-- **postgres.js**: Tagged template DSL is different from current pattern; more mental overhead to migrate
+| Aspect | Decision | Rationale |
+|--------|----------|-----------|
+| Primary model | Same as `LLM_MODEL` env var | No change — free-tier model |
+| Fallback model | Same as `LLM_FALLBACK_MODEL` env var | No change |
+| Temperature | 0.2 | Same as activity plans — low temp for deterministic JSON |
+| Max tokens | 2000 | Sufficient for 7-day meal plan (4 meals × 7 days) |
 
-### Database Driver Comparison
+**Key difference from activity plans:** Meal plan generation requires the LLM to process the full ingredient database (200+ items) as context, which increases prompt token count. At ~200 foods × ~50 chars each = ~10K chars of ingredients alone, plus profile and instructions. Free-tier models with small context windows may struggle — but this is already the existing constraint.
 
-| Feature | mysql2 (current) | pg (target) |
-|---------|-----------------|-------------|
-| Pool creation | `createPool({...})` | `new Pool({...})` |
-| Query execution | `pool.query(sql, params)` | `pool.query(sql, params)` |
-| Placeholders | `?` (positional) | `$1, $2, ...` (numbered) |
-| Result shape | `[rows, fields]` | `{ rows, fields, rowCount }` |
-| Single row | `rows[0]` | `result.rows[0]` |
-| Insert + return | `LAST_INSERT_ID()` then SELECT | `RETURNING *` |
-| Boolean values | `1` / `0` (TINYINT) | `true` / `false` (BOOLEAN) |
-| Unique violation | `'ER_DUP_ENTRY'` | `'23505'` |
-| SSL | Not used (local MySQL) | Required (Supabase enforced) |
-| Connection string | Not used (separate params) | `DATABASE_URL` support built-in |
+## Alternatives Considered
 
-**Verdict:** pg is the right choice. The migration cost is mechanical, not conceptual — same programming pattern, different SQL syntax.
+| Approach | Why Not | What We Do Instead |
+|----------|---------|-------------------|
+| Recipe generation (complex dishes) | Out of scope — ingredient-level only | Recommend individual ingredient items, not recipes |
+| Vector search for food retrieval | Overengineering at 200 ingredients | Pass full list in prompt context |
+| External meal API (Spoonacular, Edamam) | Would require API key, cost, and integration | Use existing OpenRouter + food DB |
+| Separate LLM microservice | Added deployment complexity | Extend llm.service.js patterns |
+| Prisma/Drizzle ORM | Would require migration from raw SQL | Continue repository pattern |
+| Supabase RLS | Server-side-only architecture | No change needed |
 
-### Infrastructure
+## Installation
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Docker | 24+ | Container runtime | Already in use |
-| Docker Compose | v2 | Multi-container orchestration | Already in use; simplified to 1 service |
-| Supavisor | managed | Connection pooler | Built into Supabase; handles multiplexing |
-| Cloudflare Tunnel | managed | Network exposure | Already in use; unchanged |
+No new npm packages. The batch log endpoint uses the existing `pg` connection via `pool.query()` inside a transaction:
 
-### Dependencies (package.json Changes)
-
-**backend/package.json — Changes:**
-
-```json
-{
-  "dependencies": {
-    "mysql2": "^3.22.0",          // REMOVE
-    "pg": "^8.13.0",              // ADD
-    // Everything else stays
+```javascript
+// Inside food.repository.js — new method
+export async function batchLogItems(userId, items) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const logged = [];
+    for (const item of items) {
+      const { rows } = await client.query(
+        `INSERT INTO food_logs (...)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [userId, ...]
+      );
+      logged.push(rows[0]);
+    }
+    await client.query('COMMIT');
+    return logged;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
   }
 }
 ```
 
-**Install command:**
-```bash
-cd backend
-npm uninstall mysql2
-npm install pg
-```
-
-## Alternatives Considered
-
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| DB Driver | pg | pg-promise | Extra abstraction not needed; pg is simpler |
-| DB Driver | pg | Supabase JS client | Client-side API doesn't map to repository pattern; RLS not needed for server-side |
-| DB Driver | pg | Prisma | ORM overhead for 4 simple repos; would double migration work |
-| Static Serving | Express.static() | nginx reverse proxy | nginx adds process manager complexity; Express is adequate for low traffic |
-| Static Serving | Express.static() | Caddy | Same argument as nginx — unnecessary complexity |
-| Container Setup | Single container | Keep 2 containers | Extra complexity for deployment; no benefit at this scale |
-| Connection Pooling | Supavisor (managed) | PgBouncer (self-hosted) | Supavisor is built into Supabase; no extra infrastructure to manage |
-
-## Package Installation
-
-```bash
-# Backend — replace mysql2 with pg
-cd backend
-npm uninstall mysql2
-npm install pg
-
-# No changes needed to frontend
-```
-
-## Environment Variables (New)
-
-```bash
-# Supabase connection (via Supavisor pooler — port 6543)
-DATABASE_URL=postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
-
-# Direct connection for migrations (port 5432)
-SUPABASE_DIRECT_URL=postgresql://postgres.[ref]:[password]@db.[ref].supabase.co:5432/postgres
-
-# Supabase project meta (optional, for future use)
-SUPABASE_URL=https://[ref].supabase.co
-
-# Removed
-# DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME (all replaced by DATABASE_URL)
-```
-
 ## Sources
 
-- **pg (node-postgres) docs**: https://node-postgres.com/ — Pool API, query syntax, SSL — **HIGH confidence**
-- **Supabase connection docs**: https://supabase.com/docs/guides/database/connecting-to-postgres — Connection string formats, port selection — **HIGH confidence**
-- **Supabase SSL enforcement**: https://supabase.com/docs/guides/platform/ssl-enforcement — SSL modes, CA cert — **HIGH confidence**
-- **Supavisor (Supabase pooler)**: https://supabase.com/docs/guides/database/supavisor — Transaction vs session mode — **HIGH confidence**
-- **PostgreSQL error codes**: https://www.postgresql.org/docs/current/errcodes-appendix.html — Official error code reference — **HIGH confidence**
+- **Existing codebase files** — HIGH confidence
+- **OpenRouter structured outputs docs** — https://openrouter.ai/docs/guides/features/structured-outputs — HIGH confidence
+- **OpenRouter rate limiting** — https://openrouter.ai/docs/guides/limits — HIGH confidence

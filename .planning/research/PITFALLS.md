@@ -1,213 +1,182 @@
-# Domain Pitfalls: Supabase Migration & Single-Container Deployment
+# Domain Pitfalls — LLM Food Recommendations
 
-**Domain:** Database migration (MySQL→PostgreSQL) + Infrastructure consolidation
-**Researched:** 2026-05-27
+**Domain:** Fitness App — LLM-Powered Meal Planning & Logging
+**Researched:** 2026-05-31
 
 ## Critical Pitfalls
 
-Mistakes that cause runtime failures or data loss.
+Mistakes that cause rewrites or major issues.
 
-### Pitfall 1: Uncaught MySQL-Specific Query Patterns in Repository Files
+### Pitfall 1: LLM Hallucinates Food Names Not in Database
 
-**What goes wrong:** A query written in MySQL syntax runs against PostgreSQL and throws a database error, or silently returns wrong results.
+**What goes wrong:** The LLM generates meal items with ingredient names that don't exist in the `foods` table. "Grilled chicken breast with quinoa and roasted vegetables" — quinoa is not in the seeded DB. The validation rejects these, the correction prompt may fail too, and the fallback fires unnecessarily.
 
-**Why it happens:** The 4 repository files use MySQL-specific functions and syntax. A developer may miss some during translation.
+**Why it happens:** Free-tier LLMs have strong culinary training. When you say "use ONLY these 202 ingredients," the model still wants to suggest complete recipes. It's fighting its training.
 
-**Consequences:** Runtime errors in production; certain API endpoints fail intermittently.
-
-**Prevention — Comprehensive grep for these patterns BEFORE rewriting:**
-
-| Pattern | Files to Check | MySQL | PostgreSQL |
-|---------|---------------|-------|-----------|
-| `?` placeholders | All 4 repos + tests | `WHERE id = ?` | `WHERE id = $1` |
-| `[rows]` destructuring | All 4 repos | `const [rows] = ...` | `const result = ...; result.rows` |
-| `LAST_INSERT_ID()` | user, profile, food repos | Two-query pattern | Single query with `RETURNING *` |
-| `ER_DUP_ENTRY` | user, profile, food repos | MySQL error code | PostgreSQL error code `'23505'` |
-| `DATE_SUB(CURDATE(), INTERVAL ? DAY)` | food.repository.js | Date subtraction | `CURRENT_DATE - $1::INTERVAL` |
-| `JSON_OVERLAPS(...)` | activity.repository.js | JSON array overlap | `?|` operator or `&&` on text array |
-| `NOW()` | profile, user repos | Same | Same (survives unchanged) |
-| `CURDATE()` | food.repository.js | Current date | `CURRENT_DATE` |
-| `ORDER BY RAND()` | activity.repository.js | Random sort | `ORDER BY RANDOM()` |
-| `LIMIT 1` | All repos | Same | Same (identical syntax) |
-
-**Detection:** Run `rg "INTERVAL|LAST_INSERT_ID|JSON_OVERLAPS|CURDATE|ORDER BY RAND|ER_DUP_ENTRY" backend/src/` before migration.
-
-### Pitfall 2: Supabase Free Tier Connection Pool Exhaustion
-
-**What goes wrong:** Application gets "too many connections" errors and stops working.
-
-**Why it happens:** Supabase free tier limits Supavisor to 15 pooled connections. The pg Pool default (`max: 10`) may not exhaust it with a single Express instance, but if multiple app instances run (or if connections leak), the limit is hit quickly.
-
-**Consequences:** Complete application outage until connections are recycled. New users cannot log in or use features.
+**Consequences:** High rejection rate → constant fallback plans → users never see real LLM-generated plans. Feature appears broken.
 
 **Prevention:**
-- Set pg Pool `max: 5` — more than enough for an Express app with ~1 RPS
-- Set `idleTimeoutMillis: 30000` — release idle connections after 30s
-- Set `connectionTimeoutMillis: 5000` — fail fast if pool is exhausted
-- Monitor via Supabase dashboard → Database → `pg_stat_activity`
+1. **Prompt engineering:** Put the constraint early and aggressively. Use delimiters:
+   ```
+   CRITICAL: You MUST select ingredients ONLY from the list below.
+   Any ingredient not in this list will be REJECTED.
+   ```
+2. **Few-shot examples** in the prompt showing the exact input→output mapping
+3. **Fuzzy matching post-processing** — the `validateAndFixMealPlan()` function must handle:
+   - Exact match → ✓
+   - Case-insensitive match → ✓  
+   - Substring match (LLM says "chicken" but DB has "chicken breast") → fix with warning
+   - Levenshtein distance ≤ 3 → fix with warning
+   - No match → REMOVE the item, don't fail the whole plan
+4. **Graceful degradation:** If 10% of items don't match, remove them and recalculate daily total. Return the plan with warnings rather than falling back entirely.
 
-**Detection:** `SELECT * FROM pg_stat_activity WHERE state = 'idle';` — if this shows many connections, pool is too large or connections leak.
+**Detection:**
+- Monitor `fuzzyMatchFoodName()` logs for match type distribution
+- Track percentage of LLM-suggested items that require fuzzy matching vs exact match
 
-### Pitfall 3: pg Returns Numeric Values as Strings
+### Pitfall 2: Calorie Miscalculation From LLM vs Server
 
-**What goes wrong:** Sum, count, or decimal values come back as strings instead of numbers. Frontend that expects `total: 1200` gets `total: "1200"`.
+**What goes wrong:** The LLM computes calories incorrectly. It might: (a) calculate `(cal_per_100g × portion) / 100` wrong, (b) use wrong cal_per_100g value, (c) forget to round.
 
-**Why it happens:** PostgreSQL's binary protocol returns numeric types (DECIMAL, NUMERIC, BIGINT) as strings by default in `pg` to avoid precision loss. MySQL's client library returns them as numbers.
+**Why it happens:** LLMs are bad at arithmetic, especially with many items across 7 days.
 
-**Consequences:** Type errors in frontend; progress bars showing wrong values; comparing `total < 1200` returning `true` for `"900" < 1200` (string comparison).
+**Consequences:** Daily totals displayed to users don't match what gets logged. One-click log inserts wrong calorie values into food_logs.
 
-**Affected queries in food.repository.js:**
-```javascript
-// Line 116 — SUM(calories)
-const result = await pool.query(
-  'SELECT COALESCE(SUM(calories), 0) as total FROM food_logs WHERE ...'
-);
-// result.rows[0].total is a STRING like "1200"
-```
+**Prevention:**
+1. **Server-authoritative calorie calculation** — LLM suggests portions, server recalculates calories:
+   ```javascript
+   // In validateAndFixMealPlan, for each item:
+   const food = dbFoods.find(f => f.id === item.food_id);
+   const serverCalories = Math.round((food.calories_per_100g * item.portion_grams) / 100);
+   // If discrepancy > 10%, log warning and use server value
+   if (Math.abs(item.calories - serverCalories) > 20) {
+     item.calories = serverCalories;
+   }
+   ```
+2. **Prompt the LLM to include calories as guidance only** — tell it the server will recalculate
+3. **Validate total daily calories against target** — use server recalculated values, not LLM values
 
-**Prevention:** Wrap all aggregate values with `Number()`:
-```javascript
-const totalCalories = Number(result.rows[0].total);
-```
+### Pitfall 3: Transaction Failure Mid-Batch Log
 
-**Detection:** Check all queries that use `SUM()`, `COUNT()`, or return `DECIMAL` columns. In the current schema: `weight_kg`, `height_cm` (DECIMAL), `SUM(calories)`, `COUNT(*)`.
+**What goes wrong:** The one-click log endpoint inserts 8 food_log rows. Row 5 fails (FK constraint). Rows 1-4 are already committed. User sees partial log and inconsistent state.
 
-### Pitfall 4: Google OAuth Redirect URI Mismatch After Single-Container Deployment
+**Why it happens:** Without transaction wrapping, each INSERT is auto-committed by PostgreSQL.
 
-**What goes wrong:** Google OAuth login flow breaks with "redirect_uri_mismatch" error.
+**Consequences:** Corrupted food log — some meals logged, some not. Calorie summary wrong.
 
-**Why it happens:** The backend's Google OAuth callback is at `/api/auth/google/callback`. When frontend and backend are on the same origin (port 3001), the callback URL changes from `http://localhost:5173/api/auth/google/callback` (via Vite proxy) to `http://localhost:3001/api/auth/google/callback` (direct). Google Cloud Console has the old URI registered.
+**Prevention:**
+1. **Always use BEGIN/COMMIT/ROLLBACK** for batch logging:
+   ```javascript
+   const client = await pool.connect();
+   try {
+     await client.query('BEGIN');
+     // ... all inserts ...
+     await client.query('COMMIT');
+   } catch (err) {
+     await client.query('ROLLBACK');
+     throw err;
+   } finally {
+     client.release();
+   }
+   ```
+2. **Don't mark items as "logged" in plan_data until after COMMIT**
+3. **Idempotency**: If the same request is sent twice (frontend retry), skip already-logged items
 
-**Consequences:** Users cannot log in with Google OAuth. Regular email/password login still works.
+### Pitfall 4: Prompt Token Overflow With 200+ Ingredients
 
-**Prevention:** Update the Google Cloud Console → APIs & Services → Credentials → Authorized redirect URIs to include the new callback URL.
+**What goes wrong:** The full food list + user profile + instructions + few-shot examples exceeds the free-tier model's context window. The LLM truncates the input silently, losing ingredients or instructions.
 
-**Current redirect URI:** `http://localhost:5173/api/auth/google/callback`
-**New redirect URI:** `http://localhost:3001/api/auth/google/callback`
+**Why it happens:** 200 foods × ~60 chars each = ~12K chars. Plus profile (500), instructions (2K), format spec (1K), correction history (1K) = ~17K chars ≈ 4-5K tokens. Free models like `nvidia/nemotron-3-nano` may have 4K-8K context limits.
 
-(Or just add both during transition.)
+**Consequences:** LLM doesn't see all ingredients, recommends from partial list. Or ignores constraints.
 
-### Pitfall 5: Supavisor Transaction Mode Limitation with Session-Level Features
-
-**What goes wrong:** Prepared statements or session variables fail silently or throw errors.
-
-**Why it happens:** Supavisor (port 6543) operates in transaction mode by default. This means connections are released back to the pool after each transaction. Features that require session persistence (prepared statements, `LISTEN/NOTIFY`, session variables, advisory locks) don't work in this mode.
-
-**Consequences:** Runtime errors if code uses prepared statements. The current codebase uses `pool.query(text, values)` — which sends unnamed queries (not prepared statements) — so this should NOT be affected. But if future code adds prepared statements, they will fail.
-
-**Prevention:** 
-- Continue using `pool.query(text, values)` (unnamed queries) — **no change needed**
-- NEVER add `pool.connect()` + `client.query()` pattern for prepared statements
-- If prepared statements are absolutely needed, use direct connection (port 5432) instead of pooled (port 6543)
-
-**Detection:** Any code that uses `{ name: 'myQuery', text: '...' }` pattern with `pg` will break.
-
----
+**Prevention:**
+1. **Check model context limits** via OpenRouter model API before sending
+2. **Truncate food list** — don't send 200 ingredients. Strategy:
+   - Send ALL seeded foods by category, but limit to longest 150 if needed
+   - Always include user's custom foods (they added them, likely to use them)
+   - Track token count of prompt, truncate food list if over threshold
+3. **Consider using `openai/gpt-4o-mini`** (128K context) for meal plans specifically, falling back to free model for regular use
+4. **Fewer examples** — use one example day instead of a full week
+5. **Monitor token usage** — log prompt_tokens and completion_tokens from OpenRouter response
 
 ## Moderate Pitfalls
 
-### Pitfall 1: `updated_at` Column Not Auto-Updating
+### Pitfall 5: Rate Limiting Blocks Legitimate Use
 
-**What goes wrong:** The `updated_at` column in `users` and `profiles` tables stops updating on row modification.
+**What goes wrong:** User generates a meal plan for the week, then wants to change one day. The regenerate-day rate limiter (3/30min) counts against the same user. But the user also wants to log meals — the log-day endpoint hits a different limiter (30/15min).
 
-**Why it happens:** MySQL's `ON UPDATE CURRENT_TIMESTAMP` is a column-level feature. PostgreSQL has no equivalent — it requires a trigger function.
+**Why it happens:** Multiple rate limiters per user without coordination.
 
-**Prevention:** Create a PL/pgSQL trigger:
-```sql
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+**Prevention:**
+- Keep rate limiters separate (generate: 5/15min, regenerate: 3/30min, log-day: 30/15min)
+- Clear cache on rate limit hit so next valid request works fresh
+- Frontend shows clear countdown timers (reuse RateLimitedButton)
 
-CREATE TRIGGER update_users_updated_at
-  BEFORE UPDATE ON users
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-```
+### Pitfall 6: "Log This Day" Duplicates Entries
 
-**Detection:** After migration, check if `updated_at` changes after an UPDATE query.
+**What goes wrong:** User clicks "Log This Day," it succeeds but the UI doesn't update. User clicks again. Now food_logs has duplicate entries for the same meal items.
 
-### Pitfall 2: CORS Configuration Breaking After Same-Origin Deployment
+**Why it happens:** Race condition between UI update and server-side idempotency check.
 
-**What goes wrong:** Frontend running on same origin as backend still has restrictive CORS settings that block requests.
+**Prevention:**
+1. **Mark items as `logged: true` in plan_data immediately after successful COMMIT**
+2. **Server-side idempotency check** — skip items where `logged = true` in plan_data
+3. **Return `already_logged` count** in response so frontend can show "3 items already logged"
+4. **Frontend disables the button after first successful click** (immediate state update before server response)
 
-**Why it happens:** Production uses same-origin (port 3001 serves both frontend and backend), so CORS is not needed. But if CORS middleware is still configured with a specific origin (e.g., `http://localhost:5173`), it shouldn't cause issues for same-origin requests (same-origin bypasses CORS entirely). However, the configuration may be confusing.
+### Pitfall 7: Dietary Restriction Blindness
 
-**Prevention:** In production mode (`NODE_ENV=production`), either:
-- Set `origin: true` (echo request origin) — safe for same-origin
-- Or set `origin: process.env.FRONTEND_URL || 'http://localhost:3001'`
-- Keep existing config for development (Vite proxy handles cross-origin)
+**What goes wrong:** The LLM recommends steak for a vegetarian user, or milk for a lactose-intolerant user. The app has no data about dietary restrictions so it can't prevent this.
 
-**No action strictly required** — existing CORS config will work for same-origin. Just ensure `FRONTEND_URL` env var points to the correct origin.
+**Why it happens:** The `profiles` table has `fitness_goal` but no dietary restrictions field. The app doesn't track allergies or preferences.
 
-### Pitfall 3: Docker Image Size Bloat
+**Prevention:**
+- Document this as a known limitation in the feature
+- The prompt can instruct meal diversity (different proteins each day) to avoid monotony
+- Don't add dietary restriction fields to profiles in this milestone — scope creep
+- If user custom-foods are all vegetables, the LLM will naturally select from their available pool
 
-**What goes wrong:** Final Docker image is 1.5+ GB instead of ~200MB.
+### Pitfall 8: Free-Tier Model Quality Degradation
 
-**Why it happens:** Without multi-stage build, the production image includes Node.js build toolchain, dev dependencies, and source files.
+**What goes wrong:** The free-tier OpenRouter model (`nvidia/nemotron-3-nano-30b-a3b:free`) generates low-quality meal plans — same meals every day, unrealistic combinations, ignores constraints.
 
-**Prevention:** Use multi-stage build:
-- Stage 1 (builder): `node:20-alpine`, install all deps, build frontend via Vite
-- Stage 2 (runtime): `node:20-alpine`, install only production deps, copy built assets
+**Why it happens:** Free models have reduced capability. This is the existing constraint (same model used for activity plans).
 
-Expected sizes: ~180MB (multi-stage) vs ~1.2GB (single-stage).
-
-**Detection:** `docker images` — if image > 500MB, multi-stage is not working correctly.
-
-### Pitfall 4: ENUM Column Behavior Difference
-
-**What goes wrong:** MySQL ENUM columns store invalid values as `''` (empty string) silently. PostgreSQL rejects them with an error.
-
-**Why it happens:** MySQL's ENUM is permissive by default; PostgreSQL's is strict. The CHECK constraint approach (recommended) will also reject invalid values.
-
-**Prevention:** Use `VARCHAR` with `CHECK` constraint instead of native PostgreSQL ENUM. This preserves the validation behavior while being more flexible. Ensure all application code only sends valid enum values.
-
-**Columns affected:** `gender`, `fitness_goal`, `activity_level`, `meal_type`, `category`
-
----
+**Prevention:**
+- The correction prompt loop catches structural issues (wrong dates, wrong meal types) but cannot fix "tastyness"
+- Document model limitation — users can set `LLM_MODEL` env var to a paid model for better quality
+- Fallback plan is at least nutritionally reasonable (template-based category distribution)
 
 ## Minor Pitfalls
 
-### Pitfall 1: Case Sensitivity in Object Properties
+### Pitfall 9: Timezone Mismatch on Meal Dates
 
-**What goes wrong:** PostgreSQL returns column names as-is (lowercase by default), which matches MySQL behavior, so this should be fine. But if queries use mixed-case aliases, behavior differs.
+Meal dates are stored as `DATE` (no timezone). User in UTC+14 generates a plan on their Monday. Server in UTC sees Sunday. The `getMonday()` function uses local time.
 
-**Prevention:** Keep column names lowercase with underscores (`snake_case`), matching current convention.
+**Prevention:** Use the same `getMonday()` pattern from weeklyPlan.controller.js. All date logic is server-side. The weekStart is passed explicitly by the frontend or computed server-side.
 
-### Pitfall 2: Seed Data Execution Timeout in Supabase SQL Editor
+### Pitfall 10: Large Plan Data in JSONB
 
-**What goes wrong:** Inserting 200+ food rows in a single INSERT statement times out or exceeds the query size limit.
-
-**Prevention:** Split seed data into batches of 25-50 rows per INSERT, or use the Supabase dashboard's "Import from CSV" feature.
-
-### Pitfall 3: Docker Compose Named Volume for Database No Longer Needed
-
-**What goes wrong:** The `mysql_data` volume definition remains in `docker-compose.yml` and creates an orphaned volume.
-
-**Prevention:** Remove the `volumes:` section from `docker-compose.yml` entirely (or keep empty for future use). Remove dangling volume: `docker volume rm fitness_app_mysql_data`.
-
----
+7 days × 4 meals × up to 4 items + metadata = ~200+ JSON nodes stored per week. Over years of regeneration, the DB stores many rows. But at 1 plan/user/week, this is 52 rows/year/user. At 1000 users = 52K rows. JSONB handles this fine — no migration needed.
 
 ## Phase-Specific Warnings
 
-| Phase | Likely Pitfall | Mitigation |
-|-------|---------------|------------|
-| **Phase 1: Supabase Setup** | Connection string port selection (5432 vs 6543) | Use 6543 (pooled) for app traffic; 5432 (direct) for migrations only |
-| **Phase 1: Schema Migration** | PostgreSQL ENUM vs MySQL ENUM difference | Use VARCHAR + CHECK instead of native ENUM |
-| **Phase 2: Query Rewrite** | Missed MySQL-specific patterns (`LAST_INSERT_ID`, `JSON_OVERLAPS`) | Run comprehensive grep BEFORE changing any file |
-| **Phase 2: Query Rewrite** | `ER_DUP_ENTRY` error code not updated | Replace with `'23505'` in all repository files |
-| **Phase 2: Query Rewrite** | `[rows]` destructuring still used with pg | All 4 repos must use `result.rows` pattern |
-| **Phase 3: Docker Restructure** | `express.static()` path wrong in production | Use `path.join(__dirname, '../../dist')` from `backend/src/app.js` |
-| **Phase 3: Docker Restructure** | Vite proxy still pointing to `localhost:3001` in production | Vite proxy is development-only; production uses same-origin |
-| **Phase 4: Testing** | Integration tests fail because Supabase connection not configured for test env | Add `DATABASE_URL` to test env; or use `pg-mem` for in-memory testing |
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| Prompt engineering | Hallucinated food names (#1) | Aggressive constraint language + fuzzy matching with item removal (not plan failure) |
+| Meal plan generation | Token overflow with food list (#4) | Measure + truncate food list if needed; prefer models with 8K+ context |
+| Calorie calculation | LLM arithmetic errors (#2) | Server-authoritative recalculation always overrides LLM values |
+| Batch log endpoint | Transaction failures (#3) | Explicit BEGIN/COMMIT/ROLLBACK with client connection |
+| One-click log UX | Double-logging (#6) | Server-side idempotency + immediate frontend state update |
+| Model quality | Low-quality free-tier output (#8) | Document limitation; correction loop; template fallback |
+| Rate limiting | Legitimate use blocked (#5) | Separate limiters per endpoint; clear countdown UX |
 
 ## Sources
 
-- **Supabase connection pool limits**: https://supabase.com/docs/guides/database/connection-pooling — Free tier: 15 pooled connections — **HIGH confidence**
-- **PostgreSQL error codes**: https://www.postgresql.org/docs/current/errcodes-appendix.html — `23505` for unique_violation — **HIGH confidence**
-- **pg numerics as strings**: https://github.com/brianc/node-postgres/issues/811 — Known behavior: DECIMAL/NUMERIC returned as strings — **HIGH confidence**
-- **Supavisor transaction mode limitations**: https://supabase.com/docs/guides/database/supavisor — Prepared statements, LISTEN/NOTIFY limitations — **HIGH confidence**
-- **PostgreSQL updated_at trigger pattern**: https://x-team.com/blog/automatic-timestamps-with-postgresql/ — Standard PL/pgSQL trigger — **MEDIUM confidence**
-- **Docker multi-stage build best practices**: https://docs.docker.com/build/building/multi-stage/ — Official Docker guide — **HIGH confidence**
+- **Existing llm.service.js:** Fuzzy matching, fallback, retry patterns — HIGH confidence
+- **Existing weeklyPlanRateLimiter.js:** Rate limiting patterns — HIGH confidence
+- **Existing food.controller.js:** Validation, calorie calculation patterns — HIGH confidence
+- **OpenRouter context limits:** https://openrouter.ai/docs/models — MEDIUM confidence (model-specific)
+- **PostgreSQL transaction docs:** https://www.postgresql.org/docs/17/tutorial-transactions.html — HIGH confidence
+- **NutriGen CALCULATION approach:** https://arxiv.org/html/2502.20601v1 — MEDIUM confidence
