@@ -1,54 +1,61 @@
 import { describe, test, expect } from 'vitest';
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const componentPath = join(__dirname, '..', 'ActivitySummary.jsx');
-
-const content = readFileSync(componentPath, 'utf8');
+import { render, screen } from '@testing-library/react';
+import ActivitySummary from '../ActivitySummary.jsx';
 
 describe('ActivitySummary', () => {
-  test('exports a default function', () => {
-    expect(content.includes('export default function ActivitySummary')).toBe(true);
+  test('returns null when summary is null', () => {
+    const { container } = render(<ActivitySummary summary={null} />);
+    expect(container.innerHTML).toBe('');
+  });
+
+  test('returns null when summary is undefined', () => {
+    const { container } = render(<ActivitySummary />);
+    expect(container.innerHTML).toBe('');
   });
 
   test('renders "Activity Summary" heading', () => {
-    expect(content.includes("'Activity Summary'")).toBe(true);
-  });
-
-  test('renders active minutes, burned, consumed, target', () => {
-    expect(content.includes("'Active Minutes'")).toBe(true);
-    expect(content.includes("'Burned'")).toBe(true);
-    expect(content.includes("'Consumed'")).toBe(true);
-    expect(content.includes("'Target'")).toBe(true);
+    const summary = { totalActiveMinutes: 0, totalCaloriesBurned: 0, totalConsumed: 0, calorieTarget: 2000, netCalories: 0, netVsTarget: null };
+    render(<ActivitySummary summary={summary} />);
+    expect(screen.getByText('Activity Summary')).toBeInTheDocument();
   });
 
   test('renders "No activity logged today" when all zeros', () => {
-    expect(content.includes("'No activity logged today'")).toBe(true);
+    const summary = { totalActiveMinutes: 0, totalCaloriesBurned: 0, totalConsumed: 0, calorieTarget: 2000, netCalories: 0, netVsTarget: null };
+    render(<ActivitySummary summary={summary} />);
+    expect(screen.getByText('No activity logged today')).toBeInTheDocument();
   });
 
-  test('renders net calorie labels: surplus, deficit, on track', () => {
-    expect(content.includes('Surplus')).toBe(true);
-    expect(content.includes('Deficit')).toBe(true);
-    expect(content.includes('On track')).toBe(true);
+  test('renders active minutes and burned when activity exists', () => {
+    const summary = { totalActiveMinutes: 30, totalCaloriesBurned: 300, totalConsumed: 500, calorieTarget: 2000, netCalories: 200, netVsTarget: -1500 };
+    render(<ActivitySummary summary={summary} />);
+    expect(screen.getByText('Active Minutes')).toBeInTheDocument();
+    expect(screen.getByText('Burned')).toBeInTheDocument();
+    expect(screen.getByText('Consumed')).toBeInTheDocument();
+    expect(screen.getByText('Target')).toBeInTheDocument();
   });
 
-  test('renders positive net calories with red (#dc2626)', () => {
-    expect(content.includes("'#dc2626'")).toBe(true);
+  test('renders "On track" when netVsTarget is 0', () => {
+    const summary = { totalActiveMinutes: 30, totalCaloriesBurned: 300, totalConsumed: 500, calorieTarget: 2000, netCalories: 200, netVsTarget: 0 };
+    render(<ActivitySummary summary={summary} />);
+    expect(screen.getByText(/On track/)).toBeInTheDocument();
   });
 
-  test('renders negative net calories with green (#16a34a)', () => {
-    expect(content.includes("'#16a34a'")).toBe(true);
+  test('renders "Surplus" when netVsTarget is positive', () => {
+    const summary = { totalActiveMinutes: 30, totalCaloriesBurned: 300, totalConsumed: 2500, calorieTarget: 2000, netCalories: 2200, netVsTarget: 200 };
+    render(<ActivitySummary summary={summary} />);
+    expect(screen.getByText(/Surplus/)).toBeInTheDocument();
   });
 
-  test('background color changes based on netVsTarget', () => {
-    expect(content.includes("'#fef2f2'")).toBe(true);
-    expect(content.includes("'#f0fdf4'")).toBe(true);
+  test('renders "Deficit" when netVsTarget is negative', () => {
+    const summary = { totalActiveMinutes: 30, totalCaloriesBurned: 300, totalConsumed: 1500, calorieTarget: 2000, netCalories: 1200, netVsTarget: -800 };
+    render(<ActivitySummary summary={summary} />);
+    expect(screen.getByText(/Deficit/)).toBeInTheDocument();
   });
 
-  test('returns null when summary is null', () => {
-    expect(content.includes("return null")).toBe(true);
+  test('shows net calories value', () => {
+    const summary = { totalActiveMinutes: 30, totalCaloriesBurned: 300, totalConsumed: 1500, calorieTarget: 2000, netCalories: 1200, netVsTarget: -800 };
+    render(<ActivitySummary summary={summary} />);
+    expect(screen.getByText(/Net/)).toBeInTheDocument();
+    expect(screen.getByText(/1200/)).toBeInTheDocument();
   });
 });

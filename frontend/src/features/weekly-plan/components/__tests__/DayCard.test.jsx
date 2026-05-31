@@ -1,46 +1,59 @@
 import { describe, test, expect } from 'vitest';
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { render, screen, fireEvent } from '@testing-library/react';
+import DayCard from '../DayCard.jsx';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const componentPath = join(__dirname, '..', 'DayCard.jsx');
-
-const content = readFileSync(componentPath, 'utf8');
+const mockDay = {
+  date: '2026-01-05',
+  activities: [
+    { activity_id: 1, name: 'Running', duration_min: 30, intensity: 'moderate' },
+    { activity_id: 2, name: 'Yoga', duration_min: 45, intensity: 'light' },
+  ],
+};
 
 describe('DayCard', () => {
-  test('exports a default function', () => {
-    expect(content.includes('export default function DayCard')).toBe(true);
+  test('renders day header with formatted date', () => {
+    render(<DayCard day={mockDay} />);
+    expect(screen.getByText('Monday, January 5')).toBeInTheDocument();
   });
 
-  test('imports DayActivityRow and RateLimitedButton', () => {
-    expect(content.includes("from './DayActivityRow.jsx'")).toBe(true);
-    expect(content.includes("from './RateLimitedButton.jsx'")).toBe(true);
+  test('renders activity count and total minutes in collapsed state', () => {
+    render(<DayCard day={mockDay} />);
+    expect(screen.getByText(/2 activities/)).toBeInTheDocument();
+    expect(screen.getByText(/75min total/)).toBeInTheDocument();
   });
 
-  test('uses clickable header', () => {
-    expect(content.includes('onClick')).toBe(true);
-    expect(content.includes("'pointer'")).toBe(true);
+  test('shows expand arrow (▼) when collapsed', () => {
+    render(<DayCard day={mockDay} />);
+    expect(screen.getByText('▼')).toBeInTheDocument();
   });
 
-  test('renders day.date via formatDayHeader', () => {
-    expect(content.includes('toLocaleDateString')).toBe(true);
+  test('toggles expand/collapse on header click', () => {
+    render(<DayCard day={mockDay} />);
+    const header = screen.getByText('Monday, January 5').closest('div');
+    fireEvent.click(header);
+    expect(screen.getByText('▲')).toBeInTheDocument();
+    expect(screen.queryByText('▼')).not.toBeInTheDocument();
+    expect(screen.getByText('Running')).toBeInTheDocument();
   });
 
-  test('renders activities and total minutes text', () => {
-    expect(content.includes("'activities'")).toBe(true);
-    expect(content.includes('activities')).toBe(true);
-    expect(content.includes('min total')).toBe(true);
+  test('shows "No activities scheduled" when day has no activities', () => {
+    const emptyDay = { date: '2026-01-06', activities: [] };
+    render(<DayCard day={emptyDay} />);
+    const header = screen.getByText(/Tuesday, January 6/);
+    fireEvent.click(header);
+    expect(screen.getByText('No activities scheduled for this day')).toBeInTheDocument();
   });
 
-  test('conditionally renders expand/collapse characters', () => {
-    expect(content.includes("'▲'")).toBe(true);
-    expect(content.includes("'▼'")).toBe(true);
+  test('renders Regenerate Day button inside expanded section', () => {
+    render(<DayCard day={mockDay} />);
+    const header = screen.getByText('Monday, January 5').closest('div');
+    fireEvent.click(header);
+    expect(screen.getByText('Regenerate Day')).toBeInTheDocument();
   });
 
-  test('regenerate button is inside expanded section', () => {
-    expect(content.includes('RateLimitedButton')).toBe(true);
-    expect(content.includes("'Regenerate Day'")).toBe(true);
+  test('shows correct activity count grammar for single activity', () => {
+    const singleDay = { date: '2026-01-06', activities: [{ activity_id: 1, name: 'Running', duration_min: 30, intensity: 'moderate' }] };
+    render(<DayCard day={singleDay} />);
+    expect(screen.getByText(/1 activity/)).toBeInTheDocument();
   });
 });

@@ -1,49 +1,46 @@
-import { describe, test, expect } from 'vitest';
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const componentPath = join(__dirname, '..', 'RateLimitedButton.jsx');
-
-const content = readFileSync(componentPath, 'utf8');
+import { describe, test, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import RateLimitedButton from '../RateLimitedButton.jsx';
 
 describe('RateLimitedButton', () => {
-  test('exports a default function', () => {
-    expect(content.includes('export default function RateLimitedButton')).toBe(true);
-  });
-
-  test('imports useState, useEffect, useRef', () => {
-    expect(content.includes('useState')).toBe(true);
-    expect(content.includes('useEffect')).toBe(true);
-    expect(content.includes('useRef')).toBe(true);
-  });
-
-  test('uses countdown logic with setInterval/clearInterval', () => {
-    expect(content.includes('setInterval')).toBe(true);
-    expect(content.includes('clearInterval')).toBe(true);
-  });
-
   test('renders children text', () => {
-    expect(content.includes('children')).toBe(true);
+    render(<RateLimitedButton>Click Me</RateLimitedButton>);
+    expect(screen.getByText('Click Me')).toBeInTheDocument();
   });
 
-  test('shows "Wait" text during countdown via formatCountdown', () => {
-    expect(content.includes('`Wait ${formatCountdown(countdown)}`')).toBe(true);
-    expect(content.includes('formatCountdown')).toBe(true);
+  test('button is enabled by default', () => {
+    render(<RateLimitedButton>Click Me</RateLimitedButton>);
+    expect(screen.getByRole('button')).not.toBeDisabled();
   });
 
-  test('shows "Regenerating..." text when isLoading', () => {
-    expect(content.includes("'Regenerating...'")).toBe(true);
+  test('shows "Regenerating..." when isLoading is true', () => {
+    render(<RateLimitedButton isLoading={true}>Click Me</RateLimitedButton>);
+    expect(screen.getByText('Regenerating...')).toBeInTheDocument();
+    expect(screen.getByRole('button')).toBeDisabled();
   });
 
-  test('button is disabled when isLoading or isCountingDown', () => {
-    expect(content.includes('isLoading || isCountingDown')).toBe(true);
-    expect(content.includes('disabled')).toBe(true);
+  test('shows countdown when retryAfter is set', () => {
+    render(<RateLimitedButton retryAfter={65}>Click Me</RateLimitedButton>);
+    expect(screen.getByText(/Wait/)).toBeInTheDocument();
+    expect(screen.getByText(/1:05/)).toBeInTheDocument();
+    expect(screen.getByRole('button')).toBeDisabled();
   });
 
-  test('contains minHeight: 44px for accessibility', () => {
-    expect(content.includes("'44px'")).toBe(true);
+  test('calls onClick when button is clicked and not disabled', () => {
+    const onClick = vi.fn();
+    render(<RateLimitedButton onClick={onClick}>Click Me</RateLimitedButton>);
+    screen.getByText('Click Me').click();
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  test('does not call onClick when button is disabled due to loading', () => {
+    const onClick = vi.fn();
+    render(<RateLimitedButton onClick={onClick} isLoading={true}>Click Me</RateLimitedButton>);
+    expect(screen.getByRole('button')).toBeDisabled();
+  });
+
+  test('has minHeight 44px for accessibility', () => {
+    render(<RateLimitedButton>Click Me</RateLimitedButton>);
+    expect(screen.getByRole('button')).toHaveStyle('minHeight: 44px');
   });
 });

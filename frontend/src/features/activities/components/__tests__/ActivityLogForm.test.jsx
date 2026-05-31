@@ -1,67 +1,75 @@
-import { describe, test, expect } from 'vitest';
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { describe, test, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import ActivityLogForm from '../ActivityLogForm.jsx';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const componentPath = join(__dirname, '..', 'ActivityLogForm.jsx');
-
-const content = readFileSync(componentPath, 'utf8');
+const mockActivity = {
+  id: 1,
+  name: 'Running',
+  estimated_calories: 300,
+  duration_min: 30,
+};
 
 describe('ActivityLogForm', () => {
-  test('exports a default function', () => {
-    expect(content.includes('export default function ActivityLogForm')).toBe(true);
+  test('renders activity name in heading', () => {
+    render(<ActivityLogForm activity={mockActivity} onSubmit={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.getByText('Log Activity: Running')).toBeInTheDocument();
   });
 
-  test('renders "Log Activity" heading with activity name', () => {
-    expect(content.includes("'Log Activity'")).toBe(true);
-    expect(content.includes('activity.name')).toBe(true);
+  test('has duration input of type number', () => {
+    render(<ActivityLogForm activity={mockActivity} onSubmit={vi.fn()} onCancel={vi.fn()} />);
+    const input = screen.getByLabelText('Duration (minutes)');
+    expect(input).toHaveAttribute('type', 'number');
   });
 
-  test('imports calculateActivityCalories for preview', () => {
-    expect(content.includes('calculateActivityCalories')).toBe(true);
-  });
-
-  test('has duration input[type=number]', () => {
-    expect(content.includes("type=\"number\"")).toBe(true);
+  test('duration input has min=1 and max=1440', () => {
+    render(<ActivityLogForm activity={mockActivity} onSubmit={vi.fn()} onCancel={vi.fn()} />);
+    const input = screen.getByLabelText('Duration (minutes)');
+    expect(input).toHaveAttribute('min', '1');
+    expect(input).toHaveAttribute('max', '1440');
   });
 
   test('has intensity select element', () => {
-    expect(content.includes('<select')).toBe(true);
+    render(<ActivityLogForm activity={mockActivity} onSubmit={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.getByLabelText('Intensity')).toBeInTheDocument();
+    expect(screen.getByLabelText('Intensity').tagName).toBe('SELECT');
   });
 
-  test('has date input[type=date]', () => {
-    expect(content.includes("type=\"date\"")).toBe(true);
+  test('intensity options include Light, Moderate, Vigorous', () => {
+    render(<ActivityLogForm activity={mockActivity} onSubmit={vi.fn()} onCancel={vi.fn()} />);
+    const select = screen.getByLabelText('Intensity');
+    expect(select).toContainHTML('value="light"');
+    expect(select).toContainHTML('value="moderate"');
+    expect(select).toContainHTML('value="vigorous"');
   });
 
-  test('renders "Estimated calories burned" preview text', () => {
-    expect(content.includes("'Estimated calories burned'")).toBe(true);
+  test('has date input of type date', () => {
+    render(<ActivityLogForm activity={mockActivity} onSubmit={vi.fn()} onCancel={vi.fn()} />);
+    const input = screen.getByLabelText('Date');
+    expect(input).toHaveAttribute('type', 'date');
+  });
+
+  test('renders "Estimated calories burned" preview', () => {
+    render(<ActivityLogForm activity={mockActivity} onSubmit={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.getByText(/Estimated calories burned/)).toBeInTheDocument();
   });
 
   test('has "Log Activity" submit button and "Cancel" button', () => {
-    expect(content.includes("'Log Activity'")).toBe(true);
-    expect(content.includes("'Cancel'")).toBe(true);
+    render(<ActivityLogForm activity={mockActivity} onSubmit={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.getByText('Log Activity')).toBeInTheDocument();
+    expect(screen.getByText('Cancel')).toBeInTheDocument();
   });
 
-  test('submit button is disabled when submitting', () => {
-    expect(content.includes('submitting')).toBe(true);
-    expect(content.includes('disabled')).toBe(true);
+  test('calls onSubmit when form is submitted', () => {
+    const onSubmit = vi.fn();
+    render(<ActivityLogForm activity={mockActivity} onSubmit={onSubmit} onCancel={vi.fn()} />);
+    fireEvent.click(screen.getByText('Log Activity'));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
-  test('form has onSubmit handler that calls preventDefault', () => {
-    expect(content.includes('onSubmit')).toBe(true);
-    expect(content.includes('preventDefault')).toBe(true);
-  });
-
-  test('duration validation includes min=1, max=1440', () => {
-    expect(content.includes('min="1"')).toBe(true);
-    expect(content.includes('max="1440"')).toBe(true);
-  });
-
-  test('intensity options include light, moderate, vigorous', () => {
-    expect(content.includes('"light"')).toBe(true);
-    expect(content.includes('"moderate"')).toBe(true);
-    expect(content.includes('"vigorous"')).toBe(true);
+  test('calls onCancel when Cancel is clicked', () => {
+    const onCancel = vi.fn();
+    render(<ActivityLogForm activity={mockActivity} onSubmit={vi.fn()} onCancel={onCancel} />);
+    fireEvent.click(screen.getByText('Cancel'));
+    expect(onCancel).toHaveBeenCalledTimes(1);
   });
 });

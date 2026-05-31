@@ -1,42 +1,43 @@
-import { describe, test, expect } from 'vitest';
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const componentPath = join(__dirname, '..', 'EmptyStatePlan.jsx');
-
-const content = readFileSync(componentPath, 'utf8');
+import { describe, test, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import EmptyStatePlan from '../EmptyStatePlan.jsx';
 
 describe('EmptyStatePlan', () => {
-  test('exports a default function', () => {
-    expect(content.includes('export default function EmptyStatePlan')).toBe(true);
-  });
-
   test('renders "No Weekly Plan Yet" heading', () => {
-    expect(content.includes("'No Weekly Plan Yet'")).toBe(true);
+    render(<EmptyStatePlan />);
+    expect(screen.getByText('No Weekly Plan Yet')).toBeInTheDocument();
   });
 
   test('renders "Generate My Weekly Plan" button', () => {
-    expect(content.includes("'Generate My Weekly Plan'")).toBe(true);
+    render(<EmptyStatePlan />);
+    expect(screen.getByText('Generate My Weekly Plan')).toBeInTheDocument();
+  });
+
+  test('calls onGenerate when button is clicked', () => {
+    const onGenerate = vi.fn();
+    render(<EmptyStatePlan onGenerate={onGenerate} />);
+    fireEvent.click(screen.getByText('Generate My Weekly Plan'));
+    expect(onGenerate).toHaveBeenCalledTimes(1);
   });
 
   test('button is disabled when isGenerating is true', () => {
-    expect(content.includes('isGenerating')).toBe(true);
-    expect(content.includes('disabled')).toBe(true);
+    render(<EmptyStatePlan isGenerating={true} />);
+    expect(screen.getByRole('button')).toBeDisabled();
   });
 
   test('shows "Generating your plan..." when isGenerating', () => {
-    expect(content.includes("'Generating your plan...'")).toBe(true);
+    render(<EmptyStatePlan isGenerating={true} />);
+    expect(screen.getByText('Generating your plan...')).toBeInTheDocument();
   });
 
-  test('onGenerate prop is present and called on button click', () => {
-    expect(content.includes('onGenerate')).toBe(true);
-    expect(content.includes('onClick={onGenerate}')).toBe(true);
+  test('shows description text by default', () => {
+    render(<EmptyStatePlan />);
+    expect(screen.getByText(/personalized weekly activity plan/)).toBeInTheDocument();
   });
 
-  test('button uses #16a34a green background', () => {
-    expect(content.includes("'#16a34a'")).toBe(true);
+  test('uses green (#16a34a) background for button', () => {
+    render(<EmptyStatePlan />);
+    const button = screen.getByRole('button');
+    expect(button).toHaveStyle('background: #16a34a');
   });
 });

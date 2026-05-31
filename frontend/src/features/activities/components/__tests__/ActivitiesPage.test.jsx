@@ -1,63 +1,100 @@
-import { describe, test, expect } from 'vitest';
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { describe, test, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import ActivitiesPage from '../ActivitiesPage.jsx';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const componentPath = join(__dirname, '..', 'ActivitiesPage.jsx');
+// Mock the activityApi module
+vi.mock('../../api/activityApi.js', () => ({
+  getRecommendations: vi.fn(),
+  getAllActivities: vi.fn(),
+  getActivityHistory: vi.fn(),
+  getActivitySummary: vi.fn(),
+  logActivity: vi.fn(),
+  deleteActivityLog: vi.fn(),
+}));
 
-const content = readFileSync(componentPath, 'utf8');
+import { getRecommendations, getAllActivities, getActivityHistory, getActivitySummary } from '../../api/activityApi.js';
 
 describe('ActivitiesPage', () => {
-  test('exports a default function', () => {
-    expect(content.includes('export default function ActivitiesPage')).toBe(true);
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  test('imports all sub-components: ActivityCard, ActivityPool, ActivityLogForm, ActivityHistory, ActivitySummary', () => {
-    expect(content.includes("from './ActivityCard.jsx'")).toBe(true);
-    expect(content.includes("from './ActivityPool.jsx'")).toBe(true);
-    expect(content.includes("from './ActivityLogForm.jsx'")).toBe(true);
-    expect(content.includes("from './ActivityHistory.jsx'")).toBe(true);
-    expect(content.includes("from './ActivitySummary.jsx'")).toBe(true);
+  test('shows Loading... on initial render', () => {
+    getRecommendations.mockReturnValue(new Promise(() => {}));
+    getAllActivities.mockReturnValue(new Promise(() => {}));
+    getActivityHistory.mockReturnValue(new Promise(() => {}));
+    getActivitySummary.mockReturnValue(new Promise(() => {}));
+    render(<ActivitiesPage />);
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
   });
 
-  test('imports API functions: getRecommendations, getAllActivities, getActivityHistory, getActivitySummary, logActivity, deleteActivityLog', () => {
-    expect(content.includes('getRecommendations')).toBe(true);
-    expect(content.includes('getAllActivities')).toBe(true);
-    expect(content.includes('getActivityHistory')).toBe(true);
-    expect(content.includes('getActivitySummary')).toBe(true);
-    expect(content.includes('logActivity')).toBe(true);
-    expect(content.includes('deleteActivityLog')).toBe(true);
+  test('renders "Activity Recommendations" heading after load', async () => {
+    getRecommendations.mockResolvedValue({ data: { activities: [] } });
+    getAllActivities.mockResolvedValue({ data: { activities: [] } });
+    getActivitySummary.mockResolvedValue(null);
+    getActivityHistory.mockResolvedValue([]);
+    render(<ActivitiesPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Activity Recommendations')).toBeInTheDocument();
+    });
   });
 
-  test('uses useState and useEffect', () => {
-    expect(content.includes('useState')).toBe(true);
-    expect(content.includes('useEffect')).toBe(true);
+  test('renders "Suggested activities for your fitness goal" text', async () => {
+    getRecommendations.mockResolvedValue({ data: { activities: [] } });
+    getAllActivities.mockResolvedValue({ data: { activities: [] } });
+    getActivitySummary.mockResolvedValue(null);
+    getActivityHistory.mockResolvedValue([]);
+    render(<ActivitiesPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Suggested activities for your fitness goal')).toBeInTheDocument();
+    });
   });
 
-  test('renders "Activity Recommendations" heading', () => {
-    expect(content.includes("'Activity Recommendations'")).toBe(true);
+  test('has a Shuffle button', async () => {
+    getRecommendations.mockResolvedValue({ data: { activities: [] } });
+    getAllActivities.mockResolvedValue({ data: { activities: [] } });
+    getActivitySummary.mockResolvedValue(null);
+    getActivityHistory.mockResolvedValue([]);
+    render(<ActivitiesPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Shuffle')).toBeInTheDocument();
+    });
   });
 
-  test('renders "Suggested activities for your fitness goal" text', () => {
-    expect(content.includes("'Suggested activities for your fitness goal'")).toBe(true);
+  test('renders recommendations when available', async () => {
+    getRecommendations.mockResolvedValue({
+      data: {
+        activities: [
+          { id: 1, name: 'Running', description: 'Cardio', estimated_calories: 300, duration_min: 30 },
+        ],
+      },
+    });
+    getAllActivities.mockResolvedValue({ data: { activities: [] } });
+    getActivitySummary.mockResolvedValue(null);
+    getActivityHistory.mockResolvedValue([]);
+    render(<ActivitiesPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Running')).toBeInTheDocument();
+    });
   });
 
-  test('has shuffle button with "Shuffle" text', () => {
-    expect(content.includes("'Shuffle'")).toBe(true);
-  });
-
-  test('conditionally renders ActivityLogForm when loggingActivity is set', () => {
-    expect(content.includes('loggingActivity')).toBe(true);
-    expect(content.includes('ActivityLogForm')).toBe(true);
-  });
-
-  test('renders "Loading..." for loading state', () => {
-    expect(content.includes("'Loading...'")).toBe(true);
-  });
-
-  test('renders success message (green) after successful log', () => {
-    expect(content.includes("'Activity logged successfully'")).toBe(true);
+  test('renders ActivitySummary when summary is available', async () => {
+    getRecommendations.mockResolvedValue({ data: { activities: [] } });
+    getAllActivities.mockResolvedValue({ data: { activities: [] } });
+    getActivitySummary.mockResolvedValue({
+      data: {
+        totalActiveMinutes: 30,
+        totalCaloriesBurned: 300,
+        totalConsumed: 500,
+        calorieTarget: 2000,
+        netCalories: 200,
+        netVsTarget: -1500,
+      },
+    });
+    getActivityHistory.mockResolvedValue({ data: [] });
+    render(<ActivitiesPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Activity Summary')).toBeInTheDocument();
+    });
   });
 });

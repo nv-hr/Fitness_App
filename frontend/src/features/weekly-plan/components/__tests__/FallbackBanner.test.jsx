@@ -1,40 +1,36 @@
 import { describe, test, expect } from 'vitest';
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const componentPath = join(__dirname, '..', 'FallbackBanner.jsx');
-
-const content = readFileSync(componentPath, 'utf8');
+import { render, screen } from '@testing-library/react';
+import FallbackBanner from '../FallbackBanner.jsx';
 
 describe('FallbackBanner', () => {
-  test('exports a default function', () => {
-    expect(content.includes('export default function FallbackBanner')).toBe(true);
+  test('returns null for status "active"', () => {
+    const { container } = render(<FallbackBanner status="active" />);
+    expect(container.innerHTML).toBe('');
   });
 
-  test('returns null for status "active"', () => {
-    expect(content.includes("status !== 'fallback'")).toBe(true);
-    expect(content.includes("status !== 'unavailable'")).toBe(true);
-    expect(content.includes("return null")).toBe(true);
+  test('returns null for null status', () => {
+    const { container } = render(<FallbackBanner status={null} />);
+    expect(container.innerHTML).toBe('');
+  });
+
+  test('returns null for undefined status', () => {
+    const { container } = render(<FallbackBanner />);
+    expect(container.innerHTML).toBe('');
   });
 
   test('renders fallback message for status "fallback"', () => {
-    expect(content.includes("status === 'fallback'")).toBe(true);
-    expect(content.includes('backup plan')).toBe(true);
+    render(<FallbackBanner status="fallback" />);
+    expect(screen.getByText(/backup plan/)).toBeInTheDocument();
   });
 
-  test('renders unavailable message for users with no history', () => {
-    expect(content.includes('No activity history available')).toBe(true);
+  test('renders unavailable message for status "unavailable"', () => {
+    render(<FallbackBanner status="unavailable" />);
+    expect(screen.getByText(/No activity history available to generate a plan/)).toBeInTheDocument();
   });
 
-  test('returns null for null status check', () => {
-    expect(content.includes("status !== 'fallback'")).toBe(true);
-  });
-
-  test('uses amber/yellow background colors', () => {
-    expect(content.includes("'#fffbeb'")).toBe(true);
-    expect(content.includes("'1px solid #fde68a'")).toBe(true);
+  test('uses amber background colors', () => {
+    render(<FallbackBanner status="fallback" />);
+    const banner = screen.getByText(/backup plan/).closest('div');
+    expect(banner).toHaveStyle('background: #fffbeb');
   });
 });
