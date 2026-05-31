@@ -1,4 +1,4 @@
-import { buildPrompt, callLlmApi, getCachedPlan, setCachedPlan, clearCachedPlan, buildMealPlanCorrectionPrompt } from './llm.service.js';
+import { buildPrompt, callLlmApi, getCachedPlan, setCachedPlan, clearCachedPlan, buildCorrectionPrompt as buildMealPlanCorrectionPrompt } from './llm.service.js';
 import { findByUserAndWeek, upsertPlan } from '../repositories/mealPlan.repository.js';
 import { AppError } from '../utils/errors.js';
 import { levenshteinDistance } from '../utils/string.js';
