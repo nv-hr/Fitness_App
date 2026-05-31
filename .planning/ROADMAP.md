@@ -151,7 +151,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 33-01-PLAN.md — Lazy migration (GET + swapHandler) + 404 fix for nonexistent activityId
+- [x] 33-01-PLAN.md — Lazy migration (GET + swapHandler) + 404 fix for nonexistent activityId
 - [ ] 33-02-PLAN.md — Unit + E2E tests for migration flows and swap edge cases
 
 ## Progress
@@ -190,7 +190,7 @@ Plans:
 | 30. Prompt & Validation Rework | v1.6 | 1/2 | In progress | 2026-05-31 |
 | 31. Activity Swap Endpoint | v1.6 | 1/2 | In progress | 2026-05-31 |
 | 32. Frontend — Days Selector & Swap UI | v1.6 | 2/2 | Complete | 2026-05-31 |
-| 33. Plan Migration & Edge Cases | v1.6 | 0/2 | In progress | - |
+| 33. Plan Migration & Edge Cases | v1.6 | 1/2 | In Progress|  |
 
 
 ---

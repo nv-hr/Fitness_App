@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Activity Planner Rework
-status: Plan 32-02 complete — Days selector, rest day cards, swap button, WeeklyPlanPage wiring
-stopped_at: Plan 32-02 complete — Days selector panel, rest day cards, swap buttons, WeeklyPlanPage fully wired
-last_updated: "2026-05-31T19:39:00.000Z"
+status: completed
+stopped_at: Plan 32-02 complete — Days selector panel, rest day cards, swap buttons, WeeklyPlanPage fully wired — 2/2 plans done in Phase 32
+last_updated: "2026-05-31T12:55:37.943Z"
 last_activity: 2026-05-31 — Plan 32-02 executed (days selector, rest day cards, swap buttons, WeeklyPlanPage wiring)
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_plans: 8
+  completed_plans: 7
+  percent: 75
 ---
 
 # Project State
@@ -32,7 +32,7 @@ Phase: 32-frontend-days-selector-swap-ui (plans 32-01 and 32-02 complete)
 Status: Plan 32-02 complete — Days selector panel, rest day cards, swap buttons, WeeklyPlanPage fully wired
 Last activity: 2026-05-31 — Plan 32-02 executed (days selector, rest day cards, swap buttons, WeeklyPlanPage wiring)
 
-Progress: [██████████] 100% (6/6 plans complete across v1.6)
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [██████████] 100% (6/6 plans complete across v1.6)
 - D-11: Toast accepts `type` prop (success/error/info) for flexible reuse beyond swap errors
 - D-12: Swap countdown managed at WeeklyPlanPage level via swapRetryAfter state + useEffect interval pattern
 - D-13: Toast state uses single {message} object that replaces on new error; rendered in all 5 return branches
+- [Phase ?]: availableDays default for migrated plans = 5 (CONTEXT.md discretion)
 
 ### Pending Todos
 
@@ -75,9 +76,10 @@ Items acknowledged and carried forward from v1.5 milestone close:
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
 | *(none)* | | | |
+| Phase 33-plan-migration-edge-cases P01 | 3min | - tasks | - files |
 
 ## Session Continuity
 
-Last session: 2026-05-31
+Last session: 2026-05-31T12:55:07.058Z
 Stopped at: Plan 32-02 complete — Days selector panel, rest day cards, swap buttons, WeeklyPlanPage fully wired — 2/2 plans done in Phase 32
 Resume file: None

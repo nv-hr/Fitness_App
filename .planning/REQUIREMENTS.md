@@ -28,7 +28,7 @@ Requirements for v1.6 Activity Planner Rework. Each maps to roadmap phases.
 
 ### Plan Migration
 
-- [ ] **MIGR-01**: Old-format plans are lazily regenerated on next visit
+- [x] **MIGR-01**: Old-format plans are lazily regenerated on next visit
 - [ ] **MIGR-02**: Plan data includes format_version to distinguish old vs new format
 
 ## v2 Requirements
@@ -66,7 +66,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SWAP-02 | Phase 31 | Pending |
 | SWAP-03 | Phase 31 | Pending |
 | SWAP-04 | Phase 31 | Pending |
-| MIGR-01 | Phase 33 | Pending |
+| MIGR-01 | Phase 33 | Complete |
 | MIGR-02 | Phase 30 | Pending |
 
 **Coverage:**
