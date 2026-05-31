@@ -1,4 +1,4 @@
-import { describe, it, expect } from '@jest/globals';
+import { jest, describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import {
   validatePlanStructure,
   fuzzyMatchActivityName,
@@ -416,20 +416,41 @@ describe('calculateDailyNetCalories', () => {
 });
 
 describe('buildSystemPrompt', () => {
+  const baseProfile = { weight_kg: 70, height_cm: 175, age: 30, gender: 'male', fitness_goal: 'maintain', activity_level: 'moderate' };
+
   it('returns a string containing the week start date', () => {
-    const profile = { weight_kg: 70, height_cm: 175, age: 30, gender: 'male', fitness_goal: 'maintain', activity_level: 'moderate' };
-    const history = [];
-    const activities = [{ name: 'Running', estimated_calories: 300, duration_min: 30 }];
-    const result = buildSystemPrompt(profile, history, activities, '2026-01-05');
+    const result = buildSystemPrompt(baseProfile, [], [{ name: 'Running', estimated_calories: 300, duration_min: 30 }], '2026-01-05');
     expect(typeof result).toBe('string');
     expect(result).toContain('2026-01-05');
   });
 
   it('includes activity names from history in the output', () => {
-    const profile = { weight_kg: 70, height_cm: 175, age: 30, gender: 'male', fitness_goal: 'maintain', activity_level: 'moderate' };
     const history = [{ activity_name: 'Running', duration_min: 30, intensity: 'moderate', logged_date: '2026-01-03' }];
-    const activities = [{ name: 'Running', estimated_calories: 300, duration_min: 30 }];
-    const result = buildSystemPrompt(profile, history, activities, '2026-01-05');
+    const result = buildSystemPrompt(baseProfile, history, [{ name: 'Running', estimated_calories: 300, duration_min: 30 }], '2026-01-05');
     expect(result).toContain('Running');
+  });
+
+  it('includes profile information in the prompt', () => {
+    const result = buildSystemPrompt(baseProfile, [], [{ name: 'Running', estimated_calories: 300, duration_min: 30 }], '2026-01-05');
+    expect(result).toContain('70');          // weight_kg
+    expect(result).toContain('175');         // height_cm
+    expect(result).toContain('30');          // age
+    expect(result).toContain('male');
+    expect(result).toContain('maintain');
+  });
+
+  it('contains structured sections with headers', () => {
+    const result = buildSystemPrompt(baseProfile, [], [{ name: 'Running', estimated_calories: 300, duration_min: 30 }], '2026-01-05');
+    // Verify the prompt has section-like structure (headers, instructions)
+    expect(result.length).toBeGreaterThan(200);
+    expect(result).toMatch(/profile|Profile/);
+    expect(result).toMatch(/activity|Activity/);
+    expect(result).toMatch(/week|date/);
+  });
+
+  it('includes JSON format requirements for the response', () => {
+    const result = buildSystemPrompt(baseProfile, [], [{ name: 'Running', estimated_calories: 300, duration_min: 30 }], '2026-01-05');
+    expect(result).toMatch(/json|JSON/);
+    expect(result).toMatch(/{|{|"days"/);
   });
 });
