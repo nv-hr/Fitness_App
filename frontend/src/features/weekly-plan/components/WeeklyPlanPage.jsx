@@ -80,7 +80,7 @@ export default function WeeklyPlanPage() {
         setStatus(res.data.plan.status || 'active');
       }
     } catch (err) {
-      if (err.retryAfter || err.message?.includes('RATE_LIMITED')) {
+      if (err.retryAfter || err.code === 'RATE_LIMITED') {
         const retryAfter = err.retryAfter || 150;
         setGenRetryAfter(retryAfter);
       } else {
@@ -105,7 +105,7 @@ export default function WeeklyPlanPage() {
         setStatus(res.data.plan.status || 'active');
       }
     } catch (err) {
-      if (err.retryAfter || err.message?.includes('RATE_LIMITED')) {
+      if (err.retryAfter || err.code === 'RATE_LIMITED') {
         const retryAfter = err.retryAfter || 150;
         setDayRetryAfters((prev) => ({ ...prev, [dayIndex]: retryAfter }));
       } else {
@@ -133,7 +133,7 @@ export default function WeeklyPlanPage() {
         const retryAfter = err.retryAfter || 300;
         setSwapRetryAfter(retryAfter);
         setToast({ message: `Swap limit reached. Please wait ${retryAfter}s before trying again.` });
-      } else if (err.message?.includes('not found') || err.message?.includes('removed')) {
+      } else if (err.code === 'NOT_FOUND' || err.code === 'REMOVED') {
         setToast({ message: 'Activity not found in current plan. It may have been removed.' });
       } else {
         setToast({ message: 'Could not swap activity. Please try again.' });
