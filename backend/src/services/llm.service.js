@@ -510,6 +510,17 @@ export async function regenerateDay(deps, dayIndex) {
     throw new AppError('ValidationError', 'dayIndex must be a number between 0 and 6', 400);
   }
 
+  // Defensively propagate availableDays from the cached plan
+  // if the caller did not explicitly provide it. This prevents
+  // silently switching availableDays when regenerating a single day.
+  if (!deps.availableDays) {
+    const cached = getCachedPlan(deps.userId, deps.weekStart)
+    if (cached && Array.isArray(cached.days)) {
+      const activityDays = cached.days.filter(d => d.rest_day === false).length
+      if (activityDays > 0) deps.availableDays = activityDays
+    }
+  }
+
   // Clear cache so generateWeeklyPlan actually makes an LLM call (not returning stale cache)
   clearCachedPlan(deps.userId, deps.weekStart);
   // Generate a fresh full week plan (this consumes the rate-limit quota)
