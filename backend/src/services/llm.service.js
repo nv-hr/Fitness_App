@@ -56,8 +56,10 @@ export function buildPrompt(filename, variables) {
   }
   let template = promptCache.get(filename);
   for (const [key, value] of Object.entries(variables)) {
-    const placeholder = new RegExp(`{{${key}}}`, 'g');
-    template = template.replace(placeholder, () => String(value ?? ''));
+    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const placeholder = new RegExp(`\\{\\{${escapedKey}\\}\\}`, 'g')
+    const escaped = String(value ?? '').replace(/\{\{/g, '\\{\\{').replace(/\}\}/g, '\\}\\}')
+    template = template.replace(placeholder, () => escaped)
   }
   return template;
 }
