@@ -15,6 +15,7 @@ import { useResponsive } from '../../shared/hooks/useResponsive.js';
  * @param {boolean} props.loading — Whether data is being fetched
  * @param {Error|null} props.error — Fetch error (rendered as inline error banner)
  * @param {function} [props.onMonthChange] — Optional external month change callback
+ * @param {function} [props.onDaySelect] — Optional external day select callback
  * @param {React.ReactNode} props.children — Content rendered in DayDetailPanel slot
  */
 export default function CalendarPageLayout({
@@ -22,6 +23,7 @@ export default function CalendarPageLayout({
   loading,
   error,
   onMonthChange: externalOnMonthChange,
+  onDaySelect: externalOnDaySelect,
   children,
 }) {
   // Internal state
@@ -48,7 +50,8 @@ export default function CalendarPageLayout({
   // Handle day selection
   const handleDaySelect = useCallback((day) => {
     setSelectedDay(day);
-  }, []);
+    if (externalOnDaySelect) externalOnDaySelect(day);
+  }, [externalOnDaySelect]);
 
   return (
     <div style={{

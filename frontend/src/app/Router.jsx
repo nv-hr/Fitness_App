@@ -5,7 +5,7 @@ import LoginForm from '../features/auth/components/LoginForm.jsx';
 import RegisterForm from '../features/auth/components/RegisterForm.jsx';
 import ProfileForm from '../features/profile/components/ProfileForm.jsx';
 import { FoodLogPage } from '../features/food-log/index.js';
-import { ActivitiesPage } from '../features/activities/index.js';
+import { ActivitiesPage, ActivityCalendarPage } from '../features/activities/index.js';
 import { getProfile } from '../features/profile/api/profileApi.js';
 
 import { useResponsive } from '../shared/hooks/useResponsive.js';
@@ -83,7 +83,7 @@ export default function Router() {
         <Route path="/register" element={<ResponsiveLayout><PublicRoute><RegisterForm /></PublicRoute></ResponsiveLayout>} />
         <Route path="/profile" element={<ResponsiveLayout><ProtectedRoute><ProfileForm /></ProtectedRoute></ResponsiveLayout>} />
         <Route path="/food-log" element={<ResponsiveLayout><ProtectedRoute><FoodLogPage /></ProtectedRoute></ResponsiveLayout>} />
-        <Route path="/activities" element={<ResponsiveLayout><ProtectedRoute><ActivitiesPage /></ProtectedRoute></ResponsiveLayout>} />
+        <Route path="/activities" element={<ResponsiveLayout><ProtectedRoute><ActivityCalendarPage /></ProtectedRoute></ResponsiveLayout>} />
         <Route path="/" element={<ResponsiveLayout><ProtectedRoute><ProfileGuard><DashboardPlaceholder /></ProfileGuard></ProtectedRoute></ResponsiveLayout>} />
       </Routes>
     </BrowserRouter>
