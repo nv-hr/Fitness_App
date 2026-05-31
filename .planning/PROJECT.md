@@ -10,6 +10,7 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 
 ## Current State
 
+**Building:** v1.7 Calendar-Based Plan UI
 **Shipped:** v1.6 Activity Planner Rework (2026-05-31)
 **Phases:** 33 complete (v1.0: 5, v1.1: 3, v1.2: 4, v1.3: 5, v1.4: 6, v1.5: 6, v1.6: 4) | **Plans:** 76 | **Commits:** 292+
 
@@ -37,11 +38,17 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 - **LLM Weekly Activity Plans** — AI-generated 7-day personalized plans via OpenRouter with day-by-day cards, single-day regeneration, and rate-limit UX
 - **260/260 tests passing** — backend 134 + frontend 126
 
-## Next Milestone: TBD
+## Current Milestone: v1.7 Calendar-Based Plan UI
 
-v1.6 is shipped — all 7 milestones (v1.0–v1.6) complete across 33 phases.
+**Goal:** Replace the existing Activity Plan and Food Log pages with calendar-driven UIs for visualizing and managing weekly plans and daily meals.
 
-Next milestone to be defined via `/gsd-new-milestone`.
+**Target features:**
+- Activity Calendar page — month grid view with color-coded days (blue=incomplete, green=completed, grey=missed past), above-calendar generate button, day click shows detail panel with activity cards including swap and completion toggle
+- Meal Calendar page — month grid view with same color coding, above-calendar generate button, day click shows meal detail with log action
+- Past days are read-only (grey)
+- Auto-generate on view today if no plan exists
+- Keep swap (activity) and log (meal) interactions; remove other interactions and their tests
+- Same backend endpoints — no API changes
 
 ## Requirements
 
@@ -118,7 +125,14 @@ Next milestone to be defined via `/gsd-new-milestone`.
 
 ### Active
 
-(TBD — define during milestone scoping)
+- **CAL-01**: Activity Calendar page with month grid, color-coded days, and day-click detail panel
+- **CAL-02**: Meal Calendar page with month grid, color-coded days, and day-click meal detail
+- **CAL-03**: Generate button above calendar for weekly activity / daily meal generation
+- **CAL-04**: Auto-generate plan when viewing today with no existing plan
+- **CAL-05**: Past days are read-only (grey) — no backfill logging
+- **CAL-06**: Activity swap interaction preserved in day detail panel
+- **CAL-07**: Meal one-click log interaction preserved in day detail panel
+- **CAL-08**: Remove deprecated UI interactions (single-day regenerate, etc.) and associated tests
 
 ### Out of Scope
 
@@ -224,4 +238,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-31 after completing v1.6 milestone*
+*Last updated: 2026-05-31 after initiating v1.7 milestone*

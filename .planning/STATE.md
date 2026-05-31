@@ -1,18 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.6
-milestone_name: Activity Planner Rework
-status: shipped
-shipped_at: "2026-05-31"
-stopped_at: Milestone v1.6 complete — all 8 plans, 4 phases shipped
-last_updated: "2026-05-31"
-last_activity: 2026-05-31 - Completed quick task 260531-sgr: test all endpoint
+milestone: v1.7
+milestone_name: Calendar-Based Plan UI
+status: planning
+last_updated: "2026-05-31T14:27:35.192Z"
+last_activity: 2026-05-31
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -27,14 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-31)
 
 ## Current Position
 
-Phase: 30-prompt-validation-rework (complete)
-Phase: 31-activity-swap-endpoint (complete)
-Phase: 32-frontend-days-selector-swap-ui (complete)
-Phase: 33-plan-migration-edge-cases (complete)
-Status: Milestone v1.6 shipped — all 4 phases, 8 plans complete
-Last activity: 2026-05-31 — Milestone v1.6 Activity Planner Rework shipped
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-31 — Milestone v1.7 started
 
 ## Performance Metrics
 
