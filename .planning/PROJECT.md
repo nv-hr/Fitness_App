@@ -10,25 +10,26 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 
 ## Current State
 
-**Shipped:** v1.3 Activity Tracking & Smart Suggestions (2026-05-31)
-**Phases:** 17 complete (v1.0: 5, v1.1: 3, v1.2: 4, v1.3: 5) | **Plans:** 48 | **Commits:** 197+
+**Shipped:** v1.4 LLM Food Recommendations (2026-05-31)
+**Phases:** 23 complete (v1.0: 5, v1.1: 3, v1.2: 4, v1.3: 5, v1.4: 6) | **Plans:** 62 | **Commits:** 220+
 
 ### v1.3 shipped:
 - **Activity Logger** — Log activity type + duration + intensity with server-authoritative calorie calculation (light/moderate/vigorous multipliers)
 - **LLM Weekly Activity Plans** — AI-generated 7-day personalized plans via OpenRouter with day-by-day cards, single-day regeneration, and rate-limit UX
 - **260/260 tests passing** — backend 134 + frontend 126
 
-## Current Milestone: v1.4 LLM Food Recommendations
+## Current Milestone: v1.5 Smart Auto-Logging
 
-**Goal:** LLM-powered daily meal recommendations based on fitness goal, using ingredients from the existing database with auto-calculated portions aligned to the user's calorie target.
+**Goal:** Auto-save generated activity/meal plans to logs, inline management (complete/regenerate), daily meal generation, auto-generation on page visit, and unified UI merging plan pages with log pages.
 
 **Target features:**
-- Generate a full day of simple meals (breakfast, lunch, dinner, snacks) via LLM
-- Ingredients selected exclusively from the existing 200+ ingredient database
-- Portions auto-calculated to meet user's TDEE/calorie target
-- View generated meal plan (like weekly activity plans)
-- One-click log: auto-log recommended ingredients with calculated portions to daily food log
-- Weekly generation pattern with caching and rate limiting
+- Generated activities auto-save to activity log with completed toggle
+- Generated meals auto-save to food log with completed/regenerate actions
+- Meal recommendations generate for 1 day (not weekly)
+- Auto-generate plan when visiting page if none exists
+- Manual regenerate button always available
+- Activity Plan UI merged into Activities page
+- Meal Plan UI merged into Food Log page
 
 ## Requirements
 
@@ -83,9 +84,19 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 - ✓ System falls back to cached plan when LLM unavailable — v1.3
 - ✓ OpenRouter integration with rate limiting and output validation — v1.3
 
+#### v1.4 LLM Food Recommendations
+- ✓ LLM generates daily meal recommendations from 200+ ingredient database — v1.4
+- ✓ Portions auto-calculated to meet user's calorie target — v1.4
+- ✓ One-click log recommended meals to food diary — v1.4
+- ✓ Weekly meal plan caching with namespace isolation — v1.4
+- ✓ Fuzzy ingredient matching (exact → substring → Levenshtein) — v1.4
+- ✓ Correction loop with 2 max attempts before template fallback — v1.4
+- ✓ Rate-limited: generate 5/15min, regenerate 3/30min, log-day 30/15min — v1.4
+- ✓ Batch log with atomic transaction — v1.4
+
 ### Active
 
-(TBD — define during next milestone scoping)
+(TBD — define during milestone scoping)
 
 ### Out of Scope
 
@@ -178,4 +189,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-31 after starting v1.4 milestone*
+*Last updated: 2026-05-31 after starting v1.5 milestone*
