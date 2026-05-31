@@ -169,6 +169,39 @@ export async function getRecentFoods(userId, limit = 10) {
 }
 
 /**
+ * Batch log multiple food items in a single atomic PostgreSQL transaction.
+ * All inserts succeed or all are rolled back — prevents partial food diary commits.
+ * Per-meal logging supported: items array can contain a subset of the day's meals.
+ * Calories are always server-calculated from calories_per_100g × portion / 100.
+ * @param {number} userId
+ * @param {Array<{foodId: number, portionGrams: number, calories: number, logDate: string, mealType: string}>} items
+ * @returns {Promise<Array>}
+ */
+export async function batchLogItems(userId, items) {
+  if (!items || items.length === 0) return [];
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const inserted = [];
+    for (const item of items) {
+      const { rows } = await client.query(
+        `INSERT INTO food_logs (user_id, food_id, calories, portion_grams, log_date, meal_type)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [userId, item.foodId, item.calories, item.portionGrams, item.logDate, item.mealType]
+      );
+      inserted.push(rows[0]);
+    }
+    await client.query('COMMIT');
+    return inserted;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw new AppError('DatabaseError', `Failed to batch log items: ${err.message}`, 500);
+  } finally {
+    client.release();
+  }
+}
+
+/**
  * Count foods by filter criteria (used by food.service.js for seed verification).
  * @param {Object} filters
  * @param {boolean} filters.is_custom

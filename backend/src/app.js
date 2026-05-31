@@ -13,6 +13,7 @@ import profileRoutes from './routes/profile.routes.js';
 import foodRoutes from './routes/food.routes.js';
 import activityRoutes from './routes/activity.routes.js';
 import weeklyPlanRoutes from './routes/weeklyPlan.routes.js';
+import mealPlanRoutes from './routes/mealPlan.routes.js';
 import docsRoutes from './routes/docs.routes.js';
 import { errorResponse } from './utils/response.js';
 
@@ -118,6 +119,9 @@ app.use('/api/activities', activityRoutes);
 
 // Weekly plan routes — rate limited via middleware (D-20)
 app.use('/api/weekly-plans', weeklyPlanRoutes);
+
+// Meal plan routes — rate limited via middleware (REQ-MEAL-RATELIMIT)
+app.use('/api/meal-plans', mealPlanRoutes);
 
 // Google OAuth routes (must be separate from authRoutes for Passport middleware)
 app.get(
