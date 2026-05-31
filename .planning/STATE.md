@@ -80,7 +80,7 @@ Progress: [██████████] 100%
 | 260531-hqs | improve the llm promt for activities and meal plan | 2026-05-31 | cd1443b | [260531-hqs-improve-llm-prompts](./quick/260531-hqs-improve-llm-prompts/) |
 | 260531-aow | Activity Plan copy-to-clipboard + switch to Owl Alpha model | 2026-05-31 | c07008d, ff3027a | [260531-aow-activity-plan-copy-owl-alpha](./quick/260531-aow-activity-plan-copy-owl-alpha/) |
 | 260531-252 | Remove /weekly-plan route, nav link, and import from Router.jsx | 2026-05-31 | db77cdc | [260531-252-remove-weekly-plan-route](./quick/260531-252-remove-weekly-plan-route/) |
-| 260531-7g2 | Fix Google OAuth callback 500 — add error handling redirect and GOOGLE_CALLBACK_URL to .env | 2026-05-31 | TBD | [260531-7g2-fix-google-oauth-callback](./quick/260531-7g2-fix-google-oauth-callback/) |
+| 260531-7g2 | Fix Google OAuth callback 500 — add error handling redirect and GOOGLE_CALLBACK_URL to .env | 2026-05-31 | a52553e | [260531-7g2-fix-google-oauth-callback](./quick/260531-7g2-fix-google-oauth-callback/) |
 
 ## Notes
 
