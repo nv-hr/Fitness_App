@@ -75,6 +75,16 @@ async function generate(req, res, next) {
     }
     weekStart = getMonday(weekStart ? new Date(weekStart) : new Date());
 
+    // Extract and validate availableDays (4-6 range, default 4)
+    let availableDays = req.body.availableDays;
+    if (availableDays !== undefined && availableDays !== null) {
+      if (!Number.isInteger(availableDays) || availableDays < 4 || availableDays > 6) {
+        return errorResponse(res, 'availableDays must be an integer between 4 and 6', 400, 'VALIDATION_ERROR');
+      }
+    } else {
+      availableDays = 4; // default
+    }
+
     const result = await generateWeeklyPlan({
       getProfile: (id) => findProfileByUserId(id),
       getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
@@ -82,6 +92,7 @@ async function generate(req, res, next) {
       getTopActivities: (id, limit) => getTopActivities(id, limit),
       userId,
       weekStart,
+      availableDays, // pass through to service
     });
 
     return successResponse(res, result);
@@ -93,7 +104,7 @@ async function generate(req, res, next) {
 async function regenerateDayHandler(req, res, next) {
   try {
     const userId = req.user.userId;
-    const { weekStart, dayIndex } = req.body;
+    const { weekStart, dayIndex, availableDays } = req.body;
 
     if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {
       return errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR');
@@ -105,14 +116,22 @@ async function regenerateDayHandler(req, res, next) {
     }
     targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());
 
-    const result = await regenerateDay({
+    const deps = {
       getProfile: (id) => findProfileByUserId(id),
       getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
       getActivities: () => getAllActivities(),
       getTopActivities: (id, limit) => getTopActivities(id, limit),
       userId,
       weekStart: targetWeekStart,
-    }, dayIndex);
+    };
+    if (availableDays !== undefined && availableDays !== null) {
+      if (!Number.isInteger(availableDays) || availableDays < 4 || availableDays > 6) {
+        return errorResponse(res, 'availableDays must be an integer between 4 and 6', 400, 'VALIDATION_ERROR');
+      }
+      deps.availableDays = availableDays;
+    }
+
+    const result = await regenerateDay(deps, dayIndex);
 
     return successResponse(res, result);
   } catch (err) {
