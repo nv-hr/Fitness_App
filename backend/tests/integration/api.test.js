@@ -855,7 +855,6 @@ describe('Activity Endpoints', () => {
   describe('GET /api/activities/logs', () => {
     let logsAgent;
     let seededActivityId;
-    const today = new Date().toISOString().split('T')[0];
 
     beforeAll(async () => {
       logsAgent = request.agent(app);
@@ -963,7 +962,6 @@ describe('Activity Endpoints', () => {
   describe('GET /api/activities/summary', () => {
     let summaryAgent;
     let seededActivityId;
-    const today = new Date().toISOString().split('T')[0];
 
     beforeAll(async () => {
       summaryAgent = request.agent(app);
