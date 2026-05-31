@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: LLM Food Recommendations
 status: planning
-last_updated: "2026-05-31T02:18:49.567Z"
+last_updated: "2026-05-31T07:00:00.000Z"
 last_activity: 2026-05-31
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-05-31)
 
 **Core value:** Users can accurately calculate their BMI and TDEE, log daily food intake by ingredients, log physical activities with calorie tracking, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
 
-**Current focus:** Planning next milestone — run `/gsd-new-milestone`
+**Current focus:** Executing v1.4 roadmap — 6 phases (18-23) for LLM food recommendations
 
 ## Performance Metrics
 
@@ -56,12 +56,29 @@ See: .planning/PROJECT.md (updated 2026-05-31)
 - DB changes: new activity_logs table (replaces user_activity_log), weekly_plans (JSONB), intensity_level ENUM
 - Roadmap structure: 5 phases starting at Phase 13 (continuing from v1.2 Phase 12)
 - [Phase ?]: Intensity multipliers: light=0.7, moderate=1.0, vigorous=1.3 (server authoritative)
+- **v1.4**: 6 phases (18-23) for LLM Food Recommendations feature
+- **v1.4**: No new npm packages — reuses existing openai, node-cache, express-rate-limit
+- **v1.4**: Architecture follows v1.3 weeklyPlan pattern exactly — mealPlan.service.js imports shared primitives from llm.service.js
+- **v1.4**: `meal_plans` table mirrors `weekly_plans` exactly — separate concern isolation
+- **v1.4**: Server-authoritative calorie recalculation always overrides LLM-computed values
+- **v1.4**: Fuzzy matching removes unmatchable items rather than failing the whole plan
+- **v1.4**: Template fallback distributes 6-8 diverse ingredients across 4 meals when LLM fails
+- **v1.4**: Batch log uses explicit BEGIN/COMMIT/ROLLBACK transaction pattern
+- **v1.4**: Three separate rate limiters: generate (5/15min), regenerate (3/30min), log-day (30/15min)
 - [Phase ?]: ActivityLogForm rendered as dedicated section between recommendations and pool
 - [Phase ?]: Grouped history via single JOIN query + JS-side grouping (avoids N+1)
 
 ### Pending Todos
 
-None yet.
+- [ ] Phase 18: Write `add_meal_plans.sql` migration (mirrors `weekly_plans`)
+- [ ] Phase 18: Write `meal-plan-prompt.md` and `meal-correction-prompt.md`
+- [ ] Phase 19: Build `mealPlan.service.js` — generation, validation, fuzzy matching, fallback
+- [ ] Phase 19: Prompt QA spike — run 20+ test prompts against free-tier model
+- [ ] Phase 20: Add `batchLogItems()` to food.repository.js with atomic transaction
+- [ ] Phase 20: Add `markItemsLogged()` to mealPlan.repository.js
+- [ ] Phase 21: Build mealPlan.controller.js, routes, rate limiter middleware
+- [ ] Phase 22: Build frontend feature directory (page, cards, meal rows, API client)
+- [ ] Phase 23: Backend (~20 tests) + frontend (~10 tests) + manual prompt validation
 
 ### Blockers/Concerns
 
@@ -123,11 +140,13 @@ Stopped at: Milestone v1.3 complete and archived
 ## Operator Next Steps
 
 - Milestone v1.3 (Activity Tracking & Smart Suggestions) is complete and archived
-- Run `/gsd-new-milestone` to define next milestone requirements and roadmap
+- Milestone v1.4 (LLM Food Recommendations) has a roadmap with 6 phases (18-23)
+- Next: Run `/gsd-plan-phase 18` to begin Phase 18: Database & Prompt Foundation
+- Key architectural decision: follow weeklyPlan pattern — no new npm packages, same OpenRouter + node-cache + express-rate-limit
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-05-31 — Milestone v1.4 started
+Phase: 18 — Database & Prompt Foundation (first phase)
+Plan: — (not yet planned)
+Status: Roadmap complete, ready for `/gsd-plan-phase 18`
+Last activity: 2026-05-31 — v1.4 roadmap created
