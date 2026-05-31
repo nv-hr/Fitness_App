@@ -24,11 +24,26 @@ export default function CalendarGrid({
 }) {
   const today = new Date();
 
-  // Define custom modifiers based on dayStatusMap
+  // Guard: if dayStatusMap is a plain object (not Map), convert defensively
+  // and warn in development to help consumers fix their types.
+  const normalizedMap = (() => {
+    if (dayStatusMap instanceof Map) return dayStatusMap;
+    if (dayStatusMap && typeof dayStatusMap === 'object') {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(
+          'CalendarGrid: dayStatusMap must be a Map instance. Received object — converting via Object.entries().'
+        );
+      }
+      return new Map(Object.entries(dayStatusMap));
+    }
+    return new Map();
+  })();
+
+  // Define custom modifiers based on normalizedMap
   const modifiers = {
-    incomplete: (day) => dayStatusMap?.get(format(day, 'yyyy-MM-dd')) === DAY_STATUS.INCOMPLETE,
-    completed: (day) => dayStatusMap?.get(format(day, 'yyyy-MM-dd')) === DAY_STATUS.COMPLETED,
-    pastIncomplete: (day) => dayStatusMap?.get(format(day, 'yyyy-MM-dd')) === DAY_STATUS.PAST_INCOMPLETE,
+    incomplete: (day) => normalizedMap.get(format(day, 'yyyy-MM-dd')) === DAY_STATUS.INCOMPLETE,
+    completed: (day) => normalizedMap.get(format(day, 'yyyy-MM-dd')) === DAY_STATUS.COMPLETED,
+    pastIncomplete: (day) => normalizedMap.get(format(day, 'yyyy-MM-dd')) === DAY_STATUS.PAST_INCOMPLETE,
     today: (day) => isSameDay(day, today),
   };
 
