@@ -35,14 +35,15 @@ function getClient() {
 }
 
 const CONFIG = {
-  model: process.env.LLM_MODEL || 'nvidia/nemotron-3-nano-30b-a3b:free',
-  fallbackModel: process.env.LLM_FALLBACK_MODEL || 'openai/gpt-oss-20b:free',
+  model: process.env.LLM_MODEL || 'openrouter/owl-alpha',
+  fallbackModel: process.env.LLM_FALLBACK_MODEL || '',
+  fallbackModel2: process.env.LLM_FALLBACK_MODEL_2 || '',
   temperature: 0.2,
   maxTokens: 2000,
   retryDelayMs: 1000,
 };
 
-console.log(`[LLM] Using model: ${CONFIG.model}. Verify this model is available on OpenRouter.`);
+console.log(`[LLM] Using model: ${CONFIG.model} (fallbacks: ${CONFIG.fallbackModel ? 'enabled' : 'none'}). Verify this model is available on OpenRouter.`);
 
 const planCache = new NodeCache({ stdTTL: 3600, checkperiod: 600, maxKeys: 1000 });
 
@@ -122,15 +123,23 @@ export async function callLlmApi(systemPrompt) {
     throw new AppError('LlmConfigError', 'OPENROUTER_API_KEY not configured', 503);
   }
 
-  try {
-    return await callLlmWithModel(client, CONFIG.model, systemPrompt);
-  } catch (err) {
-    if (CONFIG.fallbackModel) {
-      console.warn(`[LLM] Primary model ${CONFIG.model} failed, trying fallback ${CONFIG.fallbackModel}: ${err.message}`);
-      return await callLlmWithModel(client, CONFIG.fallbackModel, systemPrompt);
+  const models = [
+    { key: 'model', label: 'Primary' },
+    { key: 'fallbackModel', label: 'Fallback' },
+    { key: 'fallbackModel2', label: 'Secondary fallback' },
+  ];
+
+  for (const { key, label } of models) {
+    const model = CONFIG[key];
+    if (!model) continue;
+    try {
+      return await callLlmWithModel(client, model, systemPrompt);
+    } catch (err) {
+      console.warn(`[LLM] ${label} model ${model} failed: ${err.message}`);
     }
-    throw err;
   }
+
+  throw new AppError('LlmAllFailed', 'All LLM models failed', 502);
 }
 
 export function validatePlanStructure(plan, weekStart) {
@@ -254,12 +263,6 @@ export function validateAndFixPlan(plan, dbActivities) {
 
 export function buildCorrectionPrompt(validationErrors) {
   return buildPrompt('correction-prompt.md', {
-    validationErrors: validationErrors.join('\n'),
-  });
-}
-
-export function buildMealPlanCorrectionPrompt(validationErrors) {
-  return buildPrompt('meal-correction-prompt.md', {
     validationErrors: validationErrors.join('\n'),
   });
 }
