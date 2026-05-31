@@ -321,6 +321,18 @@ async function attemptMigration(userId, weekStart) {
   // from returning a stale cached old-format plan)
   clearCachedPlan(userId, weekStart);
 
+  // WR-02: Infer availableDays from the old plan structure rather than hardcoding 5.
+  // The old plan was cleared from cache above, so re-read from DB for inference.
+  // If DB read fails or returns no data, fall back to default of 5.
+  let inferredDays = 5;
+  try {
+    const dbPlan = await findByUserAndWeek(userId, weekStart);
+    inferredDays = inferAvailableDays(dbPlan?.plan_data || null);
+  } catch {
+    // DB read failure is non-fatal — use default
+  }
+  console.log(`[Migration] Using inferred availableDays=${inferredDays} for user ${userId}, week ${weekStart}.`);
+
   const deps = {
     getProfile: (id) => findProfileByUserId(id),
     getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
@@ -328,7 +340,7 @@ async function attemptMigration(userId, weekStart) {
     getTopActivities: (id, limit) => getTopActivities(id, limit),
     userId,
     weekStart,
-    availableDays: 5, // default for migrated plans (CONTEXT.md discretion)
+    availableDays: inferredDays,
   };
 
   try {
