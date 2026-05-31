@@ -1,242 +1,357 @@
-# Project Research Summary
+# Research Summary: v1.5 Smart Auto-Logging
 
-**Project:** Fitness_App — v1.4 LLM-Powered Daily Meal Recommendations
-**Domain:** Health & Fitness — AI-Assisted Meal Planning with Calorie Tracking
+**Project:** Fitness_App
+**Milestone:** v1.5 Smart Auto-Logging
+**Domain:** Health & Fitness — Auto-Logging of LLM-Generated Plans, Page Merges, Inline Management
 **Researched:** 2026-05-31
-**Confidence:** HIGH
+**Confidence:** HIGH (overall)
+
+---
 
 ## Executive Summary
 
-This research confirms that Fitness_App's v1.4 LLM meal recommendation feature can be built **with zero net-new technology additions** — the existing React + Express + Supabase PostgreSQL + OpenRouter LLM stack handles everything. The feature follows the exact architectural pattern established in v1.3's activity planning (weeklyPlan controller → llm.service → prompt files → caching → rate limiting) with three additions: a new `meal_plans` database table mirroring `weekly_plans`, a batch food-logging endpoint for one-click log, and domain-specific prompt engineering constraining the LLM to ingredients from the existing 200+ food database.
+Fitness_App v1.5 bridges the gap between "view your generated plan" and "live your plan." Currently, activity plans and meal plans live on separate pages from the actual logging tools (Activities page, Food Log page). Users must generate plans on one page, then manually log items on another. This release converges these into two unified pages, auto-generates plans on visit (no empty state), enables one-click logging from plan items with completed tracking, and shifts meal plans from 7-day to 1-day for higher daily relevance.
 
-**The key technical challenge is not the stack — it's prompt reliability.** Free-tier LLMs hallucinate food names, miscalculate calories, and can overflow context windows with 200 ingredients. The research recommends a layered defense: (1) aggressive prompt constraints with few-shot examples, (2) a validation pipeline that fuzzy-matches LLM output against the database and removes unmatchable items rather than failing the whole plan, (3) server-authoritative calorie recalculation that overrides LLM arithmetic, and (4) a template-based fallback plan for when the LLM fails entirely. The batch logging endpoint must use explicit PostgreSQL transactions (BEGIN/COMMIT/ROLLBACK) to prevent partial logs from corrupting the food diary.
+**The research recommends a zero-new-packages approach** — the existing React 19 + Express 5 + Supabase PostgreSQL + OpenRouter LLM stack handles every new feature through architectural changes alone. The core work splits into: (1) new database tables for daily meal plans and activity plan persistence, (2) new backend service files for daily meal generation and activity batch-logging, (3) frontend section extraction and route merging, and (4) auto-generation triggers with careful guard logic.
 
-**The primary risk is that free-tier OpenRouter models produce low-quality plans, making the feature appear broken.** Mitigations include a 2-attempt correction loop, always showing something via fallback, and documenting that paid models (configurable via `LLM_MODEL` env var) dramatically improve quality. Scope is tightly constrained: ingredient-level recommendations only (no recipes), calories-only display (no macros), no dietary restriction tracking, and no meal plan favorites or editing.
+**The top risks** are: (A) **Double-logging** — every page visit could trigger log inserts if generation and logging aren't separated; (B) **Infinite regeneration loops** — if auto-generation fails, React effects can retry endlessly; (C) **State explosion** — naively merging two page components creates unmaintainable God components. All three are preventable with known patterns: separate sub-components with independent state, `useRef` one-shot guards, and a strict "generation creates `logged: false` items; only explicit user toggle inserts DB rows" policy.
+
+**Key architectural decision made:** Create two new tables (`daily_meal_plans`, `activity_plans`) instead of modifying existing schemas. This isolates risk, preserves backward compatibility with v1.4 data, and enables gradual migration. "Select alternatives" for meal items is deferred to v1.6 to keep scope contained.
+
+---
 
 ## Key Findings
 
-### Recommended Stack
+### Stack Recommendations
 
-**No new technologies or packages are required.** The v1.4 feature extends the existing stack exactly as configured. All changes are new files following established patterns (weeklyPlan feature) or minor method additions to existing repositories.
+**Zero new npm packages required.** Every v1.5 feature maps to existing capabilities in the current stack.
 
-**Core stack (unchanged):**
+| Technology | Role in v1.5 | Why No Change Needed |
+|------------|-------------|---------------------|
+| React 19 + Vite 8 | Frontend rendering | Route merging follows existing component patterns; no version change needed |
+| Express 5 ESM | Backend API | New `log-day` and `daily-meal-plans` endpoints follow existing controller/route patterns |
+| Supabase PostgreSQL 17 | Database | Two new tables (`daily_meal_plans`, `activity_plans`); same `pg` driver + JSONB patterns |
+| OpenRouter (OpenAI SDK) | LLM provider | Meal prompt switches from 7-day to 1-day; same SDK, same call pattern, fewer tokens |
+| TanStack React Query | Data fetching | Not used on plan pages currently; plain `useState` + `useEffect` sufficient for single-page plan state |
+| node-cache | In-memory caching | Key namespace change only (`plan_meal_` → `plan_daily_meal_`, `plan_activity_`); same TTL/maxKeys |
+| react-router-dom | Client routing | Remove 2 routes, add 2 redirects; simpler routing tree |
+| Jest + Vitest | Testing | New tests for batch-log endpoints, daily validation, merged component rendering |
 
-| Technology | Version | Purpose | Why Correct |
-|------------|---------|---------|-------------|
-| React | 19 | Frontend | Meal plan components follow same patterns |
-| Vite | 8 | Build tool | Already configured |
-| TanStack React Query | latest | Data fetching | Already in project |
-| Express | 5 | Backend API | New routes follow weeklyPlan pattern |
-| Supabase PostgreSQL | 17 | Database | New `meal_plans` table matches existing pattern |
-| pg | latest | DB driver | Repository pattern continues |
-| OpenRouter (OpenAI SDK) | latest | LLM provider | Already integrated, meal plans use same client |
-| node-cache | latest | In-memory caching | Same cache instance, separate keys for meal plans |
-| express-rate-limit | latest | Rate limiting | New limiter follows same pattern |
+**What NOT to add:**
+- No ORMs (Prisma, Drizzle, Knex) — JSONB updates via raw pg is simpler
+- No state management library (Redux, Zustand) — sub-components manage their own state
+- No Supabase Auth/RLS — server-side Passport JWT remains
+- No WebSockets/SSE — generation is request/response
+- No Redis — node-cache with 1h TTL handles scale
+- No background job queue — single-user generation is fast enough
 
-**What changes (files):** ~15 new files across backend (controller, service, repository, routes, middleware, prompts, migration) and frontend (feature directory with page, cards, meal rows, API client, empty/fallback states). Modifications to 2 existing files (`app.js` route registration, `food.repository.js` batch insert method). See [ARCHITECTURE.md](./ARCHITECTURE.md#new-components) for full inventory.
+**Required backend changes:**
+- `activity.repository.js` — NEW `batchLogActivities()` (pattern: `food.repository.js:batchLogItems`)
+- `weeklyPlan.controller.js` — NEW `logDay` handler (pattern: `mealPlan.controller.js:logDay`)
+- `dailyMealPlan.service.js` — NEW file: 1-day generation, validation, fallback, per-meal regeneration
+- `activityPlan.repository.js` — NEW file: CRUD for activity_plans table
+- `meal-plan-prompt.md` — CHANGE "7 consecutive days" to "1 day"
+- Rate limiters — ADD for new endpoints (follow existing patterns)
 
-**LLM Model:**
-- Primary: Existing `LLM_MODEL` env var (same free-tier model as activity plans)
-- Fallback: Existing `LLM_FALLBACK_MODEL` env var
-- Temperature: 0.2 (same as activity plans — deterministic JSON)
-- Max tokens: 2000 (sufficient for 7 days × 4 meals)
-- **Key difference:** Meal plan prompts carry ~200 food entries as context (~10K chars of ingredients alone), which may stress small-context free models
+**Required frontend changes:**
+- `ActivitiesPage.jsx` — IMPORT `ActivityPlanSection` component + auto-generation trigger
+- `FoodLogPage.jsx` — IMPORT `MealPlanSection` component + auto-generation trigger
+- `Router.jsx` — REMOVE `/weekly-plan`, `/meal-plan`; ADD redirects `/weekly-plan → /activities`
+- `WeeklyPlanPage.jsx` — REFACTOR into `ActivityPlanSection` for embedding
+- `MealPlanPage.jsx` — REFACTOR into `MealPlanSection` for embedding
 
-### Expected Features
+---
 
-**Must have (table stakes):**
-- **Calorie-targeted meals** — whole point of the feature, meals must fit within daily target (80-120% tolerance)
-- **Real ingredients only** — LLM constrained to 200+ DB foods, no hallucinated "unicorn" ingredients
-- **Reasonable portions** — validate per food category (carbs 50-300g, proteins 50-250g, etc.)
-- **Meal variety across week** — prompt constraint + category diversity check prevents same meals daily
-- **One-click log to food tracker** — batch transaction endpoint that inserts 4-8 food_log entries atomically
-- **View today's meals** — quick glance at what to eat, current day default-expanded
-- **Regenerate a day** — user can replace any single day's suggestions
+### Feature Analysis
 
-**Should have (differentiators):**
-- **Ingredient-exclusive generation** — moat that no generic meal planner has; only uses REAL tracked ingredients from user's database
-- **Fitness-goal-aware portions** — lose weight → restricted carb portions; gain weight → more generous
-- **Per-meal partial logging** — log just breakfast without committing to whole day
-- **Already-logged tracking** — visual check marks on items already in food_logs
-- **Fallback plan (no-LLM mode)** — template-based ingredient distribution works even when API is down
+The 7 targets are grouped into three categories:
 
-**Defer (v1.5+):**
-- Favorite meals / meal templates — not core, adds DB complexity
-- Manual meal plan editing — would need custom UI, out of scope for v1.4
-- Recipe-style multi-ingredient dishes — ingredient level is the constraint, scope expansion
-- Grocery / shopping list generation — different use case, not a shopping app
-- Macro breakdowns (protein/carbs/fat) — calories-only per PROJECT.md
-- Dietary preference/allergy tracking — no profile fields exist, scope creep
+#### Category A: Auto-Save & Completed Tracking (Targets 1, 2)
 
-### Architecture Approach
+| Feature | Status | Complexity |
+|---------|--------|------------|
+| Auto-save activity plan → activity_logs | **NEW** | MEDIUM |
+| Auto-save meals → food_log with toggle | Builds on v1.4 `logDay` | MEDIUM |
+| "Select alternatives" for meal items | **DEFERRED to v1.6** | HIGH (deferred) |
+| Completed tracking via `logged` flag in plan_data JSONB | **NEW** (activity plan) | MEDIUM |
 
-The architecture is a **direct copy of the v1.3 weeklyPlan pattern** with meal-specific adaptations. The feature is **not a new service** — it extends the existing `llm.service.js` primitives (prompt building, LLM calling, caching, Levenshtein matching) via a new `mealPlan.service.js` that orchestrates generation, validation, correction, and fallback.
+**State machine per day:** PENDING → LOGGING (spinner) → COMPLETED (green) → regenerate resets to PENDING.
 
-**Major components:**
+**Critical rule:** Generation sets `logged: false` on every item. Only explicit user toggle inserts DB rows. Never auto-log during generation.
 
-1. **Meal Plan Service** (`mealPlan.service.js`) — **Highest complexity.** Orchestrates entire generation pipeline: fetches user profile + food DB + recent eating history, builds prompt with full ingredient list, calls LLM with prompt, validates structural integrity (dates, meal types, portions), runs fuzzy-match post-processing against DB foods to fix hallucinated names, server-recalculates all calories, runs correction loop (max 2 attempts) on failures, and falls back to template-based plan if LLM fails entirely
+#### Category B: 1-Day Meal Plans & Auto-Generate (Targets 3, 4, 5)
 
-2. **Validation Pipeline** (within mealPlan service) — Two-phase: `validateMealPlanStructure()` checks dates, meal types, portions, calorie ranges; `validateAndFixMealPlan()` fuzzy-matches each food name against DB (exact → case-insensitive → substring → Levenshtein ≤ 3 → remove if no match) and recalculates all calories server-side. **Crucial design choice: remove unmatchable items rather than failing the whole plan.**
+| Feature | Status | Complexity |
+|---------|--------|------------|
+| 1-day meal plans (was 7-day) | **CHANGE** | HIGH (foundation) |
+| Auto-generate plan on page visit | **NEW** | MEDIUM |
+| Always-visible regenerate button | **CHANGE** | LOW |
 
-3. **Batch Log Endpoint** (`POST /api/meal-plans/log-day`) — Takes `weekStart`, `dayIndex`, optional `mealType`. Runs inside explicit PostgreSQL transaction: insert 4-8 food_log rows, then mark items as `logged: true` in plan_data JSONB. Supports per-meal logging (`mealType: "lunch"`) and full-day logging (`mealType: null`). Skipping of already-logged items for idempotency.
+**Table stakes users expect:**
+- Plans auto-appear on page load (no "click Generate" empty state)
+- One-click log from plan (see it → log it)
+- Single-screen workflow (no page switching)
+- Plan adapts to today (yesterday's meal plan is irrelevant)
+- Always-available regenerate ("I don't like this suggestion")
+- Completion tracking ("Did I do this already?")
 
-4. **Template Fallback Generator** — When LLM fails, distributes 6-8 random diverse ingredients (2 proteins, 2 carbs, 2 vegetables, 1 fruit, 1 dairy) across 4 meals with portions calculated to hit calorie target. Always returns something.
+**Differentiators:**
+- Rate-limit-aware auto-generation (respects quota without confusing user)
+- Unified activity + plan view (single page shows what you planned AND what you logged)
+- Auto-calculated calorie adjustments when toggling items
 
-5. **Rate Limiting Middleware** — Three separate limiters per user: generate (5/15min), regenerate (3/30min), log-day (30/15min). Reuses the existing `express-rate-limit` configuration pattern.
+#### Category C: Page Merges (Targets 6, 7)
 
-6. **Frontend Components** — Page with state machine (loading → empty → generating → active plan → fallback), day cards (expandable, current day default), meal rows, regenerate button, log-this-day / log-this-meal buttons. Empty state + fallback banner reuse v1.3 patterns.
+| Feature | Status | Complexity |
+|---------|--------|------------|
+| Merge Activity Plan → Activities page | **CHANGE** | HIGH |
+| Merge Meal Plan → Food Log page | **CHANGE** | HIGH |
 
-### Critical Pitfalls
+**Recommendation: Section-based merge** (not tabs). Plan section appears as an inline section on the target page. This keeps everything visible on a single scroll, requires no tab state management, and allows acting on plan items without switching views.
 
-1. **LLM hallucinates food names not in database** — The #1 reliability issue. Free-tier LLMs ignore ingredient constraints and suggest quinoa, tofu, or "grilled chicken recipe" when the DB only has "chicken breast." **Prevention:** Aggressive prompt constraint language with delimiters, fuzzy-matching post-processing that removes (not fails) unmatchable items, Levenshtein distance matching up to 3 edits, and graceful degradation that returns a plan with warnings rather than falling back entirely.
+**Anti-features (do not build):**
+- ❌ Drag-and-drop meal planning — too complex for v1.5
+- ❌ Auto-log without confirmation — user must own their diary
+- ❌ Calendar view for plans — over-engineered for mobile-first
+- ❌ Fitness goal auto-adjustment from completed plans — v2+ scope
 
-2. **Calorie miscalculation from LLM arithmetic errors** — LLMs are notoriously bad at math. They miscalculate `(cal_per_100g × portion) / 100` consistently. **Prevention: Server-authoritative recalculation always wins.** The LLM suggests portions; the server recalculates every calorie using DB values. If discrepancy > 20kcal, the server value overrides. Total daily targets are validated against server-recalculated totals, not LLM values.
+---
 
-3. **Transaction failure during batch log** — Inserting 4-8 food_log rows without wrapping in a transaction risks partial commits if row 5 fails a FK constraint. **Prevention:** Explicit `BEGIN/COMMIT/ROLLBACK` with client connection. Mark items as logged in plan_data only after COMMIT succeeds. Idempotency check skips already-logged items on retry.
+### Architecture Changes
 
-4. **Prompt token overflow with 200+ ingredients** — Free-tier models like `nvidia/nemotron-3-nano` may have 4K-8K context limits. 200 foods × ~60 chars + profile + instructions + format spec + examples ≈ 5K tokens. **Prevention:** Measure token count before sending, truncate food list to 150 items if over threshold (prioritize custom foods + seeded favorites), prefer models with 8K+ context for meal generation, use one example day instead of full week format.
+#### Current Architecture (v1.4)
 
-5. **Free-tier model quality degradation** — Same constraint as activity plans. Free models produce repetitive menus and ignore nuance. **Prevention:** 2-attempt correction loop catches structural issues, template fallback is nutritionally reasonable, document that `LLM_MODEL` env var can be set to a paid model for better quality.
+```
+Frontend Routes (4 separate pages):
+  /activities     → ActivitiesPage   (manual activity log + recommendations)
+  /weekly-plan    → WeeklyPlanPage   (LLM activity plan, 7 days, cache-only)
+  /food-log       → FoodLogPage      (manual food log + search)
+  /meal-plan      → MealPlanPage     (LLM meal plan, 7 days, DB persisted)
+```
+
+#### Target Architecture (v1.5)
+
+```
+Frontend Routes (2 unified pages):
+  /activities     → ActivitiesPage   (recommendations + auto-generated plan + log)
+  /food-log       → FoodLogPage      (food search + auto-generated meals + log)
+
+Backend:
+  daily_meal_plans table   (NEW — 1-day generation, single-day key)
+  activity_plans table     (NEW — persistence for auto-log tracking)
+  weekly_plans             (KEPT — read-compatible for archive, no new writes)
+  meal_plans               (KEPT — read-compatible, no new writes)
+```
+
+#### Major Components
+
+| Component | Responsibility |
+|-----------|---------------|
+| `ActivityPlanSection` (NEW) | Extracted from `WeeklyPlanPage`; shows today's generated activities with inline log toggles |
+| `MealPlanSection` (NEW) | Extracted from `MealPlanPage`; shows today's meals with per-item log/regenerate |
+| `dailyMealPlan.service.js` (NEW) | 1-day generation pipeline, validation, fallback, per-meal regeneration |
+| `activityPlan.repository.js` (NEW) | CRUD for activity_plans table; `markActivitiesLogged` for JSONB flag updates |
+| `activityPlan.controller.js` (NEW) | Handlers: generate, get, log-activities for activity plans |
+| `dailyMealPlan.controller.js` (NEW) | Handlers: generate, get, log-meals, regenerate-meal |
+
+#### Key Data Flows
+
+**Activity Plan (NEW persistence + auto-log):**
+```
+Page mount → GET /api/activity-plans?date=today → null → auto-trigger POST generate
+  → LLM returns 1-day plan → stored in activity_plans (DB) + node-cache
+  → User toggles activity "completed" → POST /api/activity-plans/log-activities
+    → batch inserts to activity_logs table → marks logged=true in plan_data JSONB
+```
+
+**Meal Plan (1-day generation):**
+```
+Page mount → GET /api/daily-meal-plans?date=today → null → auto-trigger POST generate
+  → LLM returns 1-day, 4-meal plan → stored in daily_meal_plans (DB) + cache
+  → User clicks "Log Breakfast" → POST log-meals { date, mealType }
+    → batchLogItems to food_logs → markItemsLogged in plan_data
+```
+
+#### Integration Point Map
+
+```
+ActivitiesPage (merged)
+├── ActivitySummary (existing)
+├── ActivityPlanSection (NEW) ← auto-gen, inline toggle, always-visible regenerate
+└── Activity Logging (existing: log form, pool, history)
+
+FoodLogPage (merged)
+├── CalorieSummary (existing)
+├── MealPlanSection (NEW) ← auto-gen, per-meal log, always-visible regenerate
+└── Food Logging (existing: search, log table, history)
+```
+
+---
+
+### Critical Pitfalls & Mitigations
+
+#### Top 5 Risks
+
+1. **DOUBLE-LOGGING ON EVERY VISIT** (Critical)
+   - *What:* Auto-generation triggers logging to DB on every page load
+   - *Why:* Ambiguity between "auto-save as DB row" vs "auto-save as UI pre-fill"
+   - *Prevention:* **Separate generation from logging.** Generation sets `logged: false` on all items. Only explicit user toggle calls the log endpoint. Never auto-insert to `food_logs`/`activity_logs` during generation.
+
+2. **INFINITE REGENERATION LOOP** (Critical)
+   - *What:* Auto-gen fails → state remains "no plan" → effect re-fires → endless API calls
+   - *Prevention:* Use `useRef` one-shot guard (`autoGenAttempted.current`) that persists across renders. After a failed auto-gen, show manual "Retry" — never auto-retry.
+
+3. **STATE EXPLOSION IN MERGED PAGES** (Critical)
+   - *What:* Merging two pages creates 15+ state variables in one component
+   - *Prevention:* **Keep sub-components independent.** Use `TodayActivityPlan.jsx` and `TodayMealPlan.jsx` as self-contained components with their own state. Extract plan logic into `useActivityPlan()` / `useMealPlan()` custom hooks. The container page only passes shared context (selected date).
+
+4. **RATE LIMITER STACKING — AUTO-GEN CONSUMES USER QUOTA** (Critical)
+   - *What:* Auto-gen on page visit consumes the same rate limit bucket as manual regenerate
+   - *Prevention:* Auto-gen only when absolutely needed (no plan exists at all). Don't auto-gen if a plan exists (even stale). Use stricter limiter for auto-triggered requests (header-based: `x-auto-gen: true`).
+
+5. **WEEKLY-TO-DAILY MIGRATION GAP** (High)
+   - *What:* Existing `meal_plans` table uses `(user_id, week_start)` UNIQUE — incompatible with daily generation
+   - *Prevention:* **Create separate `daily_meal_plans` table** with `UNIQUE(user_id, date)`. Leave old table untouched. No migration of existing data needed. New code reads/writes new table; old code remains functional during transition.
+
+#### Phase-Specific Warnings
+
+| Phase | Pitfall | Prevention |
+|-------|---------|------------|
+| Daily Meal Plan | Schema collision with weekly plans | New table, don't modify existing |
+| Activity Plan Log | No `logged` flag in plan_data (currently absent) | Add `logged: boolean` to activity plan items; create `markActivitiesLogged()` |
+| Page Merge | ProfileGuard mismatch (missing on activities route) | Add ProfileGuard to merged route or show prompt banner |
+| Auto-Gen on Visit | Auto-gen fires when user just wants to log | Debounce 2s; cancel if user interacts with log section |
+| Completed Toggle | Manual log + toggle create duplicates | Cross-reference plan items with already-logged entries |
+
+---
 
 ## Implications for Roadmap
 
-Based on the architecture's dependency graph and risk profile, suggested phases:
+### Phase Structure (6 Phases Recommended)
 
-### Phase 1: Infrastructure (DB Migration + Prompt Files)
+The build order follows a strict dependency chain: daily meal foundation → activity plan persistence → auto-log endpoints → frontend merges.
 
-**Rationale:** Zero dependency on other components. Must exist before any backend logic. Low risk — follows established patterns.
+#### Phase 1: Foundation — Daily Meal Plan Service
+**Rationale:** The shift from 7-day to 1-day meal generation is the most invasive change. Everything else (auto-generation, auto-save, merging) builds on it. Getting this right unblocks all other work.
+**Delivers:** New `daily_meal_plans` DB table, `dailyMealPlan.service.js` (generate, validate, fallback, per-meal regenerate), new prompt file, new controller/routes/rate-limiters.
+**Addresses:** Target 3 (1-day meal plans)
+**Avoids:** Pitfall 7 (weekly-to-daily migration gap) — new table isolates risk
+**Risk:** MEDIUM — new code path but follows existing `mealPlan.service.js` pattern exactly
+**Test target:** 10-12 backend tests (validation, fallback, regeneration)
 
-**Delivers:**
-- `meal_plans` table (mirrors `weekly_plans`: user_id, week_start, plan_data JSONB, status, timestamps; UNIQUE(user_id, week_start))
-- `backend/db/add_meal_plans.sql` migration (idempotent, follows existing format)
-- `backend/prompts/meal-plan-prompt.md` — full system prompt with role, constraints, format, few-shot example
-- `backend/prompts/meal-correction-prompt.md` — correction prompt for validation failures
+#### Phase 2: Persistence — Activity Plan DB Storage
+**Rationale:** Activity plans are currently cache-only (node-cache). v1.5 needs DB persistence for `logged` flags that survive cache eviction and page refreshes.
+**Delivers:** `activity_plans` DB table, `activityPlan.repository.js`, `activityPlan.service.js`.
+**Addresses:** Foundation for Target 1 (auto-save activity plans)
+**Avoids:** Pitfall 8 (completed toggle disappears on refresh)
+**Risk:** LOW — mirrors existing `mealPlan.repository.js` pattern
+**Test target:** 5-8 backend tests (DB read/write, upsert)
 
-**Avoids:** Token overflow (#4) — prompt engineering done early, iterated before code freeze.
+#### Phase 3: Logging — Batch Activity Log + Meal Log Extensions
+**Rationale:** Needs Phases 1-2 for persistence. Adds the actual auto-log endpoints.
+**Delivers:** `POST /api/activity-plans/log-activities` (batch insert + capacity recalculation), `POST /api/daily-meal-plans/log-meals` (extend existing meal log), `POST /api/daily-meal-plans/regenerate-meal`.
+**Addresses:** Targets 1 (activity auto-save), 2 (meal auto-save with completed toggle)
+**Avoids:** Pitfall 1 (double-logging) — generation creates `logged: false`; only toggle inserts rows
+**Risk:** MEDIUM — transaction patterns exist but need careful idempotency
+**Test target:** 10-12 backend tests (transaction rollback, idempotency, duplicate prevention)
 
-### Phase 2: Core Meal Plan Service (Generation + Validation)
+#### Phase 4: Frontend — Merge Activity Plan into Activities Page
+**Rationale:** Phase 3 provides the backend endpoint for the inline completed toggle. Pattern established here is reused for Food Log merge.
+**Delivers:** `TodayActivityPlan.jsx`, `ActivityPlanCard.jsx` components; modified `ActivitiesPage.jsx` with plan section; removed `/weekly-plan` route + redirect.
+**Addresses:** Target 6 (merge Activity Plan), Target 5 (always-visible regenerate)
+**Avoids:** Pitfall 5 (state explosion) — sub-component with own state, not merged into parent
+**Risk:** MEDIUM — refactoring working page requires careful preservation
+**Test target:** 8-10 frontend tests (section rendering, auto-gen trigger, toggle integration)
 
-**Rationale:** Highest-risk item. Must be built and validated independently before controllers or frontend depend on it. This is where all the prompt engineering, fuzzy matching, calorie recalculation, and fallback logic lives.
+#### Phase 5: Frontend — Merge Meal Plan into Food Log Page
+**Rationale:** Follows Phase 4 pattern. Daily meal backend exists from Phase 1.
+**Delivers:** `TodayMealPlan.jsx`, `MealPlanItem.jsx` components; modified `FoodLogPage.jsx` with meal plan section; removed `/meal-plan` route + redirect.
+**Addresses:** Target 7 (merge Meal Plan), Target 4 (auto-generate on visit), Target 5 (always-visible regenerate)
+**Avoids:** Pitfall 4 (routing breakage) — redirect routes; Pitfall 11 (ProfileGuard) — check guard placement
+**Risk:** MEDIUM — follows Phase 4 pattern, lower risk
+**Test target:** 8-10 frontend tests (section rendering, per-meal log, auto-gen trigger)
 
-**Delivers:**
-- `mealPlan.service.js` — orchestrates: fetch profile + foods + eating history → build prompt → callLLM → validate structure → fuzzy-match foods → recalculate calories → correct or fallback
-- Validation functions: `validateMealPlanStructure()`, `validateAndFixMealPlan()`, `fuzzyMatchFoodName()`, `generateFallbackMealPlan()`
-- `mealPlan.repository.js` — CRUD for meal_plans table
-- Independent CLI/script testing of LLM prompt quality (10+ test prompts before integration)
-
-**Addresses FEATURES.md:** Calorie-targeted meals (#1), Real ingredients (#2), Meal variety (#3), Reasonable portions (#3), Fallback plan (#5)
-**Avoids:** Food name hallucination (#1), Calorie miscalculation (#2), Token overflow (#4), Model quality (#8)
-
-**Research flag:** Phase 2 needs a validation spike — run 20+ prompts against the free-tier model to measure hallucination rate and token consumption. Adjust prompt engineering accordingly before moving to Phase 3.
-
-### Phase 3: Batch Log Integration (One-Click Log)
-
-**Rationale:** Small scope, independent after Phase 1 and the food repository extension. Can be built in parallel with Phase 2 if desired, but sequenced here because the service layer comes first.
-
-**Delivers:**
-- `batchLogItems()` method in `food.repository.js` — transactional batch insert with BEGIN/COMMIT/ROLLBACK
-- `markItemsLogged()` method in `mealPlan.repository.js` — updates plan_data JSONB
-- `POST /api/meal-plans/log-day` endpoint logic (full-day and per-meal variants)
-
-**Addresses FEATURES.md:** One-click log day (#5, table stakes), Per-meal partial logging (#4, differentiator), Already-logged tracking (#5, differentiator)
-**Avoids:** Transaction failure (#3), Double-logging (#6)
-
-### Phase 4: Backend API Layer (Controller + Routes + Rate Limiting)
-
-**Rationale:** Thin layer after Phase 2 and Phase 3 are built. Mostly boilerplate — follows exact weeklyPlan pattern.
-
-**Delivers:**
-- `mealPlan.controller.js` — GET (fetch plan), POST (generate), POST (regenerate-day), POST (log-day)
-- `mealPlan.routes.js` — route definitions with rate limiter attachment
-- `mealPlanRateLimiter.js` — 3 separate limiters: generate (5/15min), regenerate (3/30min), log-day (30/15min)
-- `app.js` update — `app.use('/api/meal-plans', mealPlanRoutes)` (one line)
-
-**Avoids:** Rate limiting blocks legitimate use (#5)
-
-**Research flag:** None — well-documented weeklyPlan pattern, skip research-phase.
-
-### Phase 5: Frontend (Components + API + Integration)
-
-**Rationale:** Depends on Phase 4 (backend routes must exist for the API client). Pure UI work following existing patterns.
-
-**Delivers:**
-- `frontend/src/features/meal-plan/` — full feature directory with barrel export
-- `MealPlanPage.jsx` — main page with state machine (loading/empty/generating/active/fallback/error)
-- `DayMealCard.jsx` — expandable day card, current day default-expanded
-- `MealRow.jsx` — individual meal item with log status checkmarks
-- `EmptyStateMealPlan.jsx` + `FallbackBanner.jsx` — reuse v1.3 patterns
-- `mealPlanApi.js` — API client (fetch, generate, regenerate-day, log-day, log-meal)
-- Reusable `RateLimitedButton.jsx` — extracted from weekly-plan to shared directory
-- Router update — `/meal-plan` route added
-
-**Addresses FEATURES.md:** View today's meals (#6), Regenerate a day (#7), Already-logged visual indicators (#8)
-**Avoids:** Double-logging UI race (#6) — immediate state update before server response
-
-### Phase 6: Testing & Edge Cases
-
-**Rationale:** Validates everything from Phase 2-5. Can begin once backend API layer (Phase 4) is stable.
-
-**Delivers:**
-- Backend tests (Jest, ~20 tests): service validation, fuzzy matching edge cases, transaction rollback, calorie recalculation, fallback plan generation, rate limiter behavior
-- Frontend tests (Vitest, ~10 tests): component rendering, state machine transitions, log-day button behavior, empty states
-- Manual testing: 5-10 real LLM generations to verify prompt quality in production-like conditions
-
-**Avoids:** All pitfalls — this is the safety net.
+#### Phase 6: Polish & Rate Limit Tuning
+**Rationale:** Non-functional improvements and cleanup after all features work.
+**Delivers:** Tuned rate limits (auto-gen vs manual buckets), dead code removal, cache key namespace verification, README update.
+**Addresses:** Target 5 (rate-limit UX for always-visible regenerate)
+**Avoids:** Pitfall 9 (rate limiter stacking) — separate auto-gen limiter from manual; Pitfall 18 (test debt)
+**Risk:** LOW
+**Test target:** Audit existing tests pass; verify rate limiter isolation
 
 ### Phase Ordering Rationale
 
-- **Phase 1 → 2 → 4 → 5** is the dependency chain: infrastructure before logic, service before API, API before frontend
-- **Phase 3 (batch log)** sequenced after Phase 1 but technically independent of Phase 2 — could start earlier if desired
-- **Phase 2 (core service) is the riskiest and should be started first** — it has the most unknowns (prompt quality, token usage, fuzzy matching edge cases). Validating this early prevents wasted work on 5 other phases
-- **Phase 6 (tests)** covers all previous phases; integration tests are most valuable for the batch transaction (Phase 3) and the service validation pipeline (Phase 2)
+1. **Daily meal plan first** because it's the foundational schema change — get the DB right before building on it
+2. **Activity plan persistence second** because it's low-risk (pattern duplication) and unblocks auto-log
+3. **Backend logging endpoints third** because frontend merges depend on them
+4. **Activity merge before meal merge** because the activity plan is simpler (no per-meal regeneration)
+5. **Meal merge follows the same pattern** as activity merge, reducing risk
+6. **Polish last** — rate limiting, cleanup, and docs after all features are stable
 
 ### Research Flags
 
-Phases likely needing deeper research during planning:
-- **Phase 2 (Core service):** Needs a prompt QA spike — run 20+ prompts against current LLM model, measure hallucination rate, token consumption, and constraint adherence. Tune prompt delimiters and few-shot examples based on results. The fuzzy matching threshold (Levenshtein distance limit) needs empirical validation against food name diversity.
+| Phase | Needs Research? | Reason |
+|-------|----------------|--------|
+| Phase 1 (Daily Meal Service) | **Standard patterns** | Direct mirror of existing `mealPlan.service.js` — well-documented |
+| Phase 2 (Activity Plan Persistence) | **Standard patterns** | Mirror of `mealPlan.repository.js` — well-documented |
+| Phase 3 (Logging Endpoints) | **Caution: auto-gen rate limit** | Need to verify header-based rate limiter separation (`x-auto-gen: true`) — `/gsd-research-phase` on rate limiter design |
+| Phase 4 (Activity Merge) | **Standard patterns** | Section extraction pattern is React best practice |
+| Phase 5 (Meal Merge) | **Caution: ProfileGuard** | Need to verify guard placement for merged route — `/gsd-research-phase` on routing security |
+| Phase 6 (Polish) | **Standard patterns** | Cleanup and rate limit tuning |
 
-Phases with standard patterns (skip research-phase):
-- **Phase 1 (Infrastructure):** DB migration follows v1.3 pattern exactly; prompt files are new but the format is established
-- **Phase 4 (API layer):** Direct copy of weeklyPlan controllers/routes/rate-limiters — well-documented pattern
-- **Phase 5 (Frontend):** Direct copy of weekly-plan UI pattern with meal-specific content variants
-- **Phase 6 (Testing):** Standard testing patterns already established in codebase
+### Items Deferred to v1.6
+
+| Feature | Reason |
+|---------|--------|
+| "Select alternatives" for meal items | Significant UI complexity, new endpoint, LLM prompt changes — risks scope creep |
+| Un-log / undo completed toggle | Adds delete/rollback logic to food_logs — edge cases need design |
+| Auto-calculated portion adjustment for alternatives | Depends on alternatives feature |
+| Meal plan week-overview (what's for dinner this week) | Anti-pattern for daily generation — revisit if users request it |
+
+---
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Verified against existing codebase. Zero new packages needed. All technologies already in use. |
-| Features | HIGH | Scoped tightly to PROJECT.md constraints ("calories only," "ingredient-level"). Validated against existing weekly-plan UX patterns. NutriGen academic research and CARE v2.0 paper provide medium-confidence validation of prompt patterns. |
-| Architecture | HIGH | Direct copy of v1.3's weeklyPlan architecture — the most validated architectural pattern in the codebase. The one-click-log integration extends existing food.repository.js patterns. Prompt engineering follows established system-prompt.md structure. |
-| Pitfalls | HIGH | Food hallucination, calorie miscalculation, and transaction failures are well-documented industry problems with clear mitigations. Token overflow is model-specific and measurable. Rate limiting and idempotency patterns are already battle-tested in v1.3. |
-
-**Overall confidence:** HIGH
-
-The research is based primarily on the existing codebase (HIGH confidence sources) rather than external conjecture. The feature's architecture is a deliberate pattern copy of a proven v1.3 implementation. The key risk — LLM output quality — is well-documented with layered mitigations.
+| **Stack** | HIGH | Zero new packages — all patterns verified via code inspection in STACK.md. 18 package.json files checked, 30+ existing patterns mapped |
+| **Features** | HIGH | Based on existing v1.3 (activity plan) and v1.4 (meal plan) implementations. All 7 targets have clear current/desired state mapping. "Select alternatives" flagged as HIGH complexity — deferred |
+| **Architecture** | HIGH | Complete codebase analysis of current architecture. Integration points (controllers, routes, repositories, services, cache) mapped in detail. 6-phase build order with dependency justification |
+| **Pitfalls** | HIGH | 20 pitfalls documented (4 critical, 11 moderate, 5 minor). Each has prevention strategy rooted in existing code patterns. Top 5 have both detection and prevention |
+| **Overall** | **HIGH** | All four research files reached HIGH confidence independently. Convergent recommendations across files (zero new packages, section-based merging, new tables instead of schema changes, defer alternatives) |
 
 ### Gaps to Address
 
-- **Prompt quality with the actual free-tier model:** The research assumes the v1.3 LLM model handles the larger prompt (200+ foods). This MUST be validated early in Phase 2 with real prompts. If rejection rate exceeds 30%, consider upgrading to `gpt-4o-mini` for meal plan generation only.
-- **Fuzzy matching threshold:** Levenshtein distance of ≤ 3 is the starting recommendation but needs tuning against actual LLM output during Phase 2 development. Some food names differ by more than 3 characters (e.g., "chicken breast" vs "grilled chicken").
-- **Token count measurement:** The research estimates ~5K tokens but this should be measured programmatically. If actual usage exceeds model limits, implement the food list truncation strategy (top 150 items, always include custom foods).
-- **Dietary restrictions awareness:** Deliberately deferred from v1.4 scope. The feature should gracefully handle cases where a user's available foods are all vegetables (vegetarian by constraint) but cannot actively prevent meat recommendations for a vegetarian. Document this as a known limitation.
+| Gap | How to Handle |
+|-----|---------------|
+| **Rate limiter separation for auto-gen vs manual gen** | Needs planning-level design. Current `express-rate-limit` instances key by user ID; adding header-based (`x-auto-gen: true`) differentiation needs verification. Flagged for Phase 3 research |
+| **ProfileGuard placement after merge** | `/activities` and `/food-log` currently lack ProfileGuard. Plan generation requires user profile (BMI, goals). Need to decide: add ProfileGuard to merged route, or show inline prompt. Flagged for Phase 5 research |
+| **`logged` flag migration for existing plans** | Existing weekly plans lack `logged` flags. Soft migration: treat missing `logged` as `logged: false`. New plans include `logged: false` by default. No schema migration needed |
+| **Cache key collision between old weekly and new daily keys** | Low risk — existing keys use `plan_meal_` prefix, new keys use `plan_daily_meal_` and `plan_activity_`. Verify during Phase 6 |
+| **LLM token cost comparison (7-day vs 1-day)** | Weekly meal plans cost ~2K tokens; daily estimated ~300-500. Monitor OpenRouter logs after Phase 1 deployment to validate cost reduction |
+
+---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- **Existing codebase:** weeklyPlan.controller.js, llm.service.js, food.repository.js, food.controller.js, weeklyPlanRateLimiter.js — all v1.3 patterns directly applicable
-- **OpenRouter structured outputs docs:** https://openrouter.ai/docs/guides/features/structured-outputs — prompt engineering and JSON mode
-- **OpenRouter rate limiting:** https://openrouter.ai/docs/guides/limits — rate limit pattern confirmation
-- **PostgreSQL transaction docs:** https://www.postgresql.org/docs/17/tutorial-transactions.html — BEGIN/COMMIT/ROLLBACK patterns
+- **Existing codebase**: `mealPlan.controller.js` — `logDay` handler pattern
+- **Existing codebase**: `food.repository.js` — `batchLogItems` transaction pattern
+- **Existing codebase**: `mealPlan.repository.js` — `markItemsLogged` JSONB update pattern
+- **Existing codebase**: `mealPlan.service.js` — meal generation pipeline
+- **Existing codebase**: `WeeklyPlanPage.jsx` — frontend state machine for plan generation
+- **Existing codebase**: `MealPlanPage.jsx` — frontend logging + regenerate UX
+- **Existing codebase**: `ActivitiesPage.jsx` — activity logging with history and summary
+- **Existing codebase**: `FoodLogPage.jsx` — food logging with ingredient search
+- **Existing codebase**: `Router.jsx` — route definitions, ProfileGuard placement
+- **Existing codebase**: `add_meal_plans.sql`, `schema.sql` — DB schema and constraints
+- **Existing codebase**: `activity.repository.js` — activity log CRUD patterns
+- **Existing codebase**: `package.json` (backend + frontend) — dependency manifests (no changes)
 
 ### Secondary (MEDIUM confidence)
-- **NutriGen (LLM meal plan research):** https://arxiv.org/html/2502.20601v1 — validates constraint-check-after-generation pattern and prompt engineering approach
-- **CARE v2.0 constraint verification:** https://www.mdpi.com/2304-8158/15/10/1647 — validates the server-side validation-after-LLM-generation pattern
-- **LangChain + Zod structured output pattern:** https://www.wellally.tech/blog/build-ai-meal-planner-nextjs-langchain — validates the approach of constraining LLM output to a fixed food list
-
-### Tertiary (LOW confidence)
-- **Meal.io architecture:** https://dev.to/youssef_ahmed/mealio-ai-weekly-meal-planner-2mab — single dev project but same stack (React + Express + LLM), confirms architecture direction
+- No external sources needed — all patterns exist in the current codebase
 
 ---
+
 *Research completed: 2026-05-31*
 *Ready for roadmap: yes*
