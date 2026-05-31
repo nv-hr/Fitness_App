@@ -11,5 +11,6 @@ router.get('/', weeklyPlanController.get);
 router.post('/generate', weeklyPlanLimiter, weeklyPlanController.generate);
 router.post('/regenerate-day', regenerateLimiter, weeklyPlanController.regenerateDay);
 router.post('/swap', swapLimiter, weeklyPlanController.swap);
+router.post('/toggle-complete', weeklyPlanController.toggleComplete);
 
 export default router;

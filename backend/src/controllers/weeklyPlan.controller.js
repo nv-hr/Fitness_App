@@ -368,9 +368,80 @@ async function attemptMigration(userId, weekStart) {
   }
 }
 
+async function toggleComplete(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const { weekStart, dayIndex, activityId, completed } = req.body;
+
+    // Validate weekStart
+    if (!weekStart || !isValidDateString(weekStart)) {
+      return errorResponse(res, 'Invalid or missing weekStart date', 400, 'VALIDATION_ERROR');
+    }
+
+    // Validate dayIndex
+    if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {
+      return errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR');
+    }
+
+    // Validate activityId
+    if (activityId === undefined || activityId === null) {
+      return errorResponse(res, 'activityId is required', 400, 'VALIDATION_ERROR');
+    }
+
+    // Normalize weekStart
+    const targetWeekStart = getMonday(weekStart ? new Date(weekStart) : new Date());
+
+    // Load plan from DB
+    const dbPlan = await findByUserAndWeek(userId, targetWeekStart);
+    if (!dbPlan || !dbPlan.plan_data || !Array.isArray(dbPlan.plan_data.days)) {
+      return errorResponse(res, 'No plan found for the given week', 404, 'NOT_FOUND');
+    }
+
+    const planData = dbPlan.plan_data;
+
+    // Locate the day in the plan
+    if (!planData.days[dayIndex]) {
+      return errorResponse(res, 'Day index not found in plan', 400, 'VALIDATION_ERROR');
+    }
+
+    const day = planData.days[dayIndex];
+    if (!Array.isArray(day.activities)) {
+      return errorResponse(res, 'No activities found for this day', 400, 'VALIDATION_ERROR');
+    }
+
+    // Find and toggle the activity
+    const activityIdx = day.activities.findIndex(a => a.activity_id === activityId);
+    if (activityIdx === -1) {
+      return errorResponse(res, 'Activity not found in plan day', 404, 'NOT_FOUND');
+    }
+
+    // Set the completed flag
+    day.activities[activityIdx].completed = completed === true;
+
+    // Recompute day-level completed flag
+    const allCompleted = day.activities.length > 0 && day.activities.every(a => a.completed === true);
+    day.completed = allCompleted;
+    if (!allCompleted) delete day.completed; // Clean up — only set when fully completed
+
+    // Persist the updated plan
+    await upsertPlan(userId, targetWeekStart, planData, dbPlan.status || 'active');
+
+    // Update cache
+    const cached = getCachedPlan(userId, targetWeekStart);
+    if (cached) {
+      setCachedPlan(userId, targetWeekStart, planData);
+    }
+
+    return successResponse(res, { plan: planData });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export default {
   get,
   generate,
   regenerateDay: regenerateDayHandler,
   swap: swapHandler,
+  toggleComplete,
 };
