@@ -142,11 +142,45 @@ export async function callLlmApi(systemPrompt) {
   throw new AppError('LlmAllFailed', 'All LLM models failed', 502);
 }
 
+function validateActivities(activities, prefix) {
+  const errors = [];
+  if (!Array.isArray(activities)) {
+    errors.push(`${prefix}"activities" must be an array`);
+    return errors;
+  }
+  if (activities.length < 1 || activities.length > 4) {
+    errors.push(`${prefix}expected 1-4 activities but got ${activities.length}`);
+  }
+  activities.forEach((act, j) => {
+    if (!act.activity_id || typeof act.activity_id !== 'number' || act.activity_id < 1) {
+      errors.push(`${prefix}activity ${j + 1}: invalid activity_id`);
+    }
+    if (!act.name || typeof act.name !== 'string' || act.name.trim().length === 0) {
+      errors.push(`${prefix}activity ${j + 1}: name is required`);
+    }
+    if (!act.duration_min || act.duration_min < 10 || act.duration_min > 180) {
+      errors.push(`${prefix}activity ${j + 1}: duration_min must be 10-180`);
+    }
+    if (!['light', 'moderate', 'vigorous'].includes(act.intensity)) {
+      errors.push(`${prefix}activity ${j + 1}: intensity must be light/moderate/vigorous`);
+    }
+  });
+  return errors;
+}
+
 export function validatePlanStructure(plan, weekStart) {
   const errors = [];
 
-  if (!plan || !Array.isArray(plan.days)) {
-    return { valid: false, errors: ['Plan must have a "days" array'] };
+  if (!plan) {
+    return { valid: false, errors: ['Plan is null or undefined'] };
+  }
+
+  if (Array.isArray(plan.activities)) {
+    return { valid: errors.length === 0, errors: validateActivities(plan.activities, '') };
+  }
+
+  if (!Array.isArray(plan.days)) {
+    return { valid: false, errors: ['Plan must have an "activities" or "days" array'] };
   }
 
   if (plan.days.length !== 7) {
@@ -164,29 +198,7 @@ export function validatePlanStructure(plan, weekStart) {
       errors.push(`Day ${i + 1}: expected date ${expectedStr} but got ${day.date}`);
     }
 
-    if (!Array.isArray(day.activities)) {
-      errors.push(`Day ${i + 1}: "activities" must be an array`);
-      return;
-    }
-
-    if (day.activities.length < 1 || day.activities.length > 4) {
-      errors.push(`Day ${i + 1}: expected 1-4 activities but got ${day.activities.length}`);
-    }
-
-    day.activities.forEach((act, j) => {
-      if (!act.activity_id || typeof act.activity_id !== 'number' || act.activity_id < 1) {
-        errors.push(`Day ${i + 1}, activity ${j + 1}: invalid activity_id`);
-      }
-      if (!act.name || typeof act.name !== 'string' || act.name.trim().length === 0) {
-        errors.push(`Day ${i + 1}, activity ${j + 1}: name is required`);
-      }
-      if (!act.duration_min || act.duration_min < 10 || act.duration_min > 180) {
-        errors.push(`Day ${i + 1}, activity ${j + 1}: duration_min must be 10-180`);
-      }
-      if (!['light', 'moderate', 'vigorous'].includes(act.intensity)) {
-        errors.push(`Day ${i + 1}, activity ${j + 1}: intensity must be light/moderate/vigorous`);
-      }
-    });
+    errors.push(...validateActivities(day.activities, `Day ${i + 1}, `));
   });
 
   return { valid: errors.length === 0, errors };
