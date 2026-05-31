@@ -200,19 +200,43 @@ async function swapHandler(req, res, next) {
       weekStart: targetWeekStart,
     };
 
-    // Propagate availableDays from cached plan if available
-    const cached = getCachedPlan(userId, targetWeekStart);
-    if (cached && Array.isArray(cached.days)) {
-      const activityDays = cached.days.filter(d => d.rest_day === false).length;
-      if (activityDays > 0) deps.availableDays = activityDays;
-    }
-
-    // CR-03: Fall back to DB if plan not in cache (e.g., after server restart)
-    if (!cached || !Array.isArray(cached.days)) {
+    // D-04 + CR-03: Load plan from cache or DB, migrate if old format
+    let planForSwap = getCachedPlan(userId, targetWeekStart);
+    if (!planForSwap || !Array.isArray(planForSwap.days)) {
       const dbPlan = await findByUserAndWeek(userId, targetWeekStart);
       if (dbPlan && dbPlan.plan_data && Array.isArray(dbPlan.plan_data.days)) {
-        setCachedPlan(userId, targetWeekStart, dbPlan.plan_data);
+        planForSwap = dbPlan.plan_data;
+        setCachedPlan(userId, targetWeekStart, planForSwap);
       }
+    }
+
+    // D-04: Auto-trigger migration if plan is old format, then retry swap
+    if (planForSwap && isOldFormat(planForSwap)) {
+      console.log(`[Migration] Old-format plan detected during swap for user ${userId}, week ${targetWeekStart}. Migrating...`);
+      clearCachedPlan(userId, targetWeekStart);
+      const migrationDeps = {
+        getProfile: (id) => findProfileByUserId(id),
+        getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
+        getActivities: () => getAllActivities(),
+        getTopActivities: (id, limit) => getTopActivities(id, limit),
+        userId,
+        weekStart: targetWeekStart,
+        availableDays: 5, // default for migrated plans
+      };
+      const migrationResult = await generateWeeklyPlan(migrationDeps);
+      if (!migrationResult.plan || !Array.isArray(migrationResult.plan.days) || migrationResult.plan.days.length === 0) {
+        throw new AppError('MigrationError', 'Failed to migrate old-format plan. Cannot proceed with swap.', 500);
+      }
+      // Persist migrated plan to DB and cache
+      await upsertPlan(userId, targetWeekStart, migrationResult.plan, 'active');
+      console.log(`[Migration] Successfully migrated plan for swap. Proceeding with swap.`);
+    }
+
+    // Re-read availableDays from (now potentially migrated) cached plan
+    const updatedCached = getCachedPlan(userId, targetWeekStart);
+    if (updatedCached && Array.isArray(updatedCached.days)) {
+      const activityDays = updatedCached.days.filter(d => d.rest_day === false).length;
+      if (activityDays > 0) deps.availableDays = activityDays;
     }
 
     const result = await swapActivity(deps, activityId, dayIndex);

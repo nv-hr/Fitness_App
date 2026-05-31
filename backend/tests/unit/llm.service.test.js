@@ -6,6 +6,7 @@ import {
   buildSystemPrompt,
   generateFallbackPlan,
   validateActivities,
+  isOldFormat,
 } from '../../src/services/llm.service.js';
 import {
   calculateCaloriesBurned,
@@ -634,5 +635,40 @@ describe('generateFallbackPlan with availableDays', () => {
       availableDays: 4,
     });
     expect(result.format_version).toBe(1);
+  });
+});
+
+describe('isOldFormat', () => {
+  it('returns true for plan without format_version', () => {
+    const plan = { days: [] };
+    expect(isOldFormat(plan)).toBe(true);
+  });
+
+  it('returns true for plan with format_version set to undefined', () => {
+    const plan = { format_version: undefined, days: [] };
+    expect(isOldFormat(plan)).toBe(true);
+  });
+
+  it('returns false for plan with format_version: 1', () => {
+    const plan = { format_version: 1, days: [] };
+    expect(isOldFormat(plan)).toBe(false);
+  });
+
+  it('returns false for null plan', () => {
+    expect(isOldFormat(null)).toBe(false);
+  });
+
+  it('returns false for undefined plan', () => {
+    expect(isOldFormat(undefined)).toBe(false);
+  });
+
+  it('returns false for plan with format_version: 0 (edge case)', () => {
+    const plan = { format_version: 0, days: [] };
+    expect(isOldFormat(plan)).toBe(false);
+  });
+
+  it('returns true for empty object (no format_version but truthy)', () => {
+    const plan = {};
+    expect(isOldFormat(plan)).toBe(true);
   });
 });
