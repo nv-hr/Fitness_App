@@ -43,4 +43,6 @@
 - 260/260 tests passing (backend 134, frontend 126)
 - Comprehensive test suite: 14 Activity Logger integration tests, 39 LLM unit tests, 10 frontend component test files
 
+**Known deferred items at close:** 25 (see STATE.md Deferred Items)
+
 ---
