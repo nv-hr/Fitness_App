@@ -184,6 +184,12 @@ export function validatePlanStructure(plan, weekStart, availableDays = null) {
     errors.push('format_version must be an integer');
   }
 
+  // Enforce format_version when availableDays is provided (new format path)
+  // Legacy mode (availableDays === null) is backward-compatible without it.
+  if (availableDays !== null && (plan.format_version === undefined || plan.format_version !== 1)) {
+    errors.push('format_version must be 1 when using the weekly plan format');
+  }
+
   if (Array.isArray(plan.activities)) {
     const actErrors = validateActivities(plan.activities, '', false)
     return { valid: errors.length === 0 && actErrors.length === 0, errors: [...errors, ...actErrors] }
