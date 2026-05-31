@@ -86,7 +86,7 @@
 
 **Milestone Goal:** Overhaul activity planning to support variable-day weekly schedules with rest days, LLM-driven activity selection based on user profile, and per-activity swapping.
 
-- [ ] **Phase 30: Prompt & Validation Rework** — Update prompts and validation for variable-day plans, profile-driven selection, and format_version (2 plans)
+- [x] **Phase 30: Prompt & Validation Rework** — Update prompts and validation for variable-day plans, profile-driven selection, and format_version (2 plans, 1/2 complete)
 - [ ] **Phase 31: Activity Swap Endpoint** — Backend swap endpoint with dedicated rate limiter and merge-into-cache logic
 - [ ] **Phase 32: Frontend — Days Selector & Swap UI** — Days selector in plan generation form, swap buttons on activity cards
 - [ ] **Phase 33: Plan Migration & Edge Cases** — Lazy regeneration of old-format plans, edge case handling
@@ -106,7 +106,7 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 30-01-PLAN.md — Core prompts & service (weekly-plan-prompt.md, llm.service.js validation/generation)
+- [x] 30-01-PLAN.md — Core prompts & service (weekly-plan-prompt.md, llm.service.js validation/generation) — completed 2026-05-31
 - [ ] 30-02-PLAN.md — Controller wiring & tests (availableDays passthrough, test coverage)
 
 ### Phase 31: Activity Swap Endpoint
@@ -175,7 +175,7 @@ Plans:
 | 27. Meal Plan Logging | v1.5 | 1/1 | Complete | 2026-05-31 |
 | 28. Auto-Generation & Inline Management | v1.5 | 1/1 | Complete | 2026-05-31 |
 | 29. UI Consolidation | v1.5 | 1/1 | Complete | 2026-05-31 |
-| 30. Prompt & Validation Rework | v1.6 | 0/2 | Not started | - |
+| 30. Prompt & Validation Rework | v1.6 | 1/2 | In progress | 2026-05-31 |
 | 31. Activity Swap Endpoint | v1.6 | 0/0 | Not started | - |
 | 32. Frontend — Days Selector & Swap UI | v1.6 | 0/0 | Not started | - |
 | 33. Plan Migration & Edge Cases | v1.6 | 0/0 | Not started | - |

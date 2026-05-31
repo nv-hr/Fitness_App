@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Activity Planner Rework
-status: planning
-stopped_at: v1.6 roadmap created — 4 phases (30-33) defined
-last_updated: "2026-05-31T10:55:37.633Z"
-last_activity: 2026-05-31 — v1.6 roadmap created (Phases 30-33)
+status: in_progress
+stopped_at: Plan 30-01 complete
+last_updated: "2026-05-31T17:55:00.000Z"
+last_activity: 2026-05-31 — Plan 30-01 completed (prompt files + validation/service updates)
 progress:
   total_phases: 4
   completed_phases: 0
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-05-31)
 
 ## Current Position
 
-Phase: Not started (roadmap created)
-Plan: —
-Status: Ready to plan
-Last activity: 2026-05-31 — v1.6 roadmap created (Phases 30-33)
+Phase: 30-prompt-validation-rework
+Plan: 01 (Core prompt files + LLM service validation/generation overhaul)
+Status: Plan 01 complete
+Last activity: 2026-05-31 — Plan 30-01 completed (prompt files + validation/service updates)
 
 Progress: [█████░░░░░] 50%
 
@@ -45,7 +45,12 @@ Progress: [█████░░░░░] 50%
 
 ### Decisions
 
-(none yet)
+- D-01: Weekly plans always 7 days with rest_day boolean flag on each day (true for rest, false for activity)
+- D-02: Validation counts rest_day=false entries and verifies against availableDays (4-6 range)
+- D-03: Prompt includes goal-specific activity selection instructions (lose weight/maintain/build muscle)
+- D-04: Activity level guidance included in prompt for duration/intensity scaling
+- D-05: format_version: 1 at plan root level for future migration detection (Phase 33)
+- D-06: buildSystemPrompt() loads weekly-plan-prompt.md for weekly plans; system-prompt.md retained for daily plans
 
 ### Pending Todos
 
@@ -66,5 +71,5 @@ Items acknowledged and carried forward from v1.5 milestone close:
 ## Session Continuity
 
 Last session: 2026-05-31
-Stopped at: v1.6 roadmap created — 4 phases (30-33) defined
+Stopped at: Plan 30-01 complete — 1/2 plans done in Phase 30
 Resume file: None
