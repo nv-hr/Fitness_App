@@ -110,7 +110,7 @@
 | 21. Backend API Layer | v1.4 | 1/1 | Complete | 2026-05-31 |
 | 22. Meal Plan Frontend | v1.4 | 1/1 | Complete | 2026-05-31 |
 | 23. Testing & Edge Cases | v1.4 | 1/1 | Complete | 2026-05-31 |
-| 24. Activity Plan Backend | v1.5 | 0/0 | Not started | - |
+| 24. Activity Plan Backend | v1.5 | 0/2 | Not started | - |
 | 25. Activity Plan Logging | v1.5 | 0/0 | Not started | - |
 | 26. 3-Day Meal Plan Backend | v1.5 | 0/0 | Not started | - |
 | 27. Meal Plan Logging | v1.5 | 0/0 | Not started | - |
@@ -202,7 +202,11 @@
    3. Each activity item in `plan_data` JSONB includes `logged: false` by default; `markActivitiesLogged()` sets specific items to `true`
    4. GET endpoint returns persisted activity plan for a given date with `fromCache` flag to indicate source; prefers cache first with DB fallback
    5. `activity_plans` table has `UNIQUE(user_id, plan_date)` constraint — prevents duplicate entries per user per day
-**Plans**: TBD
+**Plans**: 2 plans — Wave 1: migration + repository, Wave 2: service + controller + routes
+
+Plans:
+- [ ] 24-01-PLAN.md — Database migration + repository (findByUserAndDate, upsertPlan, markActivitiesLogged) + execute migration
+- [ ] 24-02-PLAN.md — Service + controller + routes + app.js registration
 
 ### Phase 25: Activity Plan Logging
 **Goal**: Users batch-log activities from their generated plan to activity_logs with single-click toggle, and completed status persists across sessions.
