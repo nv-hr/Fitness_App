@@ -1,17 +1,23 @@
+import { useEffect } from 'react'
+
 const INTENSITY_COLORS = {
   light: '#6b7280',
   moderate: 'inherit',
   vigorous: '#b45309',
 }
 
-if (typeof document !== 'undefined' && !document.getElementById('swap-spin-style')) {
-  const style = document.createElement('style')
-  style.id = 'swap-spin-style'
-  style.textContent = '@keyframes swap-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }'
-  document.head.appendChild(style)
-}
-
 export default function DayActivityRow({ activity, onSwap, isSwapping, swapRetryAfter }) {
+  useEffect(() => {
+    if (document.getElementById('swap-spin-style')) return
+    const style = document.createElement('style')
+    style.id = 'swap-spin-style'
+    style.textContent = '@keyframes swap-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }'
+    document.head.appendChild(style)
+    return () => {
+      const el = document.getElementById('swap-spin-style')
+      if (el) el.remove()
+    }
+  }, [])
   const color = INTENSITY_COLORS[activity.intensity] || 'inherit'
   const isCountingDown = swapRetryAfter != null && swapRetryAfter > 0
   const disabled = isSwapping || isCountingDown
