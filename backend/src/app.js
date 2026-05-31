@@ -13,7 +13,6 @@ import profileRoutes from './routes/profile.routes.js';
 import foodRoutes from './routes/food.routes.js';
 import activityRoutes from './routes/activity.routes.js';
 import weeklyPlanRoutes from './routes/weeklyPlan.routes.js';
-import mealPlanRoutes from './routes/mealPlan.routes.js';
 import dailyMealPlanRoutes from './routes/dailyMealPlan.routes.js';
 import activityPlanRoutes from './routes/activityPlan.routes.js';
 import docsRoutes from './routes/docs.routes.js';
@@ -132,9 +131,6 @@ app.use('/api/activities', activityRoutes);
 // Weekly plan routes — rate limited via middleware (D-20)
 app.use('/api/weekly-plans', weeklyPlanRoutes);
 
-// Meal plan routes — rate limited via middleware (REQ-MEAL-RATELIMIT)
-app.use('/api/meal-plans', mealPlanRoutes);
-
 // Daily meal plan routes (v1.5 per-day generation)
 app.use('/api/daily-meal-plans', dailyMealPlanRoutes);
 
@@ -148,10 +144,19 @@ app.get(
 );
 app.get(
   '/api/auth/google/callback',
-  passport.authenticate('google', {
-    session: false,
-    failureRedirect: FRONTEND_URL + '/login',
-  }),
+  (req, res, next) => {
+    const cb = passport.authenticate('google', {
+      session: false,
+      failureRedirect: FRONTEND_URL + '/login?error=google_auth_failed',
+    });
+    cb(req, res, (err) => {
+      if (err) {
+        console.error('Google OAuth callback error:', err.message);
+        return res.redirect(`${FRONTEND_URL}/login?error=google_auth_error`);
+      }
+      next();
+    });
+  },
   authController.googleCallback
 );
 
