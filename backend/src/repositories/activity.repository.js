@@ -85,6 +85,38 @@ export async function createActivityLog(userId, { activityId, durationMin, inten
 }
 
 /**
+ * Batch insert activity log entries within a transaction (caller manages commit/rollback).
+ * @param {number} userId
+ * @param {Array<{activityId: number, durationMin: number, intensity: string, caloriesBurned: number, loggedDate: string}>} items
+ * @param {import('pg').PoolClient} clientOverride
+ * @returns {Promise<Array>}
+ */
+export async function batchLogActivities(userId, items, clientOverride) {
+  if (!items || items.length === 0) return [];
+  const client = clientOverride || await pool.connect();
+  const ownsClient = !clientOverride;
+  try {
+    if (ownsClient) await client.query('BEGIN');
+    const inserted = [];
+    for (const item of items) {
+      const { rows } = await client.query(
+        `INSERT INTO activity_logs (user_id, activity_id, duration_min, intensity, calories_burned, logged_date)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [userId, item.activityId, item.durationMin, item.intensity, item.caloriesBurned, item.loggedDate]
+      );
+      inserted.push(rows[0]);
+    }
+    if (ownsClient) await client.query('COMMIT');
+    return inserted;
+  } catch (err) {
+    if (ownsClient) await client.query('ROLLBACK');
+    throw new AppError('DatabaseError', `Failed to batch log activities: ${err.message}`, 500);
+  } finally {
+    if (ownsClient) client.release();
+  }
+}
+
+/**
  * Get all activity log entries for a specific date, with activity name.
  * @param {number} userId
  * @param {string} date

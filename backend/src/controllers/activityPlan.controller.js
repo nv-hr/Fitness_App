@@ -1,9 +1,10 @@
+import { pool } from '../config/database.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { getCachedPlan } from '../services/llm.service.js';
 import { generateActivityPlan } from '../services/activityPlan.service.js';
 import { getProfile } from '../services/profile.service.js';
-import { getAllActivities, getActivityHistoryWithEntries } from '../repositories/activity.repository.js';
-import { findByUserAndDate } from '../repositories/activityPlan.repository.js';
+import { getAllActivities, getActivityHistoryWithEntries, batchLogActivities } from '../repositories/activity.repository.js';
+import { findByUserAndDate, markActivitiesLogged } from '../repositories/activityPlan.repository.js';
 
 function isValidDateString(str) {
   if (typeof str !== 'string') return false;
@@ -58,7 +59,63 @@ async function generate(req, res, next) {
   }
 }
 
+async function logActivities(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const { date, activityIndexes } = req.body;
+    if (date && !isValidDateString(date)) {
+      return errorResponse(res, 'Invalid date format (use YYYY-MM-DD)', 400, 'VALIDATION_ERROR');
+    }
+    const planDate = date || getTodayString();
+    if (!Array.isArray(activityIndexes) || activityIndexes.length === 0) {
+      return errorResponse(res, 'activityIndexes must be a non-empty array', 400, 'VALIDATION_ERROR');
+    }
+    const plan = await findByUserAndDate(userId, planDate);
+    if (!plan) {
+      return errorResponse(res, 'No activity plan found for the given date', 404, 'NOT_FOUND');
+    }
+    const data = plan.plan_data;
+    if (!data.activities || !Array.isArray(data.activities)) {
+      return errorResponse(res, 'No activities found in plan', 404, 'NOT_FOUND');
+    }
+    const items = [];
+    for (const idx of activityIndexes) {
+      const act = data.activities[idx];
+      if (!act) {
+        return errorResponse(res, `Activity index ${idx} not found in plan`, 400, 'VALIDATION_ERROR');
+      }
+      if (act.logged) continue;
+      items.push({
+        activityId: act.activity_id,
+        durationMin: act.duration_min,
+        intensity: act.intensity,
+        caloriesBurned: act.calories_burned || 0,
+        loggedDate: planDate,
+      });
+    }
+    if (items.length === 0) {
+      return successResponse(res, { logged: 0, message: 'All selected activities already logged.' });
+    }
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const inserted = await batchLogActivities(userId, items, client);
+      await markActivitiesLogged(userId, planDate, activityIndexes, client);
+      await client.query('COMMIT');
+      return successResponse(res, { logged: inserted.length, activities: inserted });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    next(err);
+  }
+}
+
 export default {
   get,
   generate,
+  logActivities,
 };

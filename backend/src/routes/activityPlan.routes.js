@@ -8,5 +8,6 @@ router.use(authenticateToken);
 
 router.get('/', activityPlanController.get);
 router.post('/generate', activityPlanController.generate);
+router.post('/log', activityPlanController.logActivities);
 
 export default router;

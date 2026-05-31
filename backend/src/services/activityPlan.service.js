@@ -31,6 +31,11 @@ export function validateActivityPlanStructure(plan, planDate) {
   return { valid: errors.length === 0, errors };
 }
 
+function computeCaloriesBurned(dbActivity, durationMin) {
+  if (!dbActivity || !dbActivity.estimated_calories || !dbActivity.duration_min) return 0;
+  return Math.round((dbActivity.estimated_calories / dbActivity.duration_min) * durationMin);
+}
+
 function pickRandom(arr, count) {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, count);
@@ -48,13 +53,17 @@ export function generateFallbackActivityPlan(dbActivities) {
   }
   const count = Math.min(3, dbActivities.length);
   const selected = pickRandom(dbActivities, count);
-  const activities = selected.map(a => ({
-    activity_id: a.id,
-    name: a.name,
-    duration_min: Math.max(10, Math.min(60, Math.round((a.estimated_calories || 200) / 10) * 5)),
-    intensity: a.duration_min >= 60 ? 'vigorous' : a.duration_min >= 30 ? 'moderate' : 'light',
-    logged: false,
-  }));
+  const activities = selected.map(a => {
+    const durationMin = Math.max(10, Math.min(60, Math.round((a.estimated_calories || 200) / 10) * 5));
+    return {
+      activity_id: a.id,
+      name: a.name,
+      duration_min: durationMin,
+      intensity: a.duration_min >= 60 ? 'vigorous' : a.duration_min >= 30 ? 'moderate' : 'light',
+      calories_burned: computeCaloriesBurned(a, durationMin),
+      logged: false,
+    };
+  });
   return {
     activities,
     generated_at: new Date().toISOString(),
@@ -130,9 +139,13 @@ export async function generateActivityPlan(deps) {
       if (attempt < maxAttempts) continue;
       break;
     }
+    plan.activities.forEach(a => {
+      a.logged = false;
+      const dbAct = (dbActivities || []).find(act => act.id === a.activity_id);
+      a.calories_burned = computeCaloriesBurned(dbAct, a.duration_min);
+    });
     plan.generated_at = new Date().toISOString();
     plan.llm_model = process.env.LLM_MODEL || 'unknown';
-    plan.activities.forEach(a => { a.logged = false; });
     try {
       await upsertPlan(userId, planDate, plan, 'active');
     } catch (err) {
