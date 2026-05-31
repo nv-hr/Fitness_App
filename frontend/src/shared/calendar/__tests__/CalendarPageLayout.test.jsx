@@ -40,6 +40,19 @@ describe('CalendarPageLayout', () => {
     expect(screen.queryByTestId('calendar-grid')).not.toBeInTheDocument();
   });
 
+  test('shows error banner instead of CalendarGrid when error is provided', () => {
+    render(<CalendarPageLayout dayStatusMap={new Map()} loading={false} error={new Error('Network error')} />);
+    expect(screen.getByText(/Failed to load calendar data/)).toBeInTheDocument();
+    expect(screen.getByText(/Network error/)).toBeInTheDocument();
+    expect(screen.queryByTestId('calendar-grid')).not.toBeInTheDocument();
+  });
+
+  test('shows loading skeleton when both loading and error are true (loading takes priority)', () => {
+    render(<CalendarPageLayout dayStatusMap={new Map()} loading={true} error={new Error('Network error')} />);
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    expect(screen.queryByText(/Failed to load calendar data/)).not.toBeInTheDocument();
+  });
+
   test('renders children inside DayDetailPanel when day is selected', () => {
     // We mock the internal state indirectly by verifying the slot pattern
     render(
