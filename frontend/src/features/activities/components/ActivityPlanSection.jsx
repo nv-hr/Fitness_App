@@ -12,7 +12,6 @@ export default function ActivityPlanSection() {
   const [error, setError] = useState('');
   const [genRetryAfter, setGenRetryAfter] = useState(null);
   const [logging, setLogging] = useState(false);
-  const [copied, setCopied] = useState(false);
   const autoGenGuard = useRef(false);
   const today = getTodayString();
 
@@ -81,39 +80,6 @@ export default function ActivityPlanSection() {
     }
   };
 
-  const handleCopyPlan = () => {
-    if (!plan || !plan.activities || plan.activities.length === 0) return;
-    const lines = ['Today\'s Activity Plan', '='.repeat(30)];
-    if (plan.generated_at) {
-      const minsAgo = Math.floor((Date.now() - new Date(plan.generated_at).getTime()) / 60000);
-      lines.push(`Generated ${minsAgo} min ago`);
-      lines.push('');
-    }
-    plan.activities.forEach((act, i) => {
-      const status = act.logged ? '[Logged]' : '[Pending]';
-      const calText = act.calories_burned > 0 ? ` ~${act.calories_burned} cal` : '';
-      lines.push(`${i + 1}. ${act.name} — ${act.duration_min}min ${act.intensity}${calText} ${status}`);
-    });
-    lines.push('', `Source: Fitness App`);
-
-    navigator.clipboard.writeText(lines.join('\n')).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }).catch(() => {
-      // Fallback for older browsers — select text method
-      const ta = document.createElement('textarea');
-      ta.value = lines.join('\n');
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
   if (loading && !plan) {
     return <p style={{ color: '#666', fontSize: '0.875rem', padding: '0.5rem 0' }}>Loading activity plan...</p>;
   }
@@ -152,12 +118,6 @@ export default function ActivityPlanSection() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.25rem' }}>
         <h3 style={{ fontSize: '1.125rem', fontWeight: 700 }}>Today's Activity Plan</h3>
         <div style={{ display: 'flex', gap: '0.25rem' }}>
-          <button
-            onClick={handleCopyPlan}
-            style={{ padding: '0.3rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem', border: '1px solid #e5e7eb', borderRadius: '4px', background: copied ? '#f0fdf4' : '#fff', color: copied ? '#16a34a' : '#000', minHeight: '44px' }}
-          >
-            {copied ? 'Copied ✓' : 'Copy Plan'}
-          </button>
           <button
             onClick={handleGenerate}
             disabled={generating}
