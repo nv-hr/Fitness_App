@@ -80,6 +80,9 @@ function buildActivityPlanPrompt(profile, dbActivities, activityHistory, planDat
         `- ${a.log_date || a.loggedDate || ''}: ${a.activity_name} (${a.duration_min}min, ${a.intensity})`
       ).join('\n')
     : 'No recent activity history.';
+  const topNames = activityHistory && activityHistory.length > 0
+    ? [...new Set(activityHistory.map(a => a.activity_name || a.activityName).filter(Boolean))].slice(0, 5).join(', ')
+    : '';
   return buildPrompt('system-prompt.md', {
     weightKg: String(profile.weight_kg || profile.weightKg || ''),
     heightCm: String(profile.height_cm || profile.heightCm || ''),
@@ -87,8 +90,10 @@ function buildActivityPlanPrompt(profile, dbActivities, activityHistory, planDat
     gender: profile.gender || '',
     fitnessGoal: profile.fitness_goal || profile.fitnessGoal || '',
     activityLevel: profile.activity_level || 'sedentary',
+    calorieTarget: String(profile.calorieTarget || profile.calorie_target || ''),
+    bmr: String(profile.bmr || ''),
     activityHistory: historyText,
-    topActivityNames: '',
+    topActivityNames: topNames,
     availableActivities: activitiesText,
     weekStartDate: planDate,
   });
