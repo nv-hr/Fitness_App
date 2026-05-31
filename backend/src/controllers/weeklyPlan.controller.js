@@ -1,5 +1,5 @@
 import { successResponse, errorResponse } from '../utils/response.js';
-import { generateWeeklyPlan, getCachedPlan, setCachedPlan, clearCachedPlan, regenerateDay, swapActivity, isOldFormat } from '../services/llm.service.js';
+import { generateWeeklyPlan, getCachedPlan, setCachedPlan, clearCachedPlan, regenerateDay, swapActivity, isOldFormat, acquireLock } from '../services/llm.service.js';
 import { findByUserId as findProfileByUserId } from '../repositories/profile.repository.js';
 import { pool } from '../config/database.js';
 import { AppError } from '../utils/errors.js';
@@ -215,62 +215,71 @@ async function swapHandler(req, res, next) {
     }
     targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());
 
-    // Assemble deps for swapActivity
-    const deps = {
-      getProfile: (id) => findProfileByUserId(id),
-      getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
-      getActivities: () => getAllActivities(),
-      getTopActivities: (id, limit) => getTopActivities(id, limit),
-      getRandomActivity: (tags) => getRandomActivities(tags, 1),
-      userId,
-      weekStart: targetWeekStart,
-    };
-
-    // D-04 + CR-03: Load plan from cache or DB, migrate if old format
-    let planForSwap = getCachedPlan(userId, targetWeekStart);
-    if (!planForSwap || !Array.isArray(planForSwap.days)) {
-      const dbPlan = await findByUserAndWeek(userId, targetWeekStart);
-      if (dbPlan && dbPlan.plan_data && Array.isArray(dbPlan.plan_data.days)) {
-        planForSwap = dbPlan.plan_data;
-        setCachedPlan(userId, targetWeekStart, planForSwap);
+    // CR-02: Acquire per-user lock to make the entire migration+swap sequence atomic.
+    // This prevents concurrent swap requests from racing on cache/DB state.
+    const lockKey = `swap_${userId}_${targetWeekStart}`;
+    const release = await acquireLock(lockKey);
+    try {
+      // D-04 + CR-03: Load plan from cache or DB, migrate if old format
+      let planForSwap = getCachedPlan(userId, targetWeekStart);
+      if (!planForSwap || !Array.isArray(planForSwap.days)) {
+        const dbPlan = await findByUserAndWeek(userId, targetWeekStart);
+        if (dbPlan && dbPlan.plan_data && Array.isArray(dbPlan.plan_data.days)) {
+          planForSwap = dbPlan.plan_data;
+          setCachedPlan(userId, targetWeekStart, planForSwap);
+        }
       }
-    }
 
-    // D-04: Auto-trigger migration if plan is old format, then retry swap
-    if (planForSwap && isOldFormat(planForSwap)) {
-      console.log(`[Migration] Old-format plan detected during swap for user ${userId}, week ${targetWeekStart}. Migrating...`);
-      clearCachedPlan(userId, targetWeekStart);
-      const migrationDeps = {
+      // Assemble deps for swapActivity
+      const deps = {
         getProfile: (id) => findProfileByUserId(id),
         getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
         getActivities: () => getAllActivities(),
         getTopActivities: (id, limit) => getTopActivities(id, limit),
+        getRandomActivity: (tags) => getRandomActivities(tags, 1),
         userId,
         weekStart: targetWeekStart,
-        availableDays: 5, // default for migrated plans
       };
-      const migrationResult = await generateWeeklyPlan(migrationDeps);
-      if (!migrationResult.plan || !Array.isArray(migrationResult.plan.days) || migrationResult.plan.days.length === 0) {
-        throw new AppError('MigrationError', 'Failed to migrate old-format plan. Cannot proceed with swap.', 500);
+
+      // D-04: Auto-trigger migration if plan is old format, then retry swap
+      if (planForSwap && isOldFormat(planForSwap)) {
+        console.log(`[Migration] Old-format plan detected during swap for user ${userId}, week ${targetWeekStart}. Migrating...`);
+        clearCachedPlan(userId, targetWeekStart);
+        const migrationDeps = {
+          getProfile: (id) => findProfileByUserId(id),
+          getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
+          getActivities: () => getAllActivities(),
+          getTopActivities: (id, limit) => getTopActivities(id, limit),
+          userId,
+          weekStart: targetWeekStart,
+          availableDays: 5, // default for migrated plans
+        };
+        const migrationResult = await generateWeeklyPlan(migrationDeps);
+        if (!migrationResult.plan || !Array.isArray(migrationResult.plan.days) || migrationResult.plan.days.length === 0) {
+          throw new AppError('MigrationError', 'Failed to migrate old-format plan. Cannot proceed with swap.', 500);
+        }
+        // Persist migrated plan to DB and cache
+        await upsertPlan(userId, targetWeekStart, migrationResult.plan, 'active');
+        console.log(`[Migration] Successfully migrated plan for swap. Proceeding with swap.`);
       }
-      // Persist migrated plan to DB and cache
-      await upsertPlan(userId, targetWeekStart, migrationResult.plan, 'active');
-      console.log(`[Migration] Successfully migrated plan for swap. Proceeding with swap.`);
+
+      // Re-read availableDays from (now potentially migrated) cached plan
+      const updatedCached = getCachedPlan(userId, targetWeekStart);
+      if (updatedCached && Array.isArray(updatedCached.days)) {
+        const activityDays = updatedCached.days.filter(d => d.rest_day === false).length;
+        if (activityDays > 0) deps.availableDays = activityDays;
+      }
+
+      // CR-02: Pass skipLock=true because we already hold the lock
+      const result = await swapActivity(deps, activityId, dayIndex, true);
+
+      // Persist to DB (cache is already updated inside swapActivity under the mutex)
+      await upsertPlan(userId, targetWeekStart, result.plan, 'active');
+
+      return successResponse(res, result);
+    } finally {
+      release();
     }
-
-    // Re-read availableDays from (now potentially migrated) cached plan
-    const updatedCached = getCachedPlan(userId, targetWeekStart);
-    if (updatedCached && Array.isArray(updatedCached.days)) {
-      const activityDays = updatedCached.days.filter(d => d.rest_day === false).length;
-      if (activityDays > 0) deps.availableDays = activityDays;
-    }
-
-    const result = await swapActivity(deps, activityId, dayIndex);
-
-    // Persist to DB (cache is already updated inside swapActivity under the mutex)
-    await upsertPlan(userId, targetWeekStart, result.plan, 'active');
-
-    return successResponse(res, result);
   } catch (err) {
     next(err);
   }

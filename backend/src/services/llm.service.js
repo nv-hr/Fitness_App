@@ -51,7 +51,7 @@ const planCache = new NodeCache({ stdTTL: 3600, checkperiod: 600, maxKeys: 1000 
 // Serializes read-modify-write operations on the same cache key
 const locks = new Map();
 
-async function acquireLock(key, timeout = 15000) {
+export async function acquireLock(key, timeout = 15000) {
   const start = Date.now();
   while (locks.get(key)) {
     if (Date.now() - start > timeout) throw new AppError('LockTimeout', 'Could not acquire lock', 429);
@@ -628,7 +628,7 @@ async function getFallbackReplacement(deps, goalTags) {
  * @returns {Promise<{plan: object, day: object, dayIndex: number, activityIndex: number, replacement: object, fromCache: boolean, status: string}>}
  * @throws {AppError} If plan not found, activity not in plan, or validation failure
  */
-export async function swapActivity(deps, activityId, dayIndex) {
+export async function swapActivity(deps, activityId, dayIndex, skipLock = false) {
   // 1. Validate inputs
   if (typeof activityId !== 'number' || !Number.isInteger(activityId) || activityId < 1) {
     throw new AppError('ValidationError', 'activityId must be a positive integer', 400)
@@ -639,8 +639,10 @@ export async function swapActivity(deps, activityId, dayIndex) {
   }
 
   // Acquire per-user lock to prevent TOCTOU race on the cache (CR-01)
+  // CR-02: When skipLock is true, the caller (e.g., swapHandler with lifted lock scope)
+  // already holds the lock — skip acquisition to avoid deadlock.
   const lockKey = `swap_${deps.userId}_${deps.weekStart}`
-  const release = await acquireLock(lockKey)
+  const release = skipLock ? null : await acquireLock(lockKey)
   try {
     // 2. Get current plan from cache
     const plan = getCachedPlan(deps.userId, deps.weekStart)
@@ -774,6 +776,7 @@ export async function swapActivity(deps, activityId, dayIndex) {
       status: 'active',
     }
   } finally {
-    release()
+    // CR-02: Only release if we acquired the lock ourselves
+    if (release) release()
   }
 }
