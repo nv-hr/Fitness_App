@@ -28,6 +28,16 @@ function isMigrationOnCooldown(userId, weekStart) {
   return true;
 }
 
+// WR-02: Infer availableDays from an old-format plan's structure (best-effort).
+// Counts non-empty activity days and clamps to [4, 6]; falls back to 5 if
+// the old plan has no days array. This preserves the user's original plan
+// structure rather than silently switching to a fixed 5-day default.
+function inferAvailableDays(oldPlan) {
+  if (!oldPlan?.days) return 5;
+  const nonEmptyDays = oldPlan.days.filter(d => d.activities?.length > 0).length;
+  return Math.max(4, Math.min(6, nonEmptyDays || 5));
+}
+
 function isValidDateString(str) {
   if (typeof str !== 'string') return false;
   const d = new Date(str + 'T00:00:00Z');
@@ -245,6 +255,8 @@ async function swapHandler(req, res, next) {
       if (planForSwap && isOldFormat(planForSwap)) {
         console.log(`[Migration] Old-format plan detected during swap for user ${userId}, week ${targetWeekStart}. Migrating...`);
         clearCachedPlan(userId, targetWeekStart);
+        // WR-02: Infer availableDays from the old plan's structure rather than hardcoding 5
+        const inferredDays = inferAvailableDays(planForSwap);
         const migrationDeps = {
           getProfile: (id) => findProfileByUserId(id),
           getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
@@ -252,8 +264,9 @@ async function swapHandler(req, res, next) {
           getTopActivities: (id, limit) => getTopActivities(id, limit),
           userId,
           weekStart: targetWeekStart,
-          availableDays: 5, // default for migrated plans
+          availableDays: inferredDays,
         };
+        console.log(`[Migration] Using inferred availableDays=${inferredDays} from old plan (${planForSwap.days?.length || 0} total days, ${planForSwap.days?.filter(d => d.activities?.length > 0).length || 0} activity days).`);
         const migrationResult = await generateWeeklyPlan(migrationDeps);
         if (!migrationResult.plan || !Array.isArray(migrationResult.plan.days) || migrationResult.plan.days.length === 0) {
           throw new AppError('MigrationError', 'Failed to migrate old-format plan. Cannot proceed with swap.', 500);
