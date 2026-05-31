@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Smart Auto-Logging
 status: shipped
-last_updated: "2026-05-31T12:00:00.000Z"
-last_activity: 2026-05-31 - Completed quick task 260531-mmv: try testing the llm and its output. retorn to me in detail
+last_updated: "2026-05-31T12:47:00.000Z"
+last_activity: 2026-05-31 - Completed quick task 260531-ms6: test the LLM through real backend services — found system-prompt.md mismatch
 progress:
   total_phases: 6
   completed_phases: 6
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-05-31)
 
 Phase: 29 (complete)
 Status: Shipped
-Last activity: 2026-05-31 - Completed quick task 260531-q7x: Remove Copy Plan button from activity front end
+Last activity: 2026-05-31 - Completed quick task 260531-ms6: test the LLM through real backend services — found system-prompt.md mismatch
 
 Progress: [██████████] 100%
 
@@ -83,11 +83,14 @@ Progress: [██████████] 100%
 | 260531-7g2 | Fix Google OAuth callback 500 — add error handling redirect and GOOGLE_CALLBACK_URL to .env | 2026-05-31 | a52553e | [260531-7g2-fix-google-oauth-callback](./quick/260531-7g2-fix-google-oauth-callback/) |
 | 260531-q7x | Remove Copy Plan button from activity front end | 2026-05-31 | 5d74200 | [260531-q7x-remove-copy-button](./quick/260531-q7x-remove-copy-button/) |
 | 260531-mmv | try testing the llm and its output. retorn to me in detail | 2026-05-31 | ebf4007 | [260531-mmv-try-testing-the-llm-and-its-output-retor](./quick/260531-mmv-try-testing-the-llm-and-its-output-retor/) |
+| 260531-ms6 | End-to-end LLM test through real backend services — found system-prompt.md / service format mismatch (see SUMMARY) | 2026-05-31 | fa54584 | [260531-ms6-test-the-llm-with-real-promt-and-connect](./quick/260531-ms6-test-the-llm-with-real-promt-and-connect/) |
 
 ## Notes
 
 - Two new database tables: `activity_plans` and `daily_meal_plans` (both idempotent, UNIQUE(user_id, plan_date))
 - Migration SQL not executed — Supabase unreachable from dev environment. Run `node backend/db/run_migration.js` when DB is accessible.
+- **DB connectivity UPDATE (260531-ms6):** DB queries through pg Pool actually DO reach Supabase (FK constraint errors, not connection timeouts). Earlier connectivity assessment may need revision — or Supabase connectivity was restored.
+- **CRITICAL FINDING (260531-ms6):** `backend/prompts/system-prompt.md` still instructs the LLM to generate a 7-day weekly plan (`{ days: [...] }`) but the new `generateActivityPlan()` service expects a single-day format (`{ activities: [...] }`). All LLM activity plan generations fail validation and return fallback plans. The `daily-meal-plan-prompt.md` is correctly aligned with its service.
 - Legacy `/api/meal-plans` routes removed (backend service/controller/repository/routes/rate limiter deleted, frontend meal-plan feature directory deleted, nav link removed)
 - `/weekly-plan` standalone route removed from `Router.jsx` — activity plan functionality embedded via `ActivityPlanSection` in `ActivitiesPage.jsx`
 - `daily_meal_plans` and `activity_plans` handle all new plan generation
