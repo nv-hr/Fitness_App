@@ -62,7 +62,7 @@ export function buildPrompt(filename, variables) {
   return template;
 }
 
-export function buildSystemPrompt(profile, activityHistory, activities, weekStartDate) {
+export function buildSystemPrompt(profile, activityHistory, activities, weekStartDate, availableDays = null) {
   const historyEntries = activityHistory.slice(-20);
   const topActivityNames = [...new Set(activityHistory.map(a => a.activity_name))].slice(0, 5).join(', ');
   const historyText = historyEntries.length > 0
@@ -75,7 +75,7 @@ export function buildSystemPrompt(profile, activityHistory, activities, weekStar
     : 'No recent activity history.';
   const activitiesText = activities.map(a => `- ${a.name} (${a.estimated_calories} cal, ~${a.duration_min}min)`).join('\n');
 
-  return buildPrompt('system-prompt.md', {
+  return buildPrompt('weekly-plan-prompt.md', {
     weightKg: profile.weight_kg,
     heightCm: profile.height_cm,
     age: profile.age,
@@ -86,6 +86,7 @@ export function buildSystemPrompt(profile, activityHistory, activities, weekStar
     topActivityNames,
     availableActivities: activitiesText,
     weekStartDate,
+    availableDays: String(availableDays ?? ''),
   });
 }
 
@@ -142,13 +143,21 @@ export async function callLlmApi(systemPrompt) {
   throw new AppError('LlmAllFailed', 'All LLM models failed', 502);
 }
 
-function validateActivities(activities, prefix) {
+function validateActivities(activities, prefix, allowEmpty = false) {
   const errors = [];
   if (!Array.isArray(activities)) {
     errors.push(`${prefix}"activities" must be an array`);
     return errors;
   }
-  if (activities.length < 1 || activities.length > 4) {
+  if (!allowEmpty && activities.length < 1) {
+    errors.push(`${prefix}expected 1-4 activities but got ${activities.length}`);
+  } else if (activities.length > 4) {
+    errors.push(`${prefix}expected 1-4 activities but got ${activities.length}`);
+  }
+  if (!allowEmpty && activities.length < 1) {
+    errors.push(`${prefix}expected 1-4 activities but got ${activities.length}`);
+  }
+  if (activities.length > 4) {
     errors.push(`${prefix}expected 1-4 activities but got ${activities.length}`);
   }
   activities.forEach((act, j) => {
@@ -168,15 +177,19 @@ function validateActivities(activities, prefix) {
   return errors;
 }
 
-export function validatePlanStructure(plan, weekStart) {
+export function validatePlanStructure(plan, weekStart, availableDays = null) {
   const errors = [];
 
   if (!plan) {
     return { valid: false, errors: ['Plan is null or undefined'] };
   }
 
+  if (plan.format_version !== undefined && (typeof plan.format_version !== 'number' || !Number.isInteger(plan.format_version))) {
+    errors.push('format_version must be an integer');
+  }
+
   if (Array.isArray(plan.activities)) {
-    return { valid: errors.length === 0, errors: validateActivities(plan.activities, '') };
+    return { valid: errors.length === 0, errors: validateActivities(plan.activities, '', false) };
   }
 
   if (!Array.isArray(plan.days)) {
@@ -198,8 +211,31 @@ export function validatePlanStructure(plan, weekStart) {
       errors.push(`Day ${i + 1}: expected date ${expectedStr} but got ${day.date}`);
     }
 
-    errors.push(...validateActivities(day.activities, `Day ${i + 1}, `));
+    if (availableDays !== null) {
+      // New rest_day-aware validation for weekly plans
+      if (typeof day.rest_day !== 'boolean') {
+        errors.push(`Day ${i + 1}: rest_day field is required and must be boolean`);
+      } else if (day.rest_day === true) {
+        // Rest day — must have empty activities array
+        if (!Array.isArray(day.activities) || day.activities.length !== 0) {
+          errors.push(`Day ${i + 1}: rest day must have empty activities array`);
+        }
+      } else {
+        // Activity day — validate activities with allowEmpty=false (default)
+        errors.push(...validateActivities(day.activities, `Day ${i + 1}, `));
+      }
+    } else {
+      // Legacy validation (backward compatible)
+      errors.push(...validateActivities(day.activities, `Day ${i + 1}, `));
+    }
   });
+
+  if (availableDays !== null) {
+    const activityDayCount = plan.days.filter(d => d.rest_day === false).length;
+    if (activityDayCount !== availableDays) {
+      errors.push(`Expected ${availableDays} activity days (rest_day=false) but got ${activityDayCount}`);
+    }
+  }
 
   return { valid: errors.length === 0, errors };
 }
@@ -253,6 +289,13 @@ export function validateAndFixPlan(plan, dbActivities) {
   plan = JSON.parse(JSON.stringify(plan));
 
   for (const day of plan.days) {
+    // Skip rest days — no activities to match
+    if (day.rest_day === true) {
+      if (!Array.isArray(day.activities)) {
+        day.activities = []
+      }
+      continue
+    }
     if (!Array.isArray(day.activities)) continue;
 
     for (const act of day.activities) {
@@ -292,7 +335,7 @@ export function clearCachedPlan(userId, weekStart, planType = 'activity') {
 }
 
 export async function generateFallbackPlan(deps) {
-  const { getTopActivities, userId, weekStart } = deps;
+  const { getTopActivities, userId, weekStart, availableDays = 4 } = deps;
 
   let topActivities;
   try {
@@ -303,6 +346,7 @@ export async function generateFallbackPlan(deps) {
 
   if (topActivities.length === 0) {
     return {
+      format_version: 1,
       days: [],
       status: 'unavailable',
       generated_at: new Date().toISOString(),
@@ -318,26 +362,36 @@ export async function generateFallbackPlan(deps) {
     const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
     const dateStr = date.toISOString().split('T')[0];
 
-    const activitiesPerDay = i < 5 ? Math.min(2, shuffled.length) : 1;
-    const dayActivities = [];
-
-    for (let j = 0; j < activitiesPerDay; j++) {
-      const act = shuffled[(i + j) % shuffled.length];
-      dayActivities.push({
-        activity_id: act.id,
-        name: act.name,
-        duration_min: act.duration_min || 30,
-        intensity: 'moderate',
+    if (i < availableDays) {
+      // Activity day
+      const activitiesPerDay = Math.min(2, shuffled.length);
+      const dayActivities = [];
+      for (let j = 0; j < activitiesPerDay; j++) {
+        const act = shuffled[(i + j) % shuffled.length];
+        dayActivities.push({
+          activity_id: act.id,
+          name: act.name,
+          duration_min: act.duration_min || 30,
+          intensity: 'moderate',
+        });
+      }
+      days.push({
+        date: dateStr,
+        rest_day: false,
+        activities: dayActivities,
+      });
+    } else {
+      // Rest day
+      days.push({
+        date: dateStr,
+        rest_day: true,
+        activities: [],
       });
     }
-
-    days.push({
-      date: dateStr,
-      activities: dayActivities,
-    });
   }
 
   return {
+    format_version: 1,
     days,
     status: 'fallback',
     generated_at: new Date().toISOString(),
@@ -346,7 +400,7 @@ export async function generateFallbackPlan(deps) {
 }
 
 export async function generateWeeklyPlan(deps) {
-  const { getProfile, getActivityHistory, getActivities, getTopActivities } = deps;
+  const { getProfile, getActivityHistory, getActivities, getTopActivities, availableDays = 4 } = deps;
 
   const cached = getCachedPlan(deps.userId, deps.weekStart);
   if (cached) {
@@ -362,16 +416,16 @@ export async function generateWeeklyPlan(deps) {
     ]);
   } catch (err) {
     console.error('[LLM] Failed to fetch user data:', err.message);
-    const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart });
+    const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
     return { plan: fallback, fromCache: false, status: fallback.status };
   }
 
   if (!profile) {
-    const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart });
+    const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
     return { plan: fallback, fromCache: false, status: fallback.status };
   }
 
-  const prompt = buildSystemPrompt(profile, history, dbActivities, deps.weekStart);
+  const prompt = buildSystemPrompt(profile, history, dbActivities, deps.weekStart, availableDays);
   let plan;
   let attempt = 0;
   const maxAttempts = 2;
@@ -387,7 +441,7 @@ export async function generateWeeklyPlan(deps) {
       } catch (err) {
         console.error(`[LLM] API call attempt ${attempt} failed:`, err.message);
         if (attempt >= maxAttempts) {
-          const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart });
+          const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
           return { plan: fallback, fromCache: false, status: fallback.status };
         }
         await new Promise(r => setTimeout(r, CONFIG.retryDelayMs));
@@ -395,7 +449,7 @@ export async function generateWeeklyPlan(deps) {
       }
     }
 
-    const structureCheck = validatePlanStructure(plan, deps.weekStart);
+    const structureCheck = validatePlanStructure(plan, deps.weekStart, availableDays);
     if (!structureCheck.valid) {
       console.warn(`[LLM] Structural validation failed (attempt ${attempt}):`, structureCheck.errors.join('; '));
       if (attempt < maxAttempts) {
@@ -443,7 +497,7 @@ export async function generateWeeklyPlan(deps) {
   }
 
   console.warn('[LLM] All generation attempts failed, returning fallback');
-  const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart });
+  const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
   return { plan: fallback, fromCache: false, status: fallback.status };
 }
 
