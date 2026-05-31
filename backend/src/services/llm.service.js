@@ -551,6 +551,35 @@ export async function regenerateDay(deps, dayIndex) {
 }
 
 /**
+ * Fallback to a random activity from the database when the LLM swap fails.
+ * @param {object} deps - Data-fetching callbacks and context (must have getRandomActivity)
+ * @param {string[]} goalTags - Fitness goal tags for random activity filtering
+ * @returns {Promise<object>} Replacement activity object
+ * @throws {AppError} If no fallback is available
+ */
+async function getFallbackReplacement(deps, goalTags) {
+  if (typeof deps.getRandomActivity !== 'function') {
+    throw new AppError('SwapFallbackError', 'No fallback activity available', 500);
+  }
+  try {
+    const randomActs = await deps.getRandomActivity(goalTags);
+    if (!randomActs || randomActs.length === 0) {
+      throw new AppError('SwapFallbackError', 'No fallback activity available', 500);
+    }
+    return {
+      activity_id: randomActs[0].id,
+      name: randomActs[0].name,
+      duration_min: randomActs[0].duration_min || 30,
+      intensity: 'moderate',
+      logged: false,
+      calories_burned: randomActs[0].estimated_calories || 100,
+    };
+  } catch (fallbackErr) {
+    throw new AppError('SwapFallbackError', 'No fallback activity available', 500);
+  }
+}
+
+/**
  * Swap a single activity in the cached weekly plan with an LLM-generated replacement.
  *
  * @param {object} deps - Data-fetching callbacks and context.
@@ -663,54 +692,13 @@ export async function swapActivity(deps, activityId, dayIndex) {
     !replacement.name
 
   if (isInvalidReplacement) {
-    if (typeof deps.getRandomActivity === 'function') {
-      try {
-        const randomActs = await deps.getRandomActivity(goalTags)
-        if (randomActs && randomActs.length > 0) {
-          replacement = {
-            activity_id: randomActs[0].id,
-            name: randomActs[0].name,
-            duration_min: randomActs[0].duration_min || 30,
-            intensity: 'moderate',
-            logged: false,
-            calories_burned: randomActs[0].estimated_calories || 100,
-          }
-        } else {
-          throw new AppError('SwapFallbackError', 'No fallback activity available', 500)
-        }
-      } catch (fallbackErr) {
-        throw new AppError('SwapFallbackError', 'No fallback activity available', 500)
-      }
-    } else {
-      throw new AppError('SwapFallbackError', 'No fallback activity available', 500)
-    }
+    replacement = await getFallbackReplacement(deps, goalTags)
   } else {
     // Validate structure via validateActivities
     const validationErrors = validateActivities([replacement], 'Swap, ')
     if (validationErrors.length > 0) {
       console.warn(`[LLM] Swap replacement validation failed: ${validationErrors.join('; ')}, falling back to random`)
-      // Fallback to random
-      if (typeof deps.getRandomActivity === 'function') {
-        try {
-          const randomActs = await deps.getRandomActivity(goalTags)
-          if (randomActs && randomActs.length > 0) {
-            replacement = {
-              activity_id: randomActs[0].id,
-              name: randomActs[0].name,
-              duration_min: randomActs[0].duration_min || 30,
-              intensity: 'moderate',
-              logged: false,
-              calories_burned: randomActs[0].estimated_calories || 100,
-            }
-          } else {
-            throw new AppError('SwapFallbackError', 'No fallback activity available', 500)
-          }
-        } catch (fallbackErr) {
-          throw new AppError('SwapFallbackError', 'No fallback activity available', 500)
-        }
-      } else {
-        throw new AppError('SwapFallbackError', 'No fallback activity available', 500)
-      }
+      replacement = await getFallbackReplacement(deps, goalTags)
     }
   }
 
