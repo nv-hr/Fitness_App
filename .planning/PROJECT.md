@@ -10,8 +10,18 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 
 ## Current State
 
-**Shipped:** v1.5 Smart Auto-Logging (2026-05-31)
-**Phases:** 29 complete (v1.0: 5, v1.1: 3, v1.2: 4, v1.3: 5, v1.4: 6, v1.5: 6) | **Plans:** 68 | **Commits:** 230+
+**Shipped:** v1.6 Activity Planner Rework (2026-05-31)
+**Phases:** 33 complete (v1.0: 5, v1.1: 3, v1.2: 4, v1.3: 5, v1.4: 6, v1.5: 6, v1.6: 4) | **Plans:** 76 | **Commits:** 292+
+
+### v1.6 shipped:
+- **Variable-Day Weekly Plans** — LLM generates plans with 4-6 activity days (user selected), remaining days as rest
+- **Profile-Driven Activity Selection** — Activities chosen based on user's fitness goal, activity level, and profile
+- **Activity Swapping** — Per-activity swap button with LLM replacement, rate-limited independently
+- **Days Selector UI** — Visual checkbox panel to configure available days before generating a plan
+- **Rest Day Cards** — Dedicated green DayCard variant for rest days with recovery messaging
+- **Plan Migration** — Old-format plans auto-migrate to new format on next visit (transparent, no data loss)
+- **Swap Edge Cases** — 404 for nonexistent activityId, auto-migration for swap on old-format plans
+- **62/63 tests passing** (1 pre-existing validatePlanStructure test data issue)
 
 ### v1.5 shipped:
 - **Activity Plan Logging** — Generated activities auto-save to activity log with completed toggle
@@ -29,9 +39,9 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 
 ## Next Milestone: TBD
 
-v1.5 is shipped — all 6 milestones (v1.0–v1.5) complete across 29 phases.
+v1.6 is shipped — all 7 milestones (v1.0–v1.6) complete across 33 phases.
 
-Next milestone to be defined via `/gsd-new-milestone` or `/gsd-project-roadmap`.
+Next milestone to be defined via `/gsd-new-milestone`.
 
 ## Requirements
 
@@ -96,6 +106,16 @@ Next milestone to be defined via `/gsd-new-milestone` or `/gsd-project-roadmap`.
 - ✓ Rate-limited: generate 5/15min, regenerate 3/30min, log-day 30/15min — v1.4
 - ✓ Batch log with atomic transaction — v1.4
 
+#### v1.6 Activity Planner Rework
+- ✓ Variable-day scheduling: 4-6 available days selection — v1.6
+- ✓ Rest days displayed as rest day cards — v1.6
+- ✓ LLM selects activities based on fitness goal, activity level, and profile — v1.6
+- ✓ LLM can assign multiple activities per day — v1.6
+- ✓ Per-activity swap with LLM replacement and dedicated rate limit — v1.6
+- ✓ Swap replaces in-place without full regeneration — v1.6
+- ✓ Old-format plans lazy-migrate on next visit (transparent) — v1.6
+- ✓ format_version field distinguishes old vs new plan format — v1.6
+
 ### Active
 
 (TBD — define during milestone scoping)
@@ -138,6 +158,9 @@ Next milestone to be defined via `/gsd-new-milestone` or `/gsd-project-roadmap`.
 - **v1.1 shipped**: 3 phases (6-8), 9 plans, English UI, ingredient-based logging
 - **v1.2 shipped**: 4 phases (9-12), 13 plans, 87 commits, Supabase PostgreSQL migration
 - **v1.3 shipped**: 5 phases (13-17), 9 plans, 110 commits, +13,786 LOC
+- **v1.6 shipped**: 4 phases (30-33), 8 plans, 62 commits, 40 files, +6,889 LOC
+- **Activity Planning**: 7-day template with rest_day flag, variable activity days (4-6), profile-driven LLM selection, per-activity swap with dedicated rate limit
+- **Test Status**: 63 backend unit tests (62 pass, 1 pre-existing data issue); 46 backend integration tests require running DB
 
 ## Constraints
 
@@ -172,6 +195,16 @@ Next milestone to be defined via `/gsd-new-milestone` or `/gsd-project-roadmap`.
 | LLM triple fallback chain | Primary → fallback → openrouter/free for resilience | ✓ Good — v1.3 |
 | node-cache with 1-hour TTL, maxKeys: 1000 | Memory-safe caching with bounded growth | ✓ Good — v1.3 |
 | Single-day regeneration (merge-only) | Avoids regenerating entire plan for one changed day | ✓ Good — v1.3 |
+| rest_day boolean flag on 7-day template | Fixed template avoids variable-length output issues | ✓ Good — v1.6 |
+| format_version: 1 at plan root | Migration detection for old-format plans | ✓ Good — v1.6 |
+| Goal-specific LLM prompt sections | Profile-driven activity selection | ✓ Good — v1.6 |
+| Self-contained swap prompt | No dependency on weekly-plan-prompt, single-activity focus | ✓ Good — v1.6 |
+| DB-first write + per-user async mutex | Prevents dual-write inconsistency and TOCTOU race | ✓ Good — v1.6 |
+| Expandable days selector (7 checkboxes) | Simple UI for availableDays configuration | ✓ Good — v1.6 |
+| Green rest day cards (#f0fdf4) | Clear visual distinction for rest days | ✓ Good — v1.6 |
+| 5-minute migration cooldown Map | Prevents infinite LLM retry on migration failure | ✓ Good — v1.6 |
+| Lazy migration on GET request | Transparent migration, no user notification | ✓ Good — v1.6 |
+| Swap triggers auto-migration for old-format plans | Prevents 404 on nonexistent activities | ✓ Good — v1.6 |
 
 ## Evolution
 
@@ -191,4 +224,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-31 after completing v1.5 milestone*
+*Last updated: 2026-05-31 after completing v1.6 milestone*

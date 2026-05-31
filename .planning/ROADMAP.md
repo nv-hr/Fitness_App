@@ -1,9 +1,9 @@
 # ROADMAP: Fitness_App
 
 **Created:** 2026-05-17
-**Updated:** 2026-05-31 (v1.6 Activity Planner Rework added)
-**Phases:** 29 complete, 4 planned (v1.0-v1.6)
-**Milestones:** 6 shipped
+**Updated:** 2026-05-31 (v1.6 shipped)
+**Phases:** 33 complete
+**Milestones:** 7 shipped
 
 ## Milestones
 
@@ -13,7 +13,7 @@
 - ✅ **v1.3 Activity Tracking & Smart Suggestions** — Phases 13-17 (shipped 2026-05-31)
 - ✅ **v1.4 LLM Food Recommendations** — Phases 18-23 (shipped 2026-05-31)
 - ✅ **v1.5 Smart Auto-Logging** — Phases 24-29 (shipped 2026-05-31)
-- 🚧 **v1.6 Activity Planner Rework** — Phases 30-33 (in progress)
+- ✅ **v1.6 Activity Planner Rework** — Phases 30-33 (shipped 2026-05-31)
 
 ## Phases
 
@@ -82,16 +82,19 @@
 
 </details>
 
-### 🚧 v1.6 Activity Planner Rework (In Progress)
+<details>
+<summary>✅ v1.6 Activity Planner Rework (Phases 30-33) — SHIPPED 2026-05-31</summary>
 
-**Milestone Goal:** Overhaul activity planning to support variable-day weekly schedules with rest days, LLM-driven activity selection based on user profile, and per-activity swapping.
+- [x] Phase 30: Prompt & Validation Rework (2/2 plans) — completed 2026-05-31
+- [x] Phase 31: Activity Swap Endpoint (2/2 plans) — completed 2026-05-31
+- [x] Phase 32: Frontend — Days Selector & Swap UI (2/2 plans) — completed 2026-05-31
+- [x] Phase 33: Plan Migration & Edge Cases (2/2 plans) — completed 2026-05-31
 
-- [x] **Phase 30: Prompt & Validation Rework** — Update prompts and validation for variable-day plans, profile-driven selection, and format_version (2 plans, 1/2 complete)
-- [ ] **Phase 31: Activity Swap Endpoint** — Backend swap endpoint with dedicated rate limiter and merge-into-cache logic
-- [ ] **Phase 32: Frontend — Days Selector & Swap UI** — Days selector in plan generation form, swap buttons on activity cards
-- [ ] **Phase 33: Plan Migration & Edge Cases** — Lazy regeneration of old-format plans, edge case handling
+</details>
 
-## Phase Details
+### Next Milestone: TBD
+
+*Next milestone to be defined via `/gsd-new-milestone`.*
 
 ### Phase 30: Prompt & Validation Rework
 **Goal**: LLM generates variable-day plans with profile-driven activity selection and rest days
@@ -107,7 +110,7 @@
 
 Plans:
 - [x] 30-01-PLAN.md — Core prompts & service (weekly-plan-prompt.md, llm.service.js validation/generation) — completed 2026-05-31
-- [ ] 30-02-PLAN.md — Controller wiring & tests (availableDays passthrough, test coverage)
+- [x] 30-02-PLAN.md — Controller wiring & tests (availableDays passthrough, test coverage) — completed 2026-05-31
 
 ### Phase 31: Activity Swap Endpoint
 **Goal**: Users can swap a single activity via dedicated backend endpoint with rate limiting
@@ -122,7 +125,7 @@ Plans:
 
 Plans:
 - [x] 31-01-PLAN.md — Core service & prompt (activity-swap-prompt.md, swapActivity(), swapLimiter) — completed 2026-05-31
-- [ ] 31-02-PLAN.md — Controller, route, DB persistence & tests (swapHandler, POST /swap, upsertPlan, E2E)
+- [x] 31-02-PLAN.md — Controller, route, DB persistence & tests (swapHandler, POST /swap, upsertPlan, E2E) — completed 2026-05-31
 
 ### Phase 32: Frontend — Days Selector & Swap UI
 **Goal**: Users can configure available days before generating and swap activities from the plan view
@@ -151,8 +154,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [x] 33-01-PLAN.md — Lazy migration (GET + swapHandler) + 404 fix for nonexistent activityId
-- [ ] 33-02-PLAN.md — Unit + E2E tests for migration flows and swap edge cases
+- [x] 33-01-PLAN.md — Lazy migration (GET + swapHandler) + 404 fix for nonexistent activityId — completed 2026-05-31
+- [x] 33-02-PLAN.md — Unit + E2E tests for migration flows and swap edge cases — completed 2026-05-31
 
 ## Progress
 
@@ -187,13 +190,13 @@ Plans:
 | 27. Meal Plan Logging | v1.5 | 1/1 | Complete | 2026-05-31 |
 | 28. Auto-Generation & Inline Management | v1.5 | 1/1 | Complete | 2026-05-31 |
 | 29. UI Consolidation | v1.5 | 1/1 | Complete | 2026-05-31 |
-| 30. Prompt & Validation Rework | v1.6 | 1/2 | In progress | 2026-05-31 |
-| 31. Activity Swap Endpoint | v1.6 | 1/2 | In progress | 2026-05-31 |
+| 30. Prompt & Validation Rework | v1.6 | 2/2 | Complete | 2026-05-31 |
+| 31. Activity Swap Endpoint | v1.6 | 2/2 | Complete | 2026-05-31 |
 | 32. Frontend — Days Selector & Swap UI | v1.6 | 2/2 | Complete | 2026-05-31 |
-| 33. Plan Migration & Edge Cases | v1.6 | 1/2 | In Progress|  |
+| 33. Plan Migration & Edge Cases | v1.6 | 2/2 | Complete | 2026-05-31 |
 
 
 ---
 
 *Roadmap created: 2026-05-17*
-*Last updated: 2026-05-31 (v1.6 Activity Planner Rework added)*
+*Last updated: 2026-05-31 (v1.6 shipped)*
