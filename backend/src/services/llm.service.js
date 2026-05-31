@@ -3,7 +3,7 @@ import NodeCache from 'node-cache';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { AppError, ValidationError } from '../utils/errors.js';
+import { AppError, ValidationError, NotFoundError } from '../utils/errors.js';
 import { levenshteinDistance } from '../utils/string.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -258,6 +258,17 @@ export function validatePlanStructure(plan, weekStart, availableDays = null) {
   }
 
   return { valid: errors.length === 0, errors };
+}
+
+/**
+ * Detect old-format weekly plans (pre-Phase 30) by checking for format_version.
+ * Old format = plan exists but has no format_version at root level.
+ * New format = format_version: 1 at root level.
+ * @param {object|null|undefined} plan - Plan data object from DB or cache
+ * @returns {boolean} true if plan exists and lacks format_version
+ */
+export function isOldFormat(plan) {
+  return !!plan && plan.format_version === undefined;
 }
 
 export function fuzzyMatchActivityName(name, dbActivities) {
@@ -649,7 +660,7 @@ export async function swapActivity(deps, activityId, dayIndex) {
 
     const activityIndex = day.activities.findIndex(a => a.activity_id === activityId)
     if (activityIndex === -1) {
-      throw new AppError('ValidationError', 'Activity not found in current plan', 400)
+      throw new NotFoundError('Activity not found in current plan')
     }
 
     // 4. Fetch user data
