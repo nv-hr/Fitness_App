@@ -154,12 +154,6 @@ export function validateActivities(activities, prefix, allowEmpty = false) {
   } else if (activities.length > 4) {
     errors.push(`${prefix}expected 1-4 activities but got ${activities.length}`);
   }
-  if (!allowEmpty && activities.length < 1) {
-    errors.push(`${prefix}expected 1-4 activities but got ${activities.length}`);
-  }
-  if (activities.length > 4) {
-    errors.push(`${prefix}expected 1-4 activities but got ${activities.length}`);
-  }
   activities.forEach((act, j) => {
     if (!act.activity_id || typeof act.activity_id !== 'number' || act.activity_id < 1) {
       errors.push(`${prefix}activity ${j + 1}: invalid activity_id`);
