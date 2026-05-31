@@ -596,18 +596,16 @@ export async function swapActivity(deps, activityId, dayIndex) {
   }
 
   // 4. Fetch user data
-  let profile, dbActivities, history
+  let profile, dbActivities
   try {
-    [profile, dbActivities, history] = await Promise.all([
+    [profile, dbActivities] = await Promise.all([
       deps.getProfile(deps.userId),
       deps.getActivities(),
-      deps.getActivityHistory ? deps.getActivityHistory(deps.userId, 14) : Promise.resolve([]),
     ])
   } catch (err) {
     console.error('[LLM] Failed to fetch user data for swap:', err.message)
     profile = null
     dbActivities = []
-    history = []
   }
 
   // 5. Build context strings
