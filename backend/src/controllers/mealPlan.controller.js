@@ -1,5 +1,6 @@
 import { pool } from '../config/database.js';
 import { successResponse, errorResponse } from '../utils/response.js';
+import { getMonday } from '../utils/string.js';
 import { getCachedPlan } from '../services/llm.service.js';
 import { generateMealPlan, regenerateDay } from '../services/mealPlan.service.js';
 import { getProfile } from '../services/profile.service.js';
@@ -10,14 +11,6 @@ function isValidDateString(str) {
   if (typeof str !== 'string') return false;
   const d = new Date(str + 'T00:00:00Z');
   return !isNaN(d.getTime());
-}
-
-function getMonday(date) {
-  const d = new Date(date);
-  const localDay = d.getDay();
-  const diff = d.getDate() - localDay + (localDay === 0 ? -6 : 1);
-  d.setDate(diff);
-  return d.toISOString().split('T')[0];
 }
 
 async function get(req, res, next) {

@@ -1,3 +1,11 @@
+export function getMonday(date) {
+  const d = new Date(date);
+  const localDay = d.getDay();
+  const diff = d.getDate() - localDay + (localDay === 0 ? -6 : 1);
+  d.setDate(diff);
+  return d.toISOString().split('T')[0];
+}
+
 export function levenshteinDistance(a, b) {
   const m = a.length, n = b.length;
   const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
