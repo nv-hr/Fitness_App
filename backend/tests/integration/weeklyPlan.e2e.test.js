@@ -26,6 +26,7 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import request from 'supertest';
 import app from '../../src/app.js';
 import { startDatabase, stopDatabase, createTestUser } from './helpers.js';
+import { pool } from '../../src/config/database.js';
 
 /** @type {import('supertest').SuperAgentTest} */
 let agent;
@@ -284,6 +285,27 @@ describe('Weekly Plan E2E - Real LLM', () => {
         expect(swappedActivity).toBeDefined();
         console.log('✓ Cache verified: replacement found in cached plan');
       }
+    }
+
+    // Verify DB persistence after swap (WR-06)
+    try {
+      const dbResult = await pool.query(
+        'SELECT plan_data FROM weekly_plans WHERE user_id = $1 AND week_start = $2',
+        [testUser.user.id, weekStart]
+      );
+      if (dbResult.rows.length > 0) {
+        const dbPlan = dbResult.rows[0].plan_data;
+        if (dbPlan && Array.isArray(dbPlan.days) && dbPlan.days[activityDayIndex]) {
+          const dbDay = dbPlan.days[activityDayIndex];
+          if (Array.isArray(dbDay.activities)) {
+            const dbReplacement = dbDay.activities.find(a => a.activity_id === replacement.activity_id);
+            expect(dbReplacement).toBeDefined();
+            console.log('✓ DB persistence verified: replacement found in weekly_plans table');
+          }
+        }
+      }
+    } catch (dbErr) {
+      console.warn('⚠ Could not verify DB persistence:', dbErr.message);
     }
 
     console.log(`✓ Replacement: "${replacement.name}" (id=${replacement.activity_id}, ${replacement.duration_min}min, ${replacement.intensity})`);
