@@ -1,5 +1,5 @@
 import { successResponse, errorResponse } from '../utils/response.js';
-import { generateWeeklyPlan, getCachedPlan, regenerateDay, swapActivity } from '../services/llm.service.js';
+import { generateWeeklyPlan, getCachedPlan, setCachedPlan, regenerateDay, swapActivity } from '../services/llm.service.js';
 import { findByUserId as findProfileByUserId } from '../repositories/profile.repository.js';
 import { pool } from '../config/database.js';
 import { AppError } from '../utils/errors.js';
@@ -9,7 +9,7 @@ import {
   getTopActivities,
   getRandomActivities,
 } from '../repositories/activity.repository.js';
-import { upsertPlan } from '../repositories/weeklyPlan.repository.js';
+import { findByUserAndWeek, upsertPlan } from '../repositories/weeklyPlan.repository.js';
 
 function isValidDateString(str) {
   if (typeof str !== 'string') return false;
@@ -182,6 +182,14 @@ async function swapHandler(req, res, next) {
     if (cached && Array.isArray(cached.days)) {
       const activityDays = cached.days.filter(d => d.rest_day === false).length;
       if (activityDays > 0) deps.availableDays = activityDays;
+    }
+
+    // CR-03: Fall back to DB if plan not in cache (e.g., after server restart)
+    if (!cached || !Array.isArray(cached.days)) {
+      const dbPlan = await findByUserAndWeek(userId, targetWeekStart);
+      if (dbPlan && dbPlan.plan_data && Array.isArray(dbPlan.plan_data.days)) {
+        setCachedPlan(userId, targetWeekStart, dbPlan.plan_data);
+      }
     }
 
     const result = await swapActivity(deps, activityId, dayIndex);
