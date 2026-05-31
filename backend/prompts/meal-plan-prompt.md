@@ -12,6 +12,9 @@ You are a fitness nutrition planner creating a personalized weekly meal plan for
 # Available Foods (select ONLY from this list)
 {{foodDatabase}}
 
+# Recent Food Logs
+{{recentFoodLogs}}
+
 # Response Format
 Return ONLY valid JSON. No markdown, no explanation, no code fences.
 
@@ -19,40 +22,52 @@ Return ONLY valid JSON. No markdown, no explanation, no code fences.
   "days": [
     {
       "date": "YYYY-MM-DD",
-      "meals": {
-        "breakfast": [
-          {
-            "food_id": <integer>,
-            "food_name": "<exact name from Available Foods>",
-            "portion_grams": <integer>,
-            "meal_type": "breakfast"
-          }
-        ],
-        "lunch": [
-          {
-            "food_id": <integer>,
-            "food_name": "<exact name from Available Foods>",
-            "portion_grams": <integer>,
-            "meal_type": "lunch"
-          }
-        ],
-        "dinner": [
-          {
-            "food_id": <integer>,
-            "food_name": "<exact name from Available Foods>",
-            "portion_grams": <integer>,
-            "meal_type": "dinner"
-          }
-        ],
-        "snack": [
-          {
-            "food_id": <integer>,
-            "food_name": "<exact name from Available Foods>",
-            "portion_grams": <integer>,
-            "meal_type": "snack"
-          }
-        ]
-      }
+      "meals": [
+        {
+          "meal_type": "breakfast",
+          "items": [
+            {
+              "food_id": <integer>,
+              "food_name": "<exact name from Available Foods>",
+              "portion_grams": <integer>,
+              "meal_type": "breakfast"
+            }
+          ]
+        },
+        {
+          "meal_type": "lunch",
+          "items": [
+            {
+              "food_id": <integer>,
+              "food_name": "<exact name from Available Foods>",
+              "portion_grams": <integer>,
+              "meal_type": "lunch"
+            }
+          ]
+        },
+        {
+          "meal_type": "dinner",
+          "items": [
+            {
+              "food_id": <integer>,
+              "food_name": "<exact name from Available Foods>",
+              "portion_grams": <integer>,
+              "meal_type": "dinner"
+            }
+          ]
+        },
+        {
+          "meal_type": "snack",
+          "items": [
+            {
+              "food_id": <integer>,
+              "food_name": "<exact name from Available Foods>",
+              "portion_grams": <integer>,
+              "meal_type": "snack"
+            }
+          ]
+        }
+      ]
     }
   ]
 }
@@ -62,28 +77,35 @@ Return ONLY valid JSON. No markdown, no explanation, no code fences.
   "days": [
     {
       "date": "2026-05-18",
-      "meals": {
-        "breakfast": [
-          { "food_id": 1, "food_name": "Chicken breast, raw, skinless", "portion_grams": 150, "meal_type": "breakfast" },
-          { "food_id": 2, "food_name": "Chicken thigh, raw, skinless", "portion_grams": 100, "meal_type": "breakfast" },
-          { "food_id": 3, "food_name": "Chicken drumstick, raw, skinless", "portion_grams": 80, "meal_type": "breakfast" }
-        ],
-        "lunch": [
-          { "food_id": 4, "food_name": "Chicken wing, raw, skinless", "portion_grams": 120, "meal_type": "lunch" },
-          { "food_id": 5, "food_name": "Ground beef, 80% lean", "portion_grams": 150, "meal_type": "lunch" },
-          { "food_id": 6, "food_name": "Ground beef, 93% lean", "portion_grams": 100, "meal_type": "lunch" }
-        ],
-        "dinner": [
-          { "food_id": 7, "food_name": "Beef sirloin steak, raw", "portion_grams": 180, "meal_type": "dinner" },
-          { "food_id": 8, "food_name": "Beef ribeye steak, raw", "portion_grams": 150, "meal_type": "dinner" },
-          { "food_id": 9, "food_name": "Pork tenderloin, raw", "portion_grams": 120, "meal_type": "dinner" },
-          { "food_id": 10, "food_name": "Pork chop, raw, boneless", "portion_grams": 50, "meal_type": "dinner" }
-        ],
-        "snack": [
-          { "food_id": 11, "food_name": "Bacon, raw", "portion_grams": 80, "meal_type": "snack" },
-          { "food_id": 12, "food_name": "Ham, sliced, deli", "portion_grams": 60, "meal_type": "snack" }
-        ]
-      }
+      "meals": [
+        {
+          "meal_type": "breakfast",
+          "items": [
+            { "food_id": 1, "food_name": "Chicken breast, raw, skinless", "portion_grams": 150, "meal_type": "breakfast" },
+            { "food_id": 2, "food_name": "Chicken thigh, raw, skinless", "portion_grams": 100, "meal_type": "breakfast" }
+          ]
+        },
+        {
+          "meal_type": "lunch",
+          "items": [
+            { "food_id": 4, "food_name": "Chicken wing, raw, skinless", "portion_grams": 120, "meal_type": "lunch" },
+            { "food_id": 5, "food_name": "Ground beef, 80% lean", "portion_grams": 150, "meal_type": "lunch" }
+          ]
+        },
+        {
+          "meal_type": "dinner",
+          "items": [
+            { "food_id": 7, "food_name": "Beef sirloin steak, raw", "portion_grams": 180, "meal_type": "dinner" },
+            { "food_id": 8, "food_name": "Beef ribeye steak, raw", "portion_grams": 150, "meal_type": "dinner" }
+          ]
+        },
+        {
+          "meal_type": "snack",
+          "items": [
+            { "food_id": 11, "food_name": "Bacon, raw", "portion_grams": 80, "meal_type": "snack" }
+          ]
+        }
+      ]
     }
   ]
 }

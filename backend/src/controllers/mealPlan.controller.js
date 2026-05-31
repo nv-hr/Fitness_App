@@ -1,3 +1,4 @@
+import { pool } from '../config/database.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { getCachedPlan } from '../services/llm.service.js';
 import { generateMealPlan, regenerateDay } from '../services/mealPlan.service.js';
@@ -124,9 +125,19 @@ async function logDay(req, res, next) {
     if (items.length === 0) {
       return successResponse(res, { logged: 0, message: 'All items already logged.' });
     }
-    const inserted = await batchLogItems(userId, items);
-    await markItemsLogged(userId, targetWeekStart, dayIndex, mealType || null);
-    return successResponse(res, { logged: inserted.length, items: inserted });
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const inserted = await batchLogItems(userId, items, client);
+      await markItemsLogged(userId, targetWeekStart, dayIndex, mealType || null, client);
+      await client.query('COMMIT');
+      return successResponse(res, { logged: inserted.length, items: inserted });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   } catch (err) {
     next(err);
   }

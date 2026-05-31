@@ -177,11 +177,12 @@ export async function getRecentFoods(userId, limit = 10) {
  * @param {Array<{foodId: number, portionGrams: number, calories: number, logDate: string, mealType: string}>} items
  * @returns {Promise<Array>}
  */
-export async function batchLogItems(userId, items) {
+export async function batchLogItems(userId, items, clientOverride) {
   if (!items || items.length === 0) return [];
-  const client = await pool.connect();
+  const client = clientOverride || await pool.connect();
+  const ownsClient = !clientOverride;
   try {
-    await client.query('BEGIN');
+    if (ownsClient) await client.query('BEGIN');
     const inserted = [];
     for (const item of items) {
       const { rows } = await client.query(
@@ -191,13 +192,13 @@ export async function batchLogItems(userId, items) {
       );
       inserted.push(rows[0]);
     }
-    await client.query('COMMIT');
+    if (ownsClient) await client.query('COMMIT');
     return inserted;
   } catch (err) {
-    await client.query('ROLLBACK');
+    if (ownsClient) await client.query('ROLLBACK');
     throw new AppError('DatabaseError', `Failed to batch log items: ${err.message}`, 500);
   } finally {
-    client.release();
+    if (ownsClient) client.release();
   }
 }
 

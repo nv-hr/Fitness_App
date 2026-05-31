@@ -1,9 +1,10 @@
 import { pool } from '../config/database.js';
 import { AppError } from '../utils/errors.js';
 
-export async function findByUserAndWeek(userId, weekStart) {
+export async function findByUserAndWeek(userId, weekStart, clientOverride) {
+  const db = clientOverride || pool;
   try {
-    const { rows } = await pool.query(
+    const { rows } = await db.query(
       `SELECT id, user_id, week_start, plan_data, status, created_at, updated_at
        FROM meal_plans
        WHERE user_id = $1 AND week_start = $2
@@ -16,9 +17,10 @@ export async function findByUserAndWeek(userId, weekStart) {
   }
 }
 
-export async function upsertPlan(userId, weekStart, planData, status = 'active') {
+export async function upsertPlan(userId, weekStart, planData, status = 'active', clientOverride) {
+  const db = clientOverride || pool;
   try {
-    const { rows } = await pool.query(
+    const { rows } = await db.query(
       `INSERT INTO meal_plans (user_id, week_start, plan_data, status)
        VALUES ($1, $2, $3::jsonb, $4)
        ON CONFLICT (user_id, week_start)
@@ -32,9 +34,9 @@ export async function upsertPlan(userId, weekStart, planData, status = 'active')
   }
 }
 
-export async function markItemsLogged(userId, weekStart, dayIndex, mealType) {
+export async function markItemsLogged(userId, weekStart, dayIndex, mealType, clientOverride) {
   try {
-    const plan = await findByUserAndWeek(userId, weekStart);
+    const plan = await findByUserAndWeek(userId, weekStart, clientOverride);
     if (!plan) return null;
     const data = plan.plan_data;
     if (!data.days || !data.days[dayIndex]) return null;
@@ -45,7 +47,7 @@ export async function markItemsLogged(userId, weekStart, dayIndex, mealType) {
         item.logged = true;
       }
     }
-    return upsertPlan(userId, weekStart, data, plan.status);
+    return upsertPlan(userId, weekStart, data, plan.status, clientOverride);
   } catch (err) {
     throw new AppError('DatabaseError', `Failed to mark items logged: ${err.message}`, 500);
   }
