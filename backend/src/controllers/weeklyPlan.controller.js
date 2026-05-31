@@ -1,5 +1,5 @@
 import { successResponse, errorResponse } from '../utils/response.js';
-import { generateWeeklyPlan, getCachedPlan, setCachedPlan, regenerateDay, swapActivity } from '../services/llm.service.js';
+import { generateWeeklyPlan, getCachedPlan, setCachedPlan, clearCachedPlan, regenerateDay, swapActivity, isOldFormat } from '../services/llm.service.js';
 import { findByUserId as findProfileByUserId } from '../repositories/profile.repository.js';
 import { pool } from '../config/database.js';
 import { AppError } from '../utils/errors.js';
@@ -38,6 +38,17 @@ async function get(req, res, next) {
     // Try in-memory cache first (faster, no DB hit)
     const cached = getCachedPlan(userId, weekStart);
     if (cached && cached.status !== 'fallback') {
+      // D-01: Check for old-format plan in cache (defensive — migrated plans always
+      // have format_version: 1, but old-format plans cached via swapHandler CR-03
+      // would lack it).
+      if (isOldFormat(cached)) {
+        const migrated = await attemptMigration(userId, weekStart);
+        if (migrated) {
+          return successResponse(res, { plan: migrated, fromCache: false });
+        }
+        // D-03: LLM failure — fall through to return cached plan as-is
+        console.warn(`[Migration] LLM failed for user ${userId}, week ${weekStart}. Returning cached old-format plan.`);
+      }
       return successResponse(res, { plan: cached, fromCache: true });
     }
 
@@ -55,6 +66,18 @@ async function get(req, res, next) {
     }
 
     const row = rows[0];
+
+    // D-01: Lazy migration — detect old format by absence of format_version
+    // If the DB plan_data lacks format_version, trigger silent regeneration.
+    if (row.plan_data && isOldFormat(row.plan_data)) {
+      const migrated = await attemptMigration(userId, weekStart);
+      if (migrated) {
+        return successResponse(res, { plan: migrated, fromCache: false });
+      }
+      // D-03: LLM failure — keep old format, try again next visit
+      console.warn(`[Migration] LLM failed for user ${userId}, week ${weekStart}. Returning DB old-format plan.`);
+    }
+
     const plan = {
       days: row.plan_data?.days || [],
       status: row.status || 'active',
@@ -200,6 +223,55 @@ async function swapHandler(req, res, next) {
     return successResponse(res, result);
   } catch (err) {
     next(err);
+  }
+}
+
+/**
+ * Attempt to migrate an old-format plan to the new variable-day format.
+ * D-01: Triggers on GET request (lazy regeneration).
+ * D-03: On LLM failure, returns null — caller keeps old format.
+ * D-02: Transparent — no extra response fields, no notification.
+ *
+ * @param {number} userId
+ * @param {string} weekStart - ISO date string
+ * @returns {Promise<object|null>} Migrated plan or null on failure
+ */
+async function attemptMigration(userId, weekStart) {
+  console.log(`[Migration] Old-format plan detected for user ${userId}, week ${weekStart}. Regenerating...`);
+
+  // Clear cache to force fresh LLM call (D-04: prevents generateWeeklyPlan
+  // from returning a stale cached old-format plan)
+  clearCachedPlan(userId, weekStart);
+
+  const deps = {
+    getProfile: (id) => findProfileByUserId(id),
+    getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
+    getActivities: () => getAllActivities(),
+    getTopActivities: (id, limit) => getTopActivities(id, limit),
+    userId,
+    weekStart,
+    availableDays: 5, // default for migrated plans (CONTEXT.md discretion)
+  };
+
+  try {
+    const result = await generateWeeklyPlan(deps);
+    const newPlan = result.plan;
+
+    // Validate the generated plan has minimum required structure
+    if (!newPlan || !Array.isArray(newPlan.days) || newPlan.days.length === 0) {
+      console.warn(`[Migration] Regeneration produced invalid plan (days: ${newPlan?.days?.length || 0}). Keeping old format.`);
+      return null;
+    }
+
+    // Persist migrated plan to DB
+    await upsertPlan(userId, weekStart, newPlan, 'active');
+    console.log(`[Migration] Successfully migrated plan for user ${userId}, week ${weekStart}.`);
+
+    return newPlan;
+  } catch (err) {
+    // D-03: LLM failure — keep old format, try again next visit
+    console.error(`[Migration] Failed: ${err.message}. Keeping old format for user ${userId}.`);
+    return null;
   }
 }
 
