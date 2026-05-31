@@ -56,23 +56,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCHD-01 | | Pending |
-| SCHD-02 | | Pending |
-| SCHD-03 | | Pending |
-| PROF-01 | | Pending |
-| PROF-02 | | Pending |
-| PROF-03 | | Pending |
-| SWAP-01 | | Pending |
-| SWAP-02 | | Pending |
-| SWAP-03 | | Pending |
-| SWAP-04 | | Pending |
-| MIGR-01 | | Pending |
-| MIGR-02 | | Pending |
+| SCHD-01 | Phase 32 | Pending |
+| SCHD-02 | Phase 30 | Pending |
+| SCHD-03 | Phase 32 | Pending |
+| PROF-01 | Phase 30 | Pending |
+| PROF-02 | Phase 30 | Pending |
+| PROF-03 | Phase 30 | Pending |
+| SWAP-01 | Phase 32 | Pending |
+| SWAP-02 | Phase 31 | Pending |
+| SWAP-03 | Phase 31 | Pending |
+| SWAP-04 | Phase 31 | Pending |
+| MIGR-01 | Phase 33 | Pending |
+| MIGR-02 | Phase 30 | Pending |
 
 **Coverage:**
 - v1.6 requirements: 12 total
-- Mapped to phases: 0
-- Unmapped: 12
+- Mapped to phases: 12
+- Unmapped: 0
 
 ---
 

@@ -1,8 +1,8 @@
 # ROADMAP: Fitness_App
 
 **Created:** 2026-05-17
-**Updated:** 2026-05-31 (v1.5 Smart Auto-Logging shipped)
-**Phases:** 29 complete (v1.0-v1.5)
+**Updated:** 2026-05-31 (v1.6 Activity Planner Rework added)
+**Phases:** 29 complete, 4 planned (v1.0-v1.6)
 **Milestones:** 6 shipped
 
 ## Milestones
@@ -13,6 +13,7 @@
 - ✅ **v1.3 Activity Tracking & Smart Suggestions** — Phases 13-17 (shipped 2026-05-31)
 - ✅ **v1.4 LLM Food Recommendations** — Phases 18-23 (shipped 2026-05-31)
 - ✅ **v1.5 Smart Auto-Logging** — Phases 24-29 (shipped 2026-05-31)
+- 🚧 **v1.6 Activity Planner Rework** — Phases 30-33 (in progress)
 
 ## Phases
 
@@ -81,6 +82,62 @@
 
 </details>
 
+### 🚧 v1.6 Activity Planner Rework (In Progress)
+
+**Milestone Goal:** Overhaul activity planning to support variable-day weekly schedules with rest days, LLM-driven activity selection based on user profile, and per-activity swapping.
+
+- [ ] **Phase 30: Prompt & Validation Rework** — Update prompts and validation for variable-day plans, profile-driven selection, and format_version
+- [ ] **Phase 31: Activity Swap Endpoint** — Backend swap endpoint with dedicated rate limiter and merge-into-cache logic
+- [ ] **Phase 32: Frontend — Days Selector & Swap UI** — Days selector in plan generation form, swap buttons on activity cards
+- [ ] **Phase 33: Plan Migration & Edge Cases** — Lazy regeneration of old-format plans, edge case handling
+
+## Phase Details
+
+### Phase 30: Prompt & Validation Rework
+**Goal**: LLM generates variable-day plans with profile-driven activity selection and rest days
+**Depends on**: Phase 29
+**Requirements**: SCHD-02, PROF-01, PROF-02, PROF-03, MIGR-02
+**Success Criteria** (what must be TRUE):
+  1. Generated plans respect the availableDays parameter — exactly N activity days (4-6) with remaining days as rest
+  2. Plan activities reflect the user's fitness goal (lose weight / maintain / build muscle)
+  3. Activity duration and intensity scale with user's activity level
+  4. Multiple activities per day are assigned when user profile supports it
+  5. All plan_data includes format_version field distinguishing old vs new format
+**Plans**: TBD
+
+### Phase 31: Activity Swap Endpoint
+**Goal**: Users can swap a single activity via dedicated backend endpoint with rate limiting
+**Depends on**: Phase 30
+**Requirements**: SWAP-02, SWAP-03, SWAP-04
+**Success Criteria** (what must be TRUE):
+  1. User can request a swap for a specific activity via API and receive a replacement
+  2. LLM returns a contextually appropriate replacement activity
+  3. Swapped activity merges into the cached plan in-place without full regeneration
+  4. Swap requests are rate-limited independently from generate/regenerate
+**Plans**: TBD
+
+### Phase 32: Frontend — Days Selector & Swap UI
+**Goal**: Users can configure available days before generating and swap activities from the plan view
+**Depends on**: Phase 31
+**Requirements**: SCHD-01, SCHD-03, SWAP-01
+**Success Criteria** (what must be TRUE):
+  1. User can select 4-6 available days from a visual selector in the plan generation form
+  2. Rest days display as dedicated rest day cards in the weekly plan view
+  3. Each activity has a visible Swap button
+  4. Swap initiates a mutation with loading state and updates the activity in-place on success
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 33: Plan Migration & Edge Cases
+**Goal**: Existing old-format plans migrate seamlessly; edge cases handled gracefully
+**Depends on**: Phase 32
+**Requirements**: MIGR-01
+**Success Criteria** (what must be TRUE):
+  1. Old-format 7-day plans automatically regenerate with variable-day format on user's next visit
+  2. Migration is transparent — no data loss, no visible errors
+  3. Swap edge cases (nonexistent activity ID, already-swapped activity) display appropriate error messages
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -114,9 +171,13 @@
 | 27. Meal Plan Logging | v1.5 | 1/1 | Complete | 2026-05-31 |
 | 28. Auto-Generation & Inline Management | v1.5 | 1/1 | Complete | 2026-05-31 |
 | 29. UI Consolidation | v1.5 | 1/1 | Complete | 2026-05-31 |
+| 30. Prompt & Validation Rework | v1.6 | 0/0 | Not started | - |
+| 31. Activity Swap Endpoint | v1.6 | 0/0 | Not started | - |
+| 32. Frontend — Days Selector & Swap UI | v1.6 | 0/0 | Not started | - |
+| 33. Plan Migration & Edge Cases | v1.6 | 0/0 | Not started | - |
 
 
 ---
 
 *Roadmap created: 2026-05-17*
-*Last updated: 2026-05-31 (v1.5 shipped)*
+*Last updated: 2026-05-31 (v1.6 Activity Planner Rework added)*
