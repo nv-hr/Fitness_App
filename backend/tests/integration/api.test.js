@@ -791,9 +791,8 @@ describe('Activity Endpoints', () => {
 
       // Get a seeded activity ID
       const getRes = await logAgent.get('/api/activities');
-      if (getRes.body.data?.activities?.length) {
-        seededActivityId = getRes.body.data.activities[0].id;
-      }
+      expect(getRes.body.data?.activities?.length).toBeGreaterThan(0);
+      seededActivityId = getRes.body.data.activities[0].id;
     });
 
     it('should log an activity with valid data → 201 + calories_burned', async () => {
@@ -869,9 +868,8 @@ describe('Activity Endpoints', () => {
       });
 
       const getRes = await logsAgent.get('/api/activities');
-      if (getRes.body.data?.activities?.length) {
-        seededActivityId = getRes.body.data.activities[0].id;
-      }
+      expect(getRes.body.data?.activities?.length).toBeGreaterThan(0);
+      seededActivityId = getRes.body.data.activities[0].id;
 
       // Log an activity for today
       if (seededActivityId) {
@@ -919,9 +917,8 @@ describe('Activity Endpoints', () => {
         .send({ email, password: 'TestP@ss123', pdpConsent: true });
 
       const getRes = await deleteAgent.get('/api/activities');
-      if (getRes.body.data?.activities?.length) {
-        seededActivityId = getRes.body.data.activities[0].id;
-      }
+      expect(getRes.body.data?.activities?.length).toBeGreaterThan(0);
+      seededActivityId = getRes.body.data.activities[0].id;
 
       // Log an activity so we can delete it
       if (seededActivityId) {
@@ -976,9 +973,8 @@ describe('Activity Endpoints', () => {
       });
 
       const getRes = await summaryAgent.get('/api/activities');
-      if (getRes.body.data?.activities?.length) {
-        seededActivityId = getRes.body.data.activities[0].id;
-      }
+      expect(getRes.body.data?.activities?.length).toBeGreaterThan(0);
+      seededActivityId = getRes.body.data.activities[0].id;
 
       // Log an activity for today
       if (seededActivityId) {
