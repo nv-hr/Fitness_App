@@ -8,5 +8,6 @@ router.use(authenticateToken);
 
 router.get('/', dailyMealPlanController.get);
 router.post('/generate', dailyMealPlanController.generate);
+router.post('/log', dailyMealPlanController.logMeals);
 
 export default router;

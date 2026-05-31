@@ -1,9 +1,10 @@
+import { pool } from '../config/database.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { getCachedPlan } from '../services/llm.service.js';
 import { generateDailyMealPlan } from '../services/dailyMealPlan.service.js';
 import { getProfile } from '../services/profile.service.js';
-import { searchFoods, getLogHistory } from '../repositories/food.repository.js';
-import { findByUserAndDate } from '../repositories/dailyMealPlan.repository.js';
+import { searchFoods, getLogHistory, batchLogItems } from '../repositories/food.repository.js';
+import { findByUserAndDate, markMealsLogged } from '../repositories/dailyMealPlan.repository.js';
 
 function isValidDateString(str) {
   if (typeof str !== 'string') return false;
@@ -58,7 +59,69 @@ async function generate(req, res, next) {
   }
 }
 
+async function logMeals(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const { date, mealTypes } = req.body;
+    if (date && !isValidDateString(date)) {
+      return errorResponse(res, 'Invalid date format (use YYYY-MM-DD)', 400, 'VALIDATION_ERROR');
+    }
+    const planDate = date || getTodayString();
+    if (!Array.isArray(mealTypes) || mealTypes.length === 0) {
+      return errorResponse(res, 'mealTypes must be a non-empty array', 400, 'VALIDATION_ERROR');
+    }
+    const validMealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
+    for (const mt of mealTypes) {
+      if (!validMealTypes.includes(mt)) {
+        return errorResponse(res, `Invalid mealType "${mt}"`, 400, 'VALIDATION_ERROR');
+      }
+    }
+    const plan = await findByUserAndDate(userId, planDate);
+    if (!plan) {
+      return errorResponse(res, 'No daily meal plan found for the given date', 404, 'NOT_FOUND');
+    }
+    const data = plan.plan_data;
+    if (!data.meals || !Array.isArray(data.meals)) {
+      return errorResponse(res, 'No meals found in plan', 404, 'NOT_FOUND');
+    }
+    const items = [];
+    for (const meal of data.meals) {
+      if (!mealTypes.includes(meal.meal_type)) continue;
+      if (!Array.isArray(meal.items)) continue;
+      for (const item of meal.items) {
+        if (item.logged) continue;
+        items.push({
+          foodId: item.food_id,
+          portionGrams: item.portion_grams,
+          calories: item.calories,
+          logDate: planDate,
+          mealType: meal.meal_type,
+        });
+      }
+    }
+    if (items.length === 0) {
+      return successResponse(res, { logged: 0, message: 'All selected meals already logged.' });
+    }
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const inserted = await batchLogItems(userId, items, client);
+      await markMealsLogged(userId, planDate, mealTypes, client);
+      await client.query('COMMIT');
+      return successResponse(res, { logged: inserted.length, items: inserted });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    next(err);
+  }
+}
+
 export default {
   get,
   generate,
+  logMeals,
 };
