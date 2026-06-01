@@ -8,6 +8,8 @@ import {
   getAllActivities,
   getTopActivities,
   getRandomActivities,
+  upsertActivityLogFromPlan,
+  deleteActivityLogByPlan,
 } from '../repositories/activity.repository.js';
 import { findByUserAndWeek, upsertPlan } from '../repositories/weeklyPlan.repository.js';
 
@@ -157,6 +159,12 @@ async function generate(req, res, next) {
       weekStart,
       availableDays, // pass through to service
     });
+
+    // Persist to DB so toggleComplete, swapHandler, and subsequent
+    // page loads can find the plan (generateWeeklyPlan only caches in memory).
+    if (result.plan && Array.isArray(result.plan.days)) {
+      await upsertPlan(userId, weekStart, result.plan, result.status || 'active');
+    }
 
     return successResponse(res, result);
   } catch (err) {
@@ -398,13 +406,19 @@ async function toggleComplete(req, res, next) {
     // Normalize weekStart
     const targetWeekStart = getMonday(weekStart ? new Date(weekStart) : new Date());
 
-    // Load plan from DB
-    const dbPlan = await findByUserAndWeek(userId, targetWeekStart);
-    if (!dbPlan || !dbPlan.plan_data || !Array.isArray(dbPlan.plan_data.days)) {
-      return errorResponse(res, 'No plan found for the given week', 404, 'NOT_FOUND');
-    }
+    // Check cache first (fast path — plan may have been generated this session)
+    let planData = getCachedPlan(userId, targetWeekStart);
+    let planStatus = 'active';
 
-    const planData = dbPlan.plan_data;
+    // Fall back to DB if not in cache
+    if (!planData || !Array.isArray(planData.days)) {
+      const dbPlan = await findByUserAndWeek(userId, targetWeekStart);
+      if (!dbPlan || !dbPlan.plan_data || !Array.isArray(dbPlan.plan_data.days)) {
+        return errorResponse(res, 'No plan found for the given week', 404, 'NOT_FOUND');
+      }
+      planData = dbPlan.plan_data;
+      planStatus = dbPlan.status || 'active';
+    }
 
     // Locate the day in the plan
     if (!planData.days[dayIndex]) {
@@ -428,16 +442,31 @@ async function toggleComplete(req, res, next) {
     // Recompute day-level completed flag
     const allCompleted = day.activities.length > 0 && day.activities.every(a => a.completed === true);
     day.completed = allCompleted;
-    if (!allCompleted) delete day.completed; // Clean up — only set when fully completed
+    if (!allCompleted) delete day.completed; // Clean up �?" only set when fully completed
 
     // Persist the updated plan
-    await upsertPlan(userId, targetWeekStart, planData, dbPlan.status || 'active');
+    await upsertPlan(userId, targetWeekStart, planData, planStatus);
+
+    // Sync activity_log table for history visibility
+    try {
+      if (completed) {
+        const act = day.activities[activityIdx];
+        await upsertActivityLogFromPlan(userId, {
+          activityId,
+          durationMin: act.duration_min,
+          intensity: act.intensity || 'moderate',
+          caloriesBurned: Math.max(0, Math.round(act.calories_burned || 0)),
+          loggedDate: day.date,
+        });
+      } else {
+        await deleteActivityLogByPlan(userId, activityId, day.date);
+      }
+    } catch (logErr) {
+      console.warn(`[ToggleComplete] Failed to sync activity_log: ${logErr.message}`);
+    }
 
     // Update cache
-    const cached = getCachedPlan(userId, targetWeekStart);
-    if (cached) {
-      setCachedPlan(userId, targetWeekStart, planData);
-    }
+    setCachedPlan(userId, targetWeekStart, planData);
 
     return successResponse(res, { plan: planData });
   } catch (err) {

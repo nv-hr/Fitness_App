@@ -1,538 +1,600 @@
-# Pitfalls: Merging Calendar Pages into Target Pages (v1.8 UI Consolidation)
+# Pitfalls: Weight Logging, Goal Setting, Weight Chart & Progress Dashboard
 
+**Domain:** Fitness app progress tracking — adding weight history, goal targets, trend visualization to existing profile system
 **Researched:** 2026-06-01
-**Domain:** React 19 + React Router v6 — merging two standalone page-level components into existing pages
-**Source:** Codebase analysis (Router.jsx, CalendarPageLayout, ActivityCalendarPage, MealCalendarPage, ActivitiesPage, FoodLogPage, tests)
+**Confidence:** HIGH (verified against existing codebase patterns)
+**Codebase basis:** Profiles table (single `weight_kg` column, destructive PUT update), no charting library, TanStack React Query + React Hook Form
 
 ---
 
 ## CRITICAL PITFALLS
 
-These will cause test failures, application errors, or data integrity issues if not addressed.
+These will cause data loss, inconsistent state, or user-facing errors if not addressed.
 
-### P-01: Dual Auto-Generation Conflict
+### P-01: Weight Log Inserted Before Profile Update Succeeds (Inconsistent State)
 
-**What goes wrong:** Merging a Calendar page into a target page creates two independent auto-generation systems running simultaneously, causing duplicate API calls, rate-limit consumption, and stale data overwrites.
-
-**Why it happens:**
-
-The codebase has **four** auto-generation points across two layers:
-
-| Component | Auto-gen Mechanism | Triggers On |
-|-----------|-------------------|-------------|
-| `ActivityCalendarPage.jsx:98-139` | `useEffect` checks `dayStatusMap` for today's status | `currentMonth` change (page load = today) |
-| `ActivityPlanSection.jsx:37-42` | `useEffect` checks `!loading && !plan && !generating` | `loading`/`plan` state changes |
-| `MealCalendarPage.jsx:62-93` | `useEffect` checks `dayStatusMap` for today's status | `currentMonth` change |
-| `DailyMealPlanSection.jsx:39-44` | `useEffect` checks `!loading && !plan && !generating` | `loading`/`plan` state changes |
-
-When Activity Calendar merges into ActivitiesPage: `ActivityCalendarPage` auto-gen + `ActivityPlanSection` auto-gen fire sequentially. The PlanSection fires first (mount), then the Calendar fires (month state). Two Generate Week API calls within milliseconds — the second either hits a rate limit or overwrites the first.
-
-Same risk for Meal Calendar + FoodLogPage: `MealCalendarPage` auto-gen + `DailyMealPlanSection` auto-gen.
-
-**Consequences:**
-- Rate-limit consumed on duplicate calls (5/15min limit)
-- Second generation overwrites the first — user sees stale version
-- `genRetryAfter` countdown from one system doesn't account for the other
-- Both systems show "Generating..." simultaneously — confusing UX
-
-**Prevention:**
-- Deactivate one of the two auto-gen mechanisms in the merged page. The Calendar's auto-gen (`dayStatusMap` check) should take precedence since it already has month-awareness and past-day guards.
-- Move `ActivityPlanSection`/`DailyMealPlanSection` to be **children** of the calendar's data layer: when calendar fetches a plan, pass it down; don't let the section auto-fetch independently.
-- Or: merge the two auto-gen triggers into a single `useEffect` that only fires once.
-
-**Phase to address:** Phase where Calendar is merged into target page. Requires restructuring the existing PlanSection components.
-
----
-
-### P-02: Calendar Page Tests Will Fail — Pages Being Removed
-
-**What goes wrong:** Both `ActivityCalendarPage.test.jsx` (7 tests) and `MealCalendarPage.test.jsx` (7 tests) test for elements that either move to a new parent or disappear entirely.
-
-**File:** `frontend/src/features/activities/components/__tests__/ActivityCalendarPage.test.jsx`
-**File:** `frontend/src/features/food-log/components/__tests__/MealCalendarPage.test.jsx`
-
-**Tests that break for ActivityCalendarPage:**
-| Lines | Test | Why it breaks |
-|-------|------|---------------|
-| 81-86 | `renders page title` → expects `'Activity Calendar'` text | Title will change or move |
-| 88-93 | `renders Generate Week button` → expects `'Generate Week'` | Button may live in a section, not at top |
-| 95-100 | `renders CalendarPageLayout` → expects `data-testid="calendar-page-layout"` | Calendar becomes a subsection, not the root |
-| 102-108 | `shows Generating... when plan is being generated` | Text may conflict with PlanSection's "Generating..." |
-| 110-122 | `calls generateWeeklyPlan on Generate Week click` | Mock import path or structure changes |
-| 124-129 | `day detail panel shows empty state` | Panel rendered inside a subsection |
-| 131-155 | loading/error state rendering | Depends on how calendar state integrates |
-
-**Tests that break for MealCalendarPage:** Same pattern — all 7 tests check page-level UI elements that move or change context.
-
-**ActivitiesPage.test.jsx (5 tests) is at risk too:**
-| Lines | Test | Why it breaks |
-|-------|------|---------------|
-| 22-29 | `shows Loading... on initial render` | New merged page may combine loading states differently |
-| 31-40 | `renders "Activity Recommendations" heading` | Page structure changes with calendar section |
-| 53-63 | `has a Shuffle button` | Button still exists but page container changes |
-
-**Prevention:**
-- Do NOT simply delete test files — migrate useful assertions to a new merged-page test file
-- `ActivityCalendarPage.test.jsx` and `MealCalendarPage.test.jsx` should be **replaced** by new test files for the merged pages (e.g., `MergedActivityPage.test.jsx`)
-- Keep tests that verify calendar behavior (day selection, generate button click, loading/error) — rewrite them to mount the merged page
-- Keep tests that verify PlanSection/LogSection behavior — rewrite them to mount the merged page
-- **Shared component tests must NOT be removed**: `CalendarPageLayout.test.jsx`, `CalendarGrid.test.jsx`, `DayDetailPanel.test.jsx`, `calendarUtils.test.js`, `useMonthData.test.js`, `DayActivityRow.test.jsx` — these test reusable components and should work unchanged
-
-**Phase to address:** The test phase within the consolidation milestone. Tests should be updated as part of the merge, not after.
-
----
-
-### P-03: Dashboard and Navigation Links Point to Old Routes
-
-**What goes wrong:** Removing `/activity-calendar` and `/meal-calendar` routes breaks navigation, leaving users unable to reach these features.
+**What goes wrong:**
+The frontend or service creates a `weight_log` entry *before* the `UPDATE profiles SET weight_kg = ...` succeeds. If the profile update fails mid-flight (DB constraint violation, connection drop, server crash), the weight_log already exists but the profile still shows the old weight. The weight history is now inconsistent — it records a weight that was never actually applied, or timestamps don't match actual profile state.
 
 **Why it happens:**
+In the current codebase, `profile.service.js:updateProfile()` (line 179-187) calls `updateByUserId` then `getProfile` — two separate operations with no transaction. When adding weight_log insertion, the natural (wrong) instinct is:
 
-In `Router.jsx:56-79`, the `DashboardPlaceholder` component renders navigation links:
-
-```jsx
-<Link to="/meal-calendar">Meal Calendar</Link>       {/* Line 69-71 — will 404 */}
-<Link to="/activities">Activity Recommendations</Link> {/* Line 72-74 — will 404 */}
+```js
+// WRONG — weight_log before profile update
+await createWeightLog(userId, weightKg);   // Succeeds
+await updateByUserId(userId, data);         // Fails → profile unchanged, log exists
 ```
 
-Wait — examining the current router more carefully:
+Or worse, the frontend calls two separate API endpoints in sequence:
+```js
+// WRONG — frontend orchestrates two calls
+await fetch('/api/weight-logs', { method: 'POST', body: { weightKg } });   // Succeeds
+await fetch('/api/profile', { method: 'PUT', body: { ... } });             // Fails
+```
 
-| Route | Component | Status |
-|-------|-----------|--------|
-| `/activities` (line 90) | `ActivityCalendarPage` | ACTIVE — will be replaced |
-| `/meal-calendar` (line 89) | `MealCalendarPage` | ACTIVE — will be removed |
-| `/food-log` (line 88) | `FoodLogPage` | ACTIVE — target for merge |
+**How to avoid:**
+- **Insert weight_log AFTER the profile UPDATE succeeds**, within the same service function.
+- Use a **database transaction** (`BEGIN/COMMIT/ROLLBACK`) wrapping both the profile UPDATE and the weight_log INSERT. If either fails, both roll back.
+- Keep it in the **service layer** — the controller calls `profileService.updateProfile(userId, data)` which internally handles both profile update AND weight log insertion in one atomic operation.
+- The current `updateProfile` in `profile.service.js` already follows a service-calls-repository pattern. Extend it:
 
-So actually:
-- `/activities` already serves the Calendar. The merger needs to put Calendar **inside** the ActivitiesPage-like view. No link change needed if `/activities` stays as the route.
-- `/meal-calendar` is a separate route from `/food-log`. The dashboard link to `/meal-calendar` will 404 after removal.
+```js
+// CORRECT — weight_log after profile update, in same transaction
+export async function updateProfile(userId, profileData) {
+  validateProfileData(profileData);
+  const { weightKg, ...rest } = profileData;
 
-**Also affected:**
-- Any browser bookmarks users have saved to `/meal-calendar`
-- Any external links or documentation referencing these paths
-- The import in Router.jsx line 7: `import { ..., MealCalendarPage } from '../features/food-log/index.js'` — will break if `MealCalendarPage` export is removed from `index.js`
-- Router.jsx line 8: `import { ActivityCalendarPage } from '../features/activities/index.js'` — will break if export is removed
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const profile = await updateByUserId(client, userId, profileData);
+    await createWeightLog(client, userId, weightKg);
+    await client.query('COMMIT');
+    return getProfile(userId);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+```
 
-**Prevention:**
-- Change the dashboard `<Link to="/meal-calendar">` → `<Link to="/food-log">` (or keep both and add a tab/switch inside FoodLogPage)
-- Keep the `index.js` exports for backward compatibility (export the component from the new location, or export a no-op/redirect component)
-- If maintaining backward compatibility: add a catch-all redirect from old route to new route in Router.jsx
-- Update Router.jsx to remove the stale imports
+- **Never let the frontend orchestrate** the profile update + weight log creation as separate API calls. The backend must handle both atomically.
 
-**Phase to address:** Route configuration phase. Should be the first thing changed in Router.jsx.
+**Warning signs:**
+- Frontend code that calls `/api/weight-logs` and `/api/profile` in sequence from the same handler
+- Service functions that `await` two repository calls without a transaction wrapper
+- Tests that create weight_logs without verifying the corresponding profile state
+
+**Phase to address:** Phase 1 (backend service + repository for weight log) must enforce atomicity. The `profile.service.js` `updateProfile` function is the integration point.
 
 ---
 
-### P-04: State Explosion — Two Heavy State Systems in One Component
+### P-02: No Migration for Existing Users — Weight History Starts Empty
 
-**What goes wrong:** Merging two page-level components means their combined state lives in one render cycle, causing excessive re-renders, stale closure bugs, and maintenance complexity.
+**What goes wrong:**
+When the `weight_logs` table goes live, existing users who have been using the app for days/weeks have a weight in `profiles.weight_kg` but zero entries in `weight_logs`. Their weight chart shows a flat line starting from today, and progress calculations (% complete, rate of change) are wrong because there's no baseline.
 
-**Current state counts per component:**
+**Why it happens:**
+The `weight_logs` table is new. No code creates entries retroactively from existing profile data. Developers focus on the happy path ("new users set up weight tracking") and forget existing users who already have a profile with weight.
 
-| Component | State Variables | Approx. setState Calls |
-|-----------|----------------|----------------------|
-| `ActivityCalendarPage` | 10 (`selectedDay`, `currentMonth`, `dayPlan`, `planLoading`, `generating`, `genRetryAfter`, `swappingActivityId`, `swapRetryAfter`, `toast`, `completedActivities`) | 18+ call sites |
-| `ActivitiesPage` | 9 (`recommendations`, `allActivities`, `summary`, `history`, `loading`, `error`, `successMsg`, `reshuffling`, `loggingActivity`) | 15+ call sites |
-| Combined Activity | **19 state variables** | **33+ call sites** |
+**How to avoid:**
+- **Seed initial weight_log entry on migration.** The database migration creating the `weight_logs` table should also INSERT a row for every existing user using their current `profiles.weight_kg`:
 
-| Component | State Variables | Approx. setState Calls |
-|-----------|----------------|----------------------|
-| `MealCalendarPage` | 8 (`selectedDay`, `currentMonth`, `dayPlan`, `planLoading`, `generating`, `genRetryAfter`, `loggingMeal`, `toast`) | 15+ call sites |
-| `FoodLogPage` | 10 (`summary`, `logs`, `history`, `recentFoods`, `selectedFood`, `portion`, `mealType`, `showCustomForm`, `error`, `successMsg`, `loading`) | 20+ call sites |
-| Combined Meal | **18 state variables** | **35+ call sites** |
+```sql
+INSERT INTO weight_logs (user_id, weight_kg, logged_date, source)
+SELECT user_id, weight_kg, updated_at::date, 'migration'
+FROM profiles
+WHERE weight_kg IS NOT NULL;
+```
 
-**Why this is dangerous:**
-1. **Re-render cascades:** A single `setState` in one section re-renders the entire merged component — all 19+ useState hooks re-evaluate. Calendar toggles a completion → entire log form re-renders.
-2. **Stale closure bugs:** `useCallback` dependencies become harder to track. A callback in the calendar section might accidentally capture stale `summary` or `error` state from the other section.
-3. **`CalendarPageLayout` has its own internal state** for `currentMonth` and `selectedDay` (CalendarPageLayout.jsx:30-31) — this is **duplicated** with the parent. The parent tracks these too (to drive API fetches). This dual ownership is already fragile and becomes more so when the parent has additional unrelated state.
-4. **`useEffect` interdependence:** Effects from both sections can trigger each other. An `error` state change from FoodLogPage could cancel an effect meant for MealCalendar.
+- **Handle the "update-only" user**: When an existing user first visits the profile page and clicks "Update Profile" without changing weight, a weight_log entry should still be created (to establish a trend baseline). But only if one doesn't exist for today — guard against duplicates with `ON CONFLICT (user_id, logged_date) DO NOTHING` or check first.
 
-**Prevention:**
-- Extract the calendar section into its own wrapper component that manages its own state internally and communicates via a minimal props interface (e.g., `<ActivityCalendarSection selectedDate={date} onDaySelect={fn} />`)
-- Use `React.memo` on the calendar section so it only re-renders when its specific props change
-- Keep the log form section as a separate component, memoized similarly
-- Consider using `useReducer` instead of multiple `useState` in calendar section — cleaner state updates, easier to reason about
+- **Profile page should auto-log weight on first visit after migration**: When `GET /api/profile` returns data but weight_logs are empty, the frontend could prompt "Let's set your starting weight for tracking" — or the backend silently seeds a baseline entry on the first profile fetch.
 
-**Phase to address:** Component extraction phase — before merging, extract calendar section into a standalone component.
+**Warning signs:**
+- Migration plan that creates the `weight_logs` table but has no INSERT from existing profiles
+- All test cases use fresh users with no pre-existing profile
+- QA testing only with new accounts, never with accounts that have weeks of history
+
+**Phase to address:** Phase 1 (DB schema + seed migration). Must include both the CREATE TABLE and the data backfill.
+
+---
+
+### P-03: Duplicate Weight Entries for Same Day — Over-Reporting
+
+**What goes wrong:**
+A user updates their profile weight multiple times in one day (e.g., morning weigh-in, then again after noticing a typo). Each update creates a new `weight_log` row for the same `logged_date`. The chart shows multiple points for the same day, progress calculations use an arbitrary entry (first? last? average?), and the UI is confusing.
+
+**Why it happens:**
+The natural schema design is `INSERT INTO weight_logs (user_id, weight_kg, logged_date)` with no uniqueness constraint. Every profile update → new log entry. Multiple updates per day → multiple entries per day.
+
+**How to avoid:**
+- **UPSERT pattern**: Use `ON CONFLICT (user_id, logged_date) DO UPDATE SET weight_kg = EXCLUDED.weight_kg, updated_at = NOW()`. This requires a UNIQUE constraint on `(user_id, logged_date)`:
+
+```sql
+CREATE TABLE weight_logs (
+    id INT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    weight_kg DECIMAL(5,2) NOT NULL CHECK (weight_kg > 0),
+    logged_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    source TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'profile_update', 'migration')),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (user_id, logged_date)
+);
+```
+
+- **One entry per user per day.** If the user updates weight twice on the same day, the second update overwrites the first in `weight_logs` (same behavior as `profiles.weight_kg` — last write wins).
+
+- **Decision to make:** Is it one-entry-per-day (UPSERT) or multi-entry-per-day (INSERT with time precision)? For a BMI/TDEE app where daily weigh-in is the norm, one-entry-per-day is the right choice. Multi-entry creates chart noise and calculation ambiguity.
+
+**Warning signs:**
+- Schema with no UNIQUE constraint on `(user_id, logged_date)`
+- Repository method named `createWeightLog` that does a plain INSERT without checking for existing entries
+- Tests that insert multiple weight entries for the same date without verifying which one "wins"
+
+**Phase to address:** Phase 1 (schema design). Must decide UPSERT vs INSERT upfront — changing later requires a migration.
+
+---
+
+### P-04: Chart Loading All History on Every Page Visit
+
+**What goes wrong:**
+The weight chart page fetches ALL weight_log entries for the user (`SELECT * FROM weight_logs WHERE user_id = $1 ORDER BY logged_date`) on every page visit. As months pass, the dataset grows. A user who logs weight daily for a year has 365 entries. For two years, 730+. This is a small dataset by DB standards, but combined with React re-renders, chart library computation, and repeated fetches on every navigation, it creates unnecessary load.
+
+At the frontend, re-rendering the chart component with 365+ data points on every state change incurs chart library layout computation (especially SVG-based charts), which can cause jank on mid-range devices.
+
+**Why it happens:**
+Developers default to "fetch all" because the dataset seems small. The existing pattern in the codebase (`useMonthData` fetching 5-6 parallel weekly plans) reinforces this habit. Without lazy loading or pagination, the endpoint returns everything.
+
+**How to avoid:**
+- **Do NOT paginate weight history at MVP stage** — it adds complexity for no benefit at expected scale (<1K entries per user). Instead:
+  - **Set TanStack Query `staleTime` to 5+ minutes** so repeatedly visiting the page doesn't re-fetch. The existing pattern already uses `staleTime: 1000 * 60 * 5` in some queries.
+  - **Use `gcTime` (formerly `cacheTime`) to keep chart data cached** even after navigating away and back.
+  - **Backend: LIMIT the query** to a sensible window (e.g., last 12 months, ~365 entries max). Most users don't need to see weight from 2+ years ago on a trend chart.
+  - **Backend: offer a `?months=N` query parameter** for "last N months" filtering.
+- **Only force-refetch on manual refresh** or when the user explicitly updates their weight.
+- **Chart rendering optimization**: Memoize chart data transformation with `useMemo` so re-renders don't recompute chart layout.
+
+```js
+// Good backend query
+const MONTHS_DEFAULT = 12;
+SELECT * FROM weight_logs 
+WHERE user_id = $1 AND logged_date >= $2 
+ORDER BY logged_date;
+// $2 = startOfMonth(subMonths(new Date(), months))
+```
+
+**Warning signs:**
+- `weightLogs` query with no `staleTime` or `gcTime` configuration
+- No `.limit()` or date range on the backend SQL query
+- Chart component re-renders on unrelated state changes (profiling shows layout recalc)
+- Weight history API returns 500+ rows with no pagination or filter
+
+**Phase to address:** Phase 2 (backend API + frontend chart). Design the API with default limits from day one.
+
+---
+
+### P-05: Empty Chart UX — User Has No Weight Logs Yet
+
+**What goes wrong:**
+The progress dashboard shows a completely empty chart area with no message, or worse, a chart library error (react-day-picker doesn't do charts, so a new library will be introduced — likely recharts or chart.js). The empty state might render as "No data" or a broken SVG, leaving users confused about what they should do.
+
+For new users who just created a profile: they have `profiles.weight_kg` set (from onboarding) but zero `weight_logs` entries. The chart is empty despite the user having a weight on record.
+
+**Why it happens:**
+Developers build the chart assuming data exists. The onboarding flow sets the profile weight but doesn't seed a weight_log entry. The chart queries `weight_logs` only, finds nothing, and either breaks or shows nothing useful.
+
+**How to avoid:**
+- **Seed weight_log on profile creation**: When a user creates a profile (POST /api/profile), also insert a weight_log entry with their initial weight and `source: 'manual'`. The frontend already calls `createProfile` — extend it in the service layer.
+- **Show a helpful empty state**: If weight_logs is empty but profile exists, show a message like "Log your first weight to start tracking" with a button/modal that lets them enter a starting weight.
+- **Don't show the chart at all if <2 entries**: A trend line with one data point is meaningless. Show a "Start tracking" prompt instead.
+- **Use the profile weight as fallback**: If weight_logs is empty, show "Your current weight: X kg. Log again tomorrow to start seeing your trend."
+
+**Warning signs:**
+- Chart component renders before checking data length
+- No `if (data.length < 2) return <EmptyState />` guard in chart component
+- `createProfile` in `profile.service.js` doesn't also create a weight_log entry
+- No loading/empty/error state differentiation in the chart component
+
+**Phase to address:** Phase 1 (seed on profile creation) + Phase 2 (chart empty state).
+
+---
+
+### P-06: Goal Setting Friction — Target Date + Weight Not Integrated with Profile
+
+**What goes wrong:**
+Goal setting is bolted on as a separate feature with its own form, its own API endpoint, and its own database table. The user sets a target in one place, but the profile form doesn't show it. When editing their profile, they can't see/change their goal. The experience feels disjointed.
+
+**Why it happens:**
+The existing `profiles` table has `fitness_goal` (lose_weight/maintain/gain_weight) and `calorie_rate` (low/medium/high) but no numeric target. Adding `target_weight_kg` and `target_date` to the existing `profiles` table is simpler than creating a separate `goals` table, but developers often err on the side of "normalization" and create a new table unnecessarily.
+
+**How to avoid:**
+- **Add columns to the existing `profiles` table**, not a new table:
+  ```sql
+  ALTER TABLE profiles ADD COLUMN target_weight_kg DECIMAL(5,2) NULL;
+  ALTER TABLE profiles ADD COLUMN target_date DATE NULL;
+  ```
+- **Include goal fields in the existing ProfileForm**: The existing `ProfileForm.jsx` already handles create + update. Add target weight and target date as optional fields in the same Zod schema.
+- **Include goal data in the existing `/api/profile` response**: The `getProfile` service already returns a rich response object. Add `targetWeightKg` and `targetDate` to it.
+- **Don't create a separate `/api/goals` endpoint** — it adds complexity, requires auth middleware duplication, and forces the frontend to manage two API calls for what is logically one screen.
+
+**Exception:** If the goal system needs its own lifecycle (multiple goals over time, goal history, superseded goals), a separate `goals` table with `status` column makes sense. But for v1.9 "set a target and track against it", adding columns to `profiles` is correct.
+
+**Warning signs:**
+- Plan that creates a separate `goals` table with a single row per user
+- Separate `/api/goals` route with no existing pattern match
+- ProfileForm not updated to include goal fields
+- Frontend fetches profile from one endpoint and goals from another
+
+**Phase to address:** Phase 1 (schema change — add columns to profiles table, NOT a new table).
 
 ---
 
 ## MODERATE PITFALLS
 
-### P-05: CalendarPageLayout's Dual State Ownership is Fragile
+### P-07: Weight Chart Library Decision Paralysis
 
-**What goes wrong:** `CalendarPageLayout` owns internal `currentMonth`/`selectedDay` state while also calling `externalOnMonthChange`/`externalOnDaySelect` to sync with the parent. This creates two sources of truth that can diverge.
+**What goes wrong:**
+The team spends too much time evaluating chart libraries (recharts vs chart.js vs visx vs nivo vs d3) instead of building the feature. Or picks a library that's overkill for a simple line chart with a goal line.
 
-**Location:** `CalendarPageLayout.jsx:30-56`
+**Current project state:** No charting library in use. `react-day-picker` is the only UI library beyond base React. The project philosophy is "minimal dependencies."
 
-**The problem in detail:**
+**How to avoid:**
+- **Use `recharts`** (React-native, composable, good defaults for line charts). It's the simplest path to a line chart with:
+  - A `<LineChart>` with `<Line>` for weight data
+  - A `<ReferenceLine>` for the goal weight line
+  - Simple responsive container: `<ResponsiveContainer width="100%" height={300}>`
+- **Do NOT use raw D3.js** — it's powerful but the learning curve isn't justified for one line chart.
+- **Do NOT use Chart.js** — the imperative API fights React patterns. Recharts is declarative and fits the React data flow.
+- **Do NOT build a custom SVG chart** — the project philosophy of "minimal styling" doesn't mean "no dependencies for core features." A chart is a core feature of progress tracking.
 
-```jsx
-// CalendarPageLayout INTERNAL state (lines 30-31)
-const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
-const [selectedDay, setSelectedDay] = useState(null);
-
-// Parent ALSO has:
-// ActivityCalendarPage.jsx:26 - setCurrentMonth
-// ActivityCalendarPage.jsx:25 - setSelectedDay
-// But parent only learns of changes via callbacks (lines 39-40, 48-49, 55-56)
+**Recharts install:**
+```bash
+npm install recharts
 ```
 
-When the parent calls `handleMonthChange(newMonth)` — this only fires on user interaction with MonthNav. If the parent programmatically changes the month (e.g., resetting to today after a successful generation), it has no way to tell CalendarPageLayout. The layout's internal month state diverges.
+The bundle size impact is ~150KB gzipped, which is acceptable for a feature page.
 
-When merged into a new parent, this becomes worse because the parent may have additional side effects that need to sync the calendar month.
+**Warning signs:**
+- Spending >30 minutes evaluating chart libraries for this feature
+- Writing raw SVG `<path>` elements for the trend line
+- Importing 500KB+ of D3.js modules for a single line chart
+- Chart library chosen doesn't support ReferenceLine out of the box
 
-**Prevention:**
-- Convert `CalendarPageLayout` to be a **controlled component** — accept `currentMonth` and `selectedDay` as props from the parent, remove internal state
-- OR: invert the pattern — let CalendarPageLayout be the single owner, and expose its state through a render prop or context
-- Since v1.8 is pure UI restructuring with minimal changes to shared components, the safest approach is to make CalendarPageLayout optionally controlled: if `currentMonth` prop is provided, use it; otherwise use internal state
-
-**Phase to address:** Can be fixed as part of the merge or deferred. If controlled mode is added with backward compatibility, existing CalendarPageLayout tests still pass.
-
----
-
-### P-06: Rate-Limit Countdown Timers Conflict After Merge
-
-**What goes wrong:** Both Calendar pages and their respective PlanSection components manage their own rate-limit countdown timers via `setInterval`. When merged, two independent countdown systems run simultaneously, showing different "wait" times to the user.
-
-**Currently separate rate-limit state:**
-
-| Component | Timer Variables | Uses setInterval |
-|-----------|----------------|-----------------|
-| `ActivityCalendarPage` | `genRetryAfter`, `swapRetryAfter` | Lines 201-224 (two effects) |
-| `ActivityPlanSection` | `genRetryAfter` | Delegate to parent? No — manages own |
-| `MealCalendarPage` | `genRetryAfter` | Lines 134-144 (one effect) |
-| `DailyMealPlanSection` | `genRetryAfter` | Delegate to parent? No — manages own |
-
-**Why the timers conflict after merge:**
-- `genRetryAfter` in Calendar page and `genRetryAfter` in PlanSection are independent state variables, both decreasing every 1s via `setInterval`
-- When one hits a rate limit, it shows "Wait X:XX" — but the other component might not know and still show "Generate"
-- Both countdowns fire `setInterval` independently, consuming more browser resources
-- If the user sees two different countdowns, they can't tell which is accurate
-
-**Prevention:**
-- Unify rate-limit state into a single source of truth. The Calendar page's `genRetryAfter` should be the canonical timer; the PlanSection should receive it as a prop.
-- Or: only keep rate-limit state in one place and remove it from the other. Since the Calendar is the primary generation UI, remove rate-limit handling from PlanSection.
-
-**Phase to address:** State unification during merge. Requires changes to PlanSection components.
+**Phase to address:** Phase 2 (frontend chart component). Install recharts during this phase.
 
 ---
 
-### P-07: Dynamic Style Injection Duplication
+### P-08: Progress Metrics Calculated Incorrectly — Wrong Direction
 
-**What goes wrong:** `ActivityCalendarPage.jsx:16-22` injects a `<style>` element into `document.head` on mount for the swap-spin animation. After merging, this style injection still works — but if both the old page and new page render this component, the style gets injected twice.
+**What goes wrong:**
+Progress percentage and "kg to goal" are calculated with the wrong sign or reference point. For a user trying to lose weight:
+- "80% complete" when they've only lost 20% of what's needed
+- "2 kg to goal" shown as "-2 kg to goal"
+- Progress bar fills in the wrong direction (from right to left)
+- A user who overshoots their goal shows negative progress
 
-```jsx
-useEffect(() => {
-  if (!document.getElementById('swap-spin-style')) {
-    const style = document.createElement('style');
-    style.id = 'swap-spin-style';
-    style.textContent = '@keyframes swap-spin { ... }';
-    document.head.appendChild(style);
+**Why it happens:**
+Progress math is simple but easy to get wrong:
+
+```
+START_WEIGHT = first weight_log entry (or profile weight)
+CURRENT_WEIGHT = most recent weight_log entry
+GOAL_WEIGHT = target_weight_kg
+
+For weight loss (goal < start):
+  kgLost = startWeight - currentWeight       // positive number
+  totalToLose = startWeight - goalWeight      // positive number
+  percentComplete = (kgLost / totalToLose) * 100
+  kgToGo = currentWeight - goalWeight         // positive number (if haven't reached goal)
+
+For weight gain (goal > start):
+  kgGained = currentWeight - startWeight      // positive number
+  totalToGain = goalWeight - startWeight      // positive number
+  percentComplete = (kgGained / totalToGain) * 100
+  kgToGo = goalWeight - currentWeight         // positive number
+
+For maintain (goal ≈ start):
+  percentComplete is always 100% if within maintenance range
+  Show deviation instead: kgAway = Math.abs(currentWeight - goalWeight)
+```
+
+**The common mistakes:**
+1. Using absolute values instead of direction-aware math
+2. Assuming weight loss direction (reverse the signs for weight gain)
+3. Division by zero when startWeight === goalWeight (maintain goal)
+4. Percentages > 100% when user overshoots (cap at 100% or show "Goal exceeded!")
+5. Negative "kg to go" when goal is reached (show "Goal reached! 🎉" instead)
+
+**How to avoid:**
+- Write a pure function `calculateProgress(startKg, currentKg, goalKg)` with direction-aware logic
+- Unit test ALL combinations: lose weight (in progress, completed, overshot), gain weight (in progress, completed, overshot), maintain (on track, deviated)
+- Handle division by zero explicitly
+- Cap percentComplete at 0-100 for display (but keep raw value for "overshoot" detection)
+- Show `kgToGo` as absolute value with direction label ("2 kg to lose" vs "1 kg to gain")
+
+**Warning signs:**
+- Inline progress math in a React component instead of a pure utility function
+- No tests for progress calculations
+- Progress values that can go negative without being handled
+- Using `Math.abs()` on everything (losing direction information)
+
+**Phase to address:** Phase 2 (progress dashboard). Extract progress calculation to a pure utility with tests.
+
+---
+
+### P-09: Weight Trend Chart Not Connected to Profile Updates
+
+**What goes wrong:**
+A user updates their weight in the profile form, sees the new BMI/TDEE recalculate correctly, but the weight chart doesn't update because the chart query is stale or the weight log wasn't created. The user sees old data and thinks the feature is broken.
+
+**Why it happens:**
+The profile update (`PUT /api/profile`) and weight log creation are in separate service calls, or the chart uses a separate TanStack Query key that isn't invalidated when the profile is updated.
+
+Currently, `profile.service.js:updateProfile()` only calls `updateByUserId` + `getProfile`. Adding weight log creation inside this function is necessary, but the frontend also needs to know that the chart data is stale.
+
+**How to avoid:**
+- **Invalidate the weight_logs query key when profile is updated**. In the frontend's `useMutation` for profile update:
+  ```js
+  // In the mutation's onSuccess:
+  queryClient.invalidateQueries({ queryKey: ['weightLogs'] });
+  queryClient.invalidateQueries({ queryKey: ['profile'] });
+  ```
+- **OR: After profile update, refetch weight_logs** by returning the latest entry in the profile update response, so the chart can update immediately without a second fetch:
+  ```js
+  // Backend response includes latest weight_log
+  { profile, bmi, tdee, ..., latestWeightLog }
+  ```
+- **Update the TanStack Query cache optimistically** if the mutation is fast enough:
+  ```js
+  queryClient.setQueryData(['weightLogs'], (old) => [...old, newEntry]);
+  ```
+- **Don't make the user refresh the page** to see chart updates. The chart must update automatically when weight is logged.
+
+**Warning signs:**
+- Profile update mutation has no `onSuccess` that touches weightLogs query cache
+- Chart component uses a separate `useQuery` with no relation to profile mutations
+- User reports "I updated my weight but the chart doesn't show it"
+
+**Phase to address:** Phase 2 (frontend chart + API integration). The TanStack Query invalidation must be wired up.
+
+---
+
+### P-10: Estimated Completion Date Ignoring Rate of Change
+
+**What goes wrong:**
+The "estimated completion date" is calculated using a flat rate assumption (e.g., "losing 0.5 kg/week" from the calorieRate setting) instead of the user's actual weight trend. A user losing 0.2 kg/week sees "Estimated completion: 4 weeks" when their actual rate will take 10 weeks. The estimate is misleading and erodes trust.
+
+**Why it happens:**
+Using the `calorie_rate` profile field (low/medium/high) to estimate completion is tempting because it's already in the database. But `calorie_rate` is a *planning* value, not an *observed* value. Actual weight change depends on adherence, metabolism changes, and many other factors.
+
+**How to avoid:**
+- **Use actual trend data** from weight_logs to calculate rate of change:
+  ```js
+  function estimateCompletionDate(weightLogs, goalWeight) {
+    if (weightLogs.length < 2) return null; // Not enough data
+
+    const sorted = [...weightLogs].sort((a, b) => a.logged_date - b.logged_date);
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
+    const daysDiff = differenceInDays(last.logged_date, first.logged_date);
+    const kgDiff = last.weight_kg - first.weight_kg;
+    const dailyRate = kgDiff / daysDiff; // Can be negative (losing) or positive (gaining)
+
+    if (Math.abs(dailyRate) < 0.001) return null; // Rate too slow to estimate
+
+    const kgRemaining = goalWeight - last.weight_kg;
+    const daysRemaining = kgRemaining / dailyRate;
+    if (daysRemaining <= 0 || !isFinite(daysRemaining)) return null; // Already at goal
+
+    return addDays(new Date(), Math.round(daysRemaining));
   }
-}, []);
-```
+  ```
+- **Show trend-based estimates alongside a confidence indicator**: "At your current rate, you'll reach your goal by [date] (based on [N] weigh-ins)"
+- **Require minimum data points**: Don't show estimates until the user has at least 3-4 weigh-ins over 2+ weeks
+- **Always show the data range used for the estimate** so users understand it's based on actual trends, not promises
 
-The guard (`!document.getElementById('swap-spin-style')`) prevents duplication. But:
-- If the merged page unmounts and remounts (React StrictMode in dev, or component key change), the style stays (no cleanup)
-- This was an intentional design decision per comment "CR-03: no cleanup to avoid breaking remaining rows"
-- After merging, this style injection is still needed for `DayActivityRow` swap animation. If the component moves, the style must move with it.
+**Warning signs:**
+- Estimated completion date uses `calorie_rate` or any profile setting instead of weight_log data
+- Estimates displayed when user has only 1 weight entry
+- No disclaimer that estimates are based on current trend
+- Estimates don't update when new weight entries are added
 
-**Prevention:**
-- Extract the style injection into a module-level constant or a shared utility that injects once, regardless of which component mounts first
-- Move from `useEffect` to a lazy singleton pattern: `if (!document.getElementById(...)) inject();`
-- Document that this style lives globally and has no cleanup — any component using swap-spin must ensure it exists
-
-**Phase to address:** Shared component extraction. The style injection utility should be created before merging.
+**Phase to address:** Phase 2 (progress dashboard). The estimation function should be a pure utility with thorough tests.
 
 ---
 
-### P-08: Data Re-Fetch Waterfall on Month Navigation
+### P-11: Edge Cases in Weight Log History Queries
 
-**What goes wrong:** Navigating to a new month triggers 5-6 parallel `useQueries` for weekly plans (via `useMonthData`). Meanwhile, the target page's own data fetching (summary, history, recent foods) happens independently. These two sets of fetches can create a cascading waterfall that delays rendering.
+**What goes wrong:**
+The weight history API returns data in the wrong order, duplicates, or missing entries for specific user scenarios — particularly when users backfill entries, edit weights for past dates, or use the app across timezone boundaries.
 
-**How it currently works:**
+**Common missed edge cases:**
 
-```
-useMonthData(currentMonth, fetchWeekFn)
-  → 5-6 parallel getWeeklyPlan calls for each week in month
-  → Returns dayStatusMap (Map<string, string>)
+| Scenario | Failure Mode |
+|----------|-------------|
+| User logs weight for yesterday (backfill) | Entry appears in wrong position if sorted by `created_at` instead of `logged_date` |
+| User in UTC+14 timezone logs weight late at night | Entry recorded as tomorrow's date |
+| User logs weight, then edits their profile weight on the same day | Two entries for same day if UPSERT not used, or overwrite with UPSERT — either case needs correct behavior defined |
+| User deletes profile (CASCADE) | Cascade should delete weight_logs, but `source: 'migration'` entries might get orphaned if migration didn't set user_id correctly |
+| User has a weight_log entry from the future (device date wrong) | Chart scale breaks, progress calculations produce negative days |
 
-Target page mounts:
-  → 4 parallel calls: getDailySummary, getDailyLogs, getLogHistory, getRecentFoods
-  → Renders summary + history + log form
-```
+**How to avoid:**
+- **Always sort by `logged_date ASC`** in the weight history query, never by `created_at` or `id`
+- **Use `DATE` type for `logged_date`**, not `TIMESTAMPTZ` — timezone issues disappear
+- **Clamp `logged_date` to `CURRENT_DATE`** on insert: `logged_date = LEAST(NEW.logged_date, CURRENT_DATE)` via CHECK constraint or application logic
+- **Test the timezone scenario**: A user in UTC+14 logging at 11 PM local time (which is 9 AM next day UTC) — the DATE type stores what the user intended, not the server's interpretation
+- **Backfill shouldn't update the UPSERT conflict**: `ON CONFLICT (user_id, logged_date) DO UPDATE SET weight_kg = EXCLUDED.weight_kg` — this is correct behavior (last write wins per day)
 
-**After merge (worst case):**
-```
-Page mounts:
-  → Calendar useMonthData fires 5-6 parallel queries
-  → Target page also fires 4 parallel queries
-  → 9-10 total parallel queries on page load
-  → If any of these share a rate-limit (they don't currently, but they all use the same JWT session), server may throttle
-```
+**Warning signs:**
+- Weight log query uses `ORDER BY created_at` or `ORDER BY id`
+- `logged_date` column is `TIMESTAMPTZ` instead of `DATE`
+- No index on `(user_id, logged_date)` for efficient range queries
+- No test for backfilling weight entries
 
-**More importantly:** After month navigation, the Calendar refetches all weeks. But the target page's summary/history only shows "today" — it doesn't change when the calendar month changes. This means every month navigation triggers a re-fetch of 5-6 queries that don't affect the visible data. Unnecessary API load.
-
-**Prevention:**
-- Don't re-trigger the target page's data fetching on month navigation. The summary/history sections always show current data.
-- Consider lowering `staleTime` on calendar queries from 5min to encourage caching on back-nav
-- Verify that `useMonthData`'s `useQueries` doesn't force parent re-fetches (it uses memoized query keys, so this should be OK)
-
-**Phase to address:** During merge, ensure parent data fetching is not tied to calendar month state.
-
----
-
-### P-09: Past-Day UX Inconsistency Between Sections
-
-**What goes wrong:** The calendar enforces past-day read-only (grey, no interactions). But the log form in the target page shows today's data by default — and has no concept of "past day." When a user selects a past day on the calendar, the log form still shows today's data, creating a split UX.
-
-**How read-only is enforced:**
-
-Calendar page (ActivityCalendarPage.jsx:262):
-```jsx
-const isPast = selectedDay ? isBefore(selectedDay, startOfToday()) : false;
-```
-
-Then passed to DayActivityRow as `disabled={isPast}`. The log form and history in ActivitiesPage have no concept of `selectedDay` — they always show today.
-
-**After merge, these scenarios are broken:**
-1. User clicks past day on calendar → Calendar detail shows greyed-out entries ✓
-2. User scrolls down to log form → Log form still shows today's data and allows logging ✗
-3. User sees calendar summary (today's data) while viewing past month → Which date is "active"? ✗
-4. User logs food while calendar shows a future month → Confusing context mismatch ✗
-
-**Prevention:**
-- Connect the log form's target date to the calendar's `selectedDay`. When a day is selected on the calendar, the log form should show data for that day.
-- For past days: disable logging (consistent with calendar read-only)
-- For future days: show "no data" state (future dates can't have logs)
-- For today (default): full functionality as currently implemented
-- Add a visual indicator showing which date the log form is currently displaying
-
-**Phase to address:** UX integration phase — this is the most user-visible aspect of the merge.
-
----
-
-### P-10: Toast Notification Competition
-
-**What goes wrong:** Both calendar pages manage their own `toast` state variable. The target pages manage `error` and `successMsg` as separate state. After merge, these are two independent notification systems that can show conflicting messages or overwrite each other.
-
-Currently:
-- Calendar pages: single `toast` state → Toast component (positioned fixed)
-- Target pages: `error` + `successMsg` → inline `<p>` elements
-
-After merge, an operation in the calendar section could set `error` while the log section shows `successMsg`, or vice versa.
-
-**Prevention:**
-- Unify notifications: either use a shared Toast system (preferred) or keep them separate but spatially distinct
-- Easiest fix: use separate containers — calendar section has its own Toast (positioned fixed, top-right), log section shows inline messages at section level
-
-**Phase to address:** UI integration during merge.
-
----
-
-### P-11: Component Import Path Restructuring
-
-**What goes wrong:** The `features/activities/index.js` and `features/food-log/index.js` barrel exports will need updating, potentially breaking imports used by tests and Router.
-
-**Current exports:**
-
-`features/activities/index.js`:
-```jsx
-export { default as ActivityCalendarPage } from './ActivityCalendarPage.jsx';
-```
-
-`features/food-log/index.js`:
-```jsx
-export { default as FoodLogPage } from './components/FoodLogPage.jsx';
-export { default as MealCalendarPage } from './components/MealCalendarPage.jsx';
-```
-
-**After merge:**
-- `ActivityCalendarPage` export will need to point to the new merged page or be removed
-- `MealCalendarPage` export will need similar treatment
-- Router.jsx imports these — they'll break if exports are removed
-
-**Prevention:**
-- Keep the exports but redirect them: `export { default as MealCalendarPage } from './components/MealCalendarPage.jsx';` can become `export { default as MealCalendarView } from './components/MealCalendarView.jsx';`
-- Or: re-export from new location to maintain backward compatibility during transition
-- Update Router.jsx imports atomically with the merge
-
-**Phase to address:** First code change in the merge — update exports before or simultaneously with route changes.
-
----
-
-### P-12: Scroll Position Loss When Switching Contexts
-
-**What goes wrong:** The merged page becomes very long (calendar grid + detail panel + log form + history + recommendations on activity page, or calendar + food search + portion form + log table + history on food log page). Users scrolling between sections lose their position when state changes cause re-renders.
-
-**Page length estimate:**
-
-Activity merged page (vertical stacking):
-1. Page title
-2. ActivityPlanSection (~150px-400px depending on content)
-3. ActivitySummary (~100px)
-4. Generate Week button (~50px)
-5. CalendarPageLayout (MonthNav ~50px + CalendarGrid ~400px + DayDetailPanel ~100-600px)
-6. Recommendations (~200-500px)
-7. ActivityLogForm (~300px when visible)
-8. ActivityPool (~200px)
-9. ActivityHistory (~200px)
-**Total: ~1800-2600px of content**
-
-Food Log merged page:
-1. Page title
-2. DailyMealPlanSection (~150-400px)
-3. CalorieSummary (~80px)
-4. Generate Day button (~50px)
-5. CalendarPageLayout (~500-700px)
-6. FoodSearch (~100px)
-7. CustomFoodForm (~200px when visible)
-8. Portion form + log button (~300px when visible)
-9. FoodLogTable (~200-600px)
-10. CalorieHistory (~200px)
-**Total: ~1800-2500px of content**
-
-**Why scroll position breaks:**
-- Any `setState` in the calendar section re-renders the entire page
-- DayDetailPanel expands/collapses (0px → 600px) on day selection, shifting everything below it
-- On mobile (no max-width constraint), the page is even longer
-- Browser scroll position is maintained but the content shifts, making it feel jumpy
-
-**Prevention:**
-- Wrap the calendar section in a container with `max-height` and `overflow-y: auto` so it scrolls independently
-- On mobile: use a collapsible/expandable calendar section (default: collapsed)
-- Keep the DayDetailPanel content within the calendar section container so expansions don't push page content below
-- Consider a tab or toggle approach: "Manual Log" | "Calendar View" tabs that show different content rather than stacking everything
-
-**Phase to address:** UX and layout during merge. Should be decided before coding begins.
+**Phase to address:** Phase 1 (schema + repository). Get the query right before building the API.
 
 ---
 
 ## MINOR PITFALLS
 
-### P-13: Loading State Ambiguity
+### P-12: Weight Log Source Tracking Omitted
 
-**What goes wrong:** After merge, there are multiple independent loading states. The page may show "Loading..." from one section while another section is already rendered, or show nothing during the slowest loading section.
+**What goes wrong:**
+When debugging a user issue ("my weight on [date] is wrong"), there's no way to tell if the entry came from a manual log, a profile update, or the initial migration. Every entry looks the same.
 
-Loading states that run in parallel on mount:
-- `useMonthData` loading → Calendar shows skeleton
-- ActivitiesPage loading → Shows "Loading..." full page
-- ActivityPlanSection loading → Shows "Loading activity plan..."
-- FoodLogPage loading → Shows "Loading..." full page
-- DailyMealPlanSection loading → Shows "Loading meal plan..."
+**How to avoid:**
+Add a `source` column with enum values: `'manual'` (direct weight log entry), `'profile_update'` (weight changed via profile form), `'migration'` (seeded from existing profile data). This is forward-thinking without adding complexity.
 
-**Risk:** User sees "Loading..." (from ActivitiesPage/FoodLogPage) until the slowest of all parallel fetches resolves. But if sections render independently, parts of the page appear at different times.
+### P-13: Weight Input Validation Mismatch
 
-**Prevention:** Determine a single loading strategy. Either:
-- Show a single page-level loading state until ALL data is ready (simpler, consistent but slower perceived load)
-- Show sections as they load (faster perceived load but potential layout shift)
+**What goes wrong:**
+The profile form validates weight with `z.coerce.number().min(2).max(300)` but the weight_log API might use different validation. A user enters 75.5 kg in the profile form — valid. But the weight_log endpoint might reject decimals or have different limits.
 
-Recommendation: sections-as-they-load with skeleton placeholders, given the page length.
+**How to avoid:**
+Share the same validation schema (Zod) between profile weight and weight_log. Extract weight validation to a shared schema file. Both the profile service and weight_log service should import and use the same `weightSchema`.
 
----
+### P-14: Goal Line on Chart Not Customizable
 
-### P-14: `useMonthMealData` vs `useMonthData` Hooks
+**What goes wrong:**
+The weight chart shows a goal line (horizontal reference line at the target weight), but users can't see how different goal dates affect the projection. The goal line is static, and the "projected trend" is missing.
 
-**What goes wrong:** The two calendar pages use different month-data hooks (`useMonthData` for activities, `useMonthMealData` for meals). These hooks have similar interfaces but different internal query structures (5-6 weekly calls vs 28-31 daily calls). If one is accidentally substituted for the other during the merge, data will be wrong or missing.
+**How to avoid:**
+- Show the goal line (ReferenceLine at `target_weight_kg`)
+- Optionally show a "target pace" trend line (theoretical line from current weight to goal weight over the time to target date) so users can see if they're ahead of or behind schedule
+- The target pace line is calculated as: slope = (goalWeight - currentWeight) / daysToGoal
+- Make goal line color green (destination), pace line dashed grey (if ahead/behind), and actual trend line blue (recharts `<Line>` default)
 
-**Current split:**
-- `ActivityCalendarPage` uses `useMonthData(currentMonth, fetchWeekFn)` — fetches weekly plans
-- `MealCalendarPage` uses `useMonthMealData(currentMonth)` — fetches daily meal plans (different hook, different API)
+### P-15: Weight Log Form Duplicated from Profile Form
 
-This is correct behavior — activities use a weekly plan structure, meals use daily plans. The risk is in the merge: each hook must remain paired with its correct consumption pattern.
+**What goes wrong:**
+The progress dashboard has a "Log Weight" input, and the profile form also has a weight input. These are two different UI elements that do the same thing but might behave differently (one triggers a weight log POST, the other triggers a profile PUT). Users are confused about which to use.
 
-**Prevention:** The hooks are already correctly paired. Just ensure the merged page passes the right hook for the right context.
-
----
-
-### P-15: Missing `Link` Rebase in Dashboard
-
-**What goes wrong:** The `DashboardPlaceholder` in Router.jsx contains hardcoded `<Link>` elements pointing to routes. One of them (`/meal-calendar`) will 404 after the route is removed.
-
-**The dashboard links (Router.jsx:63-74):**
-```jsx
-<Link to="/profile">Profile, BMI & TDEE</Link>
-<Link to="/food-log">Log Food</Link>
-<Link to="/meal-calendar">Meal Calendar</Link>          {/* WILL 404 */}
-<Link to="/activities">Activity Recommendations</Link>  {/* Stays — points to ActivityCalendarPage currently */}
-```
-
-**Fix needed:** Change `/meal-calendar` → `/food-log` (or add a calendar tab within the food-log page and point to `/food-log?view=calendar`)
+**How to avoid:**
+- **Make the profile weight update the canonical way to log weight** for most users. When they update their weight in the profile form, it also creates a weight_log entry (via the atomic service in P-01).
+- **Add a quick "Log Weight" widget on the dashboard** that also calls the same profile update endpoint (with other fields defaulting to existing values). It's not a separate weight log endpoint — it's a shortcut to the profile update.
+- OR: have a dedicated weight log endpoint that ONLY updates weight_logs and NOT the profile. But this means two sources of truth for "current weight" — the profile's `weight_kg` and the latest weight_log. Pick one and stick with it. **Recommended: weight_logs is the source of truth, profile.weight_kg is derived from the latest entry.**
 
 ---
 
-## SUMMARY OF TEST FILES AFFECTED
+## TECHNICAL DEBT PATTERNS
 
-| Test File | Status | Action |
-|-----------|--------|--------|
-| `ActivityCalendarPage.test.jsx` | BREAKS (7 tests) | Replace with merged page tests |
-| `MealCalendarPage.test.jsx` | BREAKS (7 tests) | Replace with merged page tests |
-| `ActivitiesPage.test.jsx` | AT RISK (5 tests) | Update assertions for new page structure |
-| `CalendarPageLayout.test.jsx` | SAFE (5 tests) | No changes needed |
-| `CalendarGrid.test.jsx` | SAFE | No changes needed |
-| `DayDetailPanel.test.jsx` | SAFE | No changes needed |
-| `calendarUtils.test.js` | SAFE | No changes needed |
-| `useMonthData.test.js` | SAFE | No changes needed |
-| `DayActivityRow.test.jsx` | SAFE | No changes needed |
-| `ActivitySummary.test.jsx` | SAFE | No changes needed |
-| `ActivityLogForm.test.jsx` | SAFE | No changes needed |
-| `ActivityHistory.test.jsx` | SAFE | No changes needed |
-| `previewCalories.test.js` | SAFE | No changes needed |
-| `api-integration.test.js` | AT RISK* | Check if it mocks routes |
-
-*`api-integration.test.js` needs inspection — if it tests `/meal-calendar` API endpoints, those may still work (backend unchanged). If it mocks frontend routes, update accordingly.
+| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
+|----------|-------------------|----------------|-----------------|
+| Weight_log inserted outside transaction | Simpler service code | Orphaned entries if profile update fails | Never — data integrity is non-negotiable |
+| No migration for existing users | Launch faster | All existing users start with empty charts | Only if communicated as "tracking starts now" but still seed baseline |
+| Chart library chosen without evaluation | Saves 30min | Wrong abstraction for future features (e.g., bar charts for macros) | Acceptable for MVP if recharts is chosen (it handles most chart types) |
+| Progress metrics calculated inline in component | Fast to implement | Untestable, easy to get direction wrong | Never — extract to pure function |
+| Separate goals table with separate API | Feels "clean" | Extra endpoints, query invalidation complexity, form duplication | Only if multi-goal history is a confirmed requirement |
+| No `source` column on weight_logs | Simpler schema | Can't diagnose data issues | Acceptable for MVP if migration is clean |
 
 ---
 
-## PREVENTION CHECKLIST BY PHASE
+## INTEGRATION GOTCHAS
 
-```
-Phase 1: Route Configuration
-  ☐ Keep index.js exports (redirect, don't delete)
-  ☐ Update Dashboard links
-  ☐ Add redirect from old route to new route (optional)
-  ☐ Update Router.jsx imports
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| Profile update → weight log | Create weight_log before profile update | After update succeeds, in same DB transaction |
+| Profile form → weight chart | Forget to invalidate weightLogs query | In `onSuccess` of profile mutation: `invalidateQueries(['weightLogs'])` |
+| Profile creation → weight log | No initial weight_log entry | Insert weight_log in `createProfile` service with `source: 'manual'` |
+| TDEE calculation → weight chart | Using profile.weight_kg always | Use latest weight_log entry; or keep profile.weight_kg as cache of latest |
+| Chart library → React state | Chart data transformation in render | `useMemo` with stable dependencies |
+| Zod validation → profile vs weight | Different validation rules | Extract shared `weightSchema` |
 
-Phase 2: Component Extraction
-  ☐ Extract calendar section into <ActivityCalendarSection> wrapper
-  ☐ Extract meal calendar section into <MealCalendarSection> wrapper
-  ☐ Unify style injection (swap-spin) into singleton utility
-  ☐ Make CalendarPageLayout optionally controlled (accept currentMonth prop)
+---
 
-Phase 3: State Unification
-  ☐ Deactivate duplicate auto-gen (keep Calendar's, disable PlanSection's)
-  ☐ Unify rate-limit state (Calendar's timer is canonical)
-  ☐ Merge toast/error/successMsg into one notification system
-  ☐ Connect log form's target date to calendar's selectedDay
+## PERFORMANCE TRAPS
 
-Phase 4: Layout & UX
-  ☐ Decide stacking strategy: scrollable section vs tabs vs toggle
-  ☐ Make calendar section independently scrollable with max-height
-  ☐ Mobile: default calendar collapsed
-  ☐ Past-day consistency: disable log form for past days
-  ☐ Show which date the log form is displaying
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|----------------|
+| Fetching ALL weight history every page visit | Slow page load, unnecessary API calls | `staleTime: 5min`, server-side `LIMIT` to last 12 months | At any scale — prevented upfront |
+| Chart re-render on every state change | Janky chart animation, high CPU | `React.memo` on chart, memoize data transformation | At any scale with active users |
+| No index on weight_logs user_id+logged_date | Slow queries as data grows | `CREATE INDEX CONCURRENTLY idx_weight_logs_user_date ON weight_logs(user_id, logged_date)` | At ~1000+ entries per user |
+| Weight log table growing unbounded | Storage costs, slow scans | No issue at expected scale (<1M rows total). Add cleanup after 5+ years of data | Never at this project's scale |
 
-Phase 5: Test Updates
-  ☐ Replace ActivityCalendarPage.test.jsx → MergedActivityPage.test.jsx
-  ☐ Replace MealCalendarPage.test.jsx → MergedFoodLogPage.test.jsx
-  ☐ Update ActivitiesPage.test.jsx assertions as needed
-  ☐ Verify all SAFE test files still pass
-  ☐ Run full test suite before merge commit
-```
+---
+
+## UX PITFALLS
+
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|-----------------|
+| Empty chart on first visit | User thinks feature is broken | Show "Log your first weight" prompt |
+| Chart with one data point | Pointless trend line | Hide chart, show message until 2+ entries |
+| Goal date in the past after missed deadline | User can't set past deadline, stuck | Allow re-setting target date (update, not lock) |
+| Weight entry only from profile form | Users hunting for where to log weight | Add quick-log widget on dashboard too |
+| No animation on weight update | User doesn't know action registered | Recharts animates by default — keep it |
+| "kg to goal" shows negative when exceeding | Confusing math | Show "Goal exceeded by X kg" with celebration |
+| Estimated completion uses flat rate | Unrealistic expectations | Use actual trend data, show data range |
+| Chart Y-axis starts at 0 | Weight fluctuations look dramatic | Auto-scale Y-axis to weight range ±2kg padding |
+
+---
+
+## "LOOKS DONE BUT ISN'T" CHECKLIST
+
+- [ ] **Weight log on profile update**: Weight_log INSERT is inside the same DB transaction as the profile UPDATE. Verify by checking the service method.
+- [ ] **Migration for existing users**: `weight_logs` table creation includes INSERT FROM profiles for every existing user. Verify by running migration on a copy of production data.
+- [ ] **One-entry-per-day constraint**: `UNIQUE(user_id, logged_date)` exists on the weight_logs table. Verify by inserting two entries for the same date and asserting the second overwrites.
+- [ ] **Initial weight on profile creation**: When a new user sets up their profile, a weight_log entry is also created. Verify by creating a profile and checking weight_logs count = 1.
+- [ ] **Chart empty state**: Chart component handles 0 entries (prompt), 1 entry (message, no trend), 2+ entries (trend line). Verify by mocking API responses.
+- [ ] **Goal validation**: Target weight is on the correct side of current weight (cannot set gain target above current without changing fitness_goal). Verify by testing validation.
+- [ ] **Progress calculation edge cases**: Handle division by zero (start === goal), overshoot (>100%), maintain goal (show deviation). Verify by unit testing the pure function.
+- [ ] **Chart query invalidation**: Updating profile weight also refetches weight_logs. Verify by checking React Query DevTools or network tab.
+- [ ] **Backend LIMIT on weight history**: API returns max 12 months by default. Verify by reading the SQL query.
+- [ ] **Estimated completion uses trend**: Not calorie_rate or flat rate. Verify by inspecting the calculation function.
+
+---
+
+## RECOVERY STRATEGIES
+
+| Pitfall | Recovery Cost | Recovery Steps |
+|---------|---------------|----------------|
+| P-01: Out-of-order weight log | HIGH | Delete orphaned weight_logs, re-run with correct order in transaction |
+| P-02: No migration for existing users | MEDIUM | Run backfill SQL AFTER the feature ships (may cause a brief empty-chart window) |
+| P-03: Duplicate daily entries | LOW | `DELETE FROM weight_logs WHERE id NOT IN (SELECT DISTINCT ON (user_id, logged_date) id FROM weight_logs ORDER BY user_id, logged_date, updated_at DESC)` — keeps the last entry per day |
+| P-08: Wrong progress direction | MEDIUM | Fix the utility function, redeploy, all existing data recalculates correctly |
+| P-09: Chart not updating after profile update | LOW | Fix query invalidation in frontend mutation handler |
+| P-10: Wrong estimated completion date | MEDIUM | Switch from flat rate to trend-based calculation, re-deploy |
+| P-14: Goal line missing from chart | LOW | Add ReferenceLine to recharts, data is already available |
+
+---
+
+## PITFALL-TO-PHASE MAPPING
+
+| Pitfall | Prevention Phase | Verification |
+|---------|------------------|--------------|
+| P-01: Weight log before profile update | Phase 1 (service layer) | Test: profile update failure doesn't create weight_log |
+| P-02: No migration for existing users | Phase 1 (schema + migration) | Verify: seed SQL included in migration |
+| P-03: Duplicate daily entries | Phase 1 (schema) | Verify: UNIQUE constraint exists |
+| P-04: Chart loading all data | Phase 2 (backend API + frontend) | Verify: API has default LIMIT, query has staleTime |
+| P-05: Empty chart | Phase 2 (frontend component) | Test: 0-entry and 1-entry states |
+| P-06: Goal setting separated from profile | Phase 1 (schema) | Verify: columns added to profiles, not new table |
+| P-07: Chart library decision | Phase 2 (frontend) | Decision made before coding starts |
+| P-08: Wrong progress direction | Phase 2 (utility function) | Test: all direction combinations |
+| P-09: Chart not updating | Phase 2 (frontend mutations) | Verify: queryClient.invalidateQueries wired up |
+| P-10: Estimated completion wrong | Phase 2 (utility function) | Test: with real weight_log data |
+| P-11: Weight history query edge cases | Phase 1 (repository) | Test: backfill, timezone, ordering |
+| P-15: Duplicate weight input | Phase 2 (UI design) | Verify: single source of truth for weight entry |
 
 ---
 
 ## Sources
 
-- Codebase analysis: `frontend/src/app/Router.jsx`
-- Codebase analysis: `frontend/src/features/activities/ActivityCalendarPage.jsx` (347 LOC)
-- Codebase analysis: `frontend/src/features/activities/components/ActivitiesPage.jsx` (192 LOC)
-- Codebase analysis: `frontend/src/features/activities/components/ActivityPlanSection.jsx` (160 LOC)
-- Codebase analysis: `frontend/src/features/food-log/components/MealCalendarPage.jsx` (294 LOC)
-- Codebase analysis: `frontend/src/features/food-log/components/FoodLogPage.jsx` (244 LOC)
-- Codebase analysis: `frontend/src/features/food-log/components/DailyMealPlanSection.jsx` (184 LOC)
-- Codebase analysis: `frontend/src/shared/calendar/CalendarPageLayout.jsx` (106 LOC)
-- Codebase analysis: `frontend/src/shared/calendar/hooks/useMonthData.js` (79 LOC)
-- Test files: 15 test files inspected (141 tests total)
-- `PROJECT.md` line 43-48: "Goal: Merge standalone Activity Calendar and Meal Calendar pages"
+- Codebase analysis: `backend/src/services/profile.service.js` — no transaction wrapper around updates
+- Codebase analysis: `backend/src/repositories/profile.repository.js` — single-table UPDATE, no weight_log
+- Codebase analysis: `frontend/src/features/profile/components/ProfileForm.jsx` — create + update in one form
+- Codebase analysis: `frontend/src/features/profile/api/profileApi.js` — PUT /api/profile for updates
+- Codebase analysis: `backend/src/controllers/profile.controller.js` — delegates to service, no weight log awareness
+- Codebase analysis: `backend/db/schema.sql` — profiles table has `weight_kg` only, no target columns
+- Codebase analysis: `frontend/package.json` — no charting library present
+- Codebase analysis: `.planning/PROJECT.md` lines 145-149 — target features for v1.9
+- General fitness app post-mortems: weight tracking data integrity issues are well-documented in health app space
+- Recharts documentation: `<ReferenceLine>` for goal line, `<LineChart>` for trend, auto-animation
+- TanStack Query v5 docs: `staleTime`, `gcTime`, `invalidateQueries` for cache management
+
+---
+
+*Pitfalls research for: Weight Logging, Goal Setting, Weight Chart & Progress Dashboard (v1.9 Progress Tracking)*
+*Researched: 2026-06-01*

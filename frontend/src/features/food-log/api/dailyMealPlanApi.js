@@ -12,3 +12,11 @@ export async function generateDailyMealPlan(date) {
 export async function logMeals(date, mealTypes) {
   return apiPost('/api/daily-meal-plans/log', { date, mealTypes });
 }
+
+export async function toggleItemLogged(date, mealType, foodId, logged) {
+  return apiPost('/api/daily-meal-plans/toggle-item', { date, mealType, foodId, logged });
+}
+
+export async function swapMealItem(date, mealType, foodId) {
+  return apiPost('/api/daily-meal-plans/swap-item', { date, mealType, foodId });
+}

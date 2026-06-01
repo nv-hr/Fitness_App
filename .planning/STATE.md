@@ -4,8 +4,8 @@ milestone: v1.9
 milestone_name: Progress Tracking
 status: shipped
 stopped_at: All v1.9 phases (42-46) complete
-last_updated: "2026-06-01T13:40:00.000Z"
-last_activity: 2026-06-01 — Completed quick task 260601-237: Disable logged meal items in plan (5 phases, 6 plans)
+last_updated: "2026-06-01T14:00:00.000Z"
+last_activity: 2026-06-01 — Grey-out logged meal items persistently (quick task 260601-gry)
 progress:
   total_phases: 46
   completed_phases: 46
@@ -68,10 +68,11 @@ Last activity: 2026-06-01 — v1.9 Progress Tracking shipped
 | 260601-fhd | Update Documentation | 2026-06-01 | `8d494e6` | [260601-fhd-update-documentation](./quick/260601-fhd-update-documentation/) |
 | 260601-601 | Sync weight logs to profile weight | 2026-06-01 | `e63efc8` | [260601-601-sync-weight-to-profile](./quick/260601-601-sync-weight-to-profile/) |
 | 260601-237 | Disable logged meal items in plan | 2026-06-01 | `ce20c72` | [260601-237-disable-logged-meals](./quick/260601-237-disable-logged-meals/) |
+| 260601-gry | Grey-out logged meal items persistently | 2026-06-01 | (pending) | [260601-gry-grey-logged-meals](./quick/260601-gry-grey-logged-meals/) |
 
 ## Session Continuity
 
-Last session: 2026-06-01T13:40:00.000Z
+Last session: 2026-06-01T14:00:00.000Z
 Stopped at: v1.9 shipped — all milestones complete
-Last activity: 2026-06-01 — Completed quick task 260601-237: Disable logged meal items in plan
+Last activity: 2026-06-01 — Grey-out logged meal items persistently (quick task 260601-gry)
 Resume file: (none — all milestones complete)

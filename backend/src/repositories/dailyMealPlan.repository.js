@@ -17,6 +17,27 @@ export async function findByUserAndDate(userId, planDate, clientOverride) {
   }
 }
 
+export async function markItemLogged(userId, planDate, mealType, foodId, logged, clientOverride) {
+  try {
+    const plan = await findByUserAndDate(userId, planDate, clientOverride);
+    if (!plan) return null;
+    const data = plan.plan_data;
+    if (!Array.isArray(data.meals)) return null;
+    for (const meal of data.meals) {
+      if (meal.meal_type !== mealType) continue;
+      if (!Array.isArray(meal.items)) continue;
+      for (const item of meal.items) {
+        if (item.food_id === foodId) {
+          item.logged = logged === true;
+        }
+      }
+    }
+    return upsertPlan(userId, planDate, data, plan.status, clientOverride);
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to mark item logged: ${err.message}`, 500);
+  }
+}
+
 export async function upsertPlan(userId, planDate, planData, status = 'active', clientOverride) {
   const db = clientOverride || pool;
   try {

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { startOfMonth } from 'date-fns';
 import MonthNav from './MonthNav.jsx';
 import CalendarGrid from './CalendarGrid.jsx';
@@ -22,6 +22,7 @@ export default function CalendarPageLayout({
   dayStatusMap,
   loading,
   error,
+  defaultDay = null,
   onMonthChange: externalOnMonthChange,
   onDaySelect: externalOnDaySelect,
   children,
@@ -54,6 +55,15 @@ export default function CalendarPageLayout({
     setSelectedDay(day);
     if (externalOnDaySelect) externalOnDaySelect(day);
   }, [externalOnDaySelect]);
+
+  // Sync selectedDay whenever defaultDay prop changes (always-sync behavior)
+  // Notifies parent via externalOnDaySelect so parent stays in sync with internal state
+  useEffect(() => {
+    if (defaultDay) {
+      setSelectedDay(defaultDay);
+      if (externalOnDaySelect) externalOnDaySelect(defaultDay);
+    }
+  }, [defaultDay, externalOnDaySelect]);
 
   return (
     <div style={{

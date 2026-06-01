@@ -5,6 +5,8 @@ import { findByUserId as findProfileByUserId } from '../repositories/profile.rep
 import { getDailyTotal } from '../repositories/food.repository.js';
 import { getCalorieTarget, calculateTdee } from '../services/profile.service.js';
 import * as activityRepo from '../repositories/activity.repository.js';
+import { getCachedPlan, setCachedPlan } from '../services/llm.service.js';
+import { findByUserAndWeek, upsertPlan } from '../repositories/weeklyPlan.repository.js';
 
 /**
  * GET /api/activities/recommendations — Randomized goal-based activity recommendations (ACT-01).
@@ -148,8 +150,23 @@ async function getActivityHistory(req, res, next) {
   }
 }
 
+function getMonday(date) {
+  const d = new Date(date);
+  d.setUTCHours(0, 0, 0, 0);
+  const day = d.getUTCDay();
+  const diff = day === 0 ? -6 : 1;
+  d.setUTCDate(d.getUTCDate() - day + diff);
+  return d.toISOString().split('T')[0];
+}
+
+function formatDateLocal(d) {
+  const date = d instanceof Date ? d : new Date(d);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 /**
  * DELETE /api/activities/log/:id — Delete an activity log entry.
+ * Also un-checks the corresponding toggle in the weekly plan (best-effort).
  */
 async function deleteActivityLog(req, res, next) {
   try {
@@ -158,9 +175,57 @@ async function deleteActivityLog(req, res, next) {
       return errorResponse(res, 'Invalid log ID', 400, 'VALIDATION_ERROR');
     }
 
-    const deletedId = await activityRepo.deleteActivityLog(id, req.user.userId);
-    if (!deletedId) {
+    // Fetch log entry first to get activity_id and logged_date
+    const logEntry = await activityRepo.getActivityLogById(id, req.user.userId);
+    if (!logEntry) {
       return errorResponse(res, 'Activity log not found', 404, 'NOT_FOUND');
+    }
+
+    // Delete the log entry
+    await activityRepo.deleteActivityLog(id, req.user.userId);
+
+    // Un-check the corresponding toggle in the weekly plan (best-effort)
+    try {
+      const loggedDate = formatDateLocal(logEntry.logged_date);
+      const weekStart = getMonday(new Date(loggedDate));
+      const targetDate = loggedDate;
+      const activityId = logEntry.activity_id;
+      const userId = req.user.userId;
+
+      // Get plan from cache or DB
+      let planData = getCachedPlan(userId, weekStart);
+      let planStatus = 'active';
+      if (!planData || !Array.isArray(planData.days)) {
+        const dbPlan = await findByUserAndWeek(userId, weekStart);
+        if (dbPlan && dbPlan.plan_data && Array.isArray(dbPlan.plan_data.days)) {
+          planData = dbPlan.plan_data;
+          planStatus = dbPlan.status || 'active';
+        }
+      }
+
+      if (planData && Array.isArray(planData.days)) {
+        const day = planData.days.find(d => {
+          const dDate = d.date || '';
+          return dDate === targetDate;
+        });
+
+        if (day && Array.isArray(day.activities)) {
+          const actIdx = day.activities.findIndex(a => a.activity_id === activityId);
+          if (actIdx !== -1 && day.activities[actIdx].completed === true) {
+            day.activities[actIdx].completed = false;
+
+            // Recompute day-level completed flag
+            const allCompleted = day.activities.length > 0 && day.activities.every(a => a.completed === true);
+            if (allCompleted) day.completed = true;
+            else delete day.completed;
+
+            await upsertPlan(userId, weekStart, planData, planStatus);
+            setCachedPlan(userId, weekStart, planData);
+          }
+        }
+      }
+    } catch (planErr) {
+      console.warn(`[deleteActivityLog] Failed to un-check plan toggle: ${planErr.message}`);
     }
 
     return successResponse(res, null, 200);

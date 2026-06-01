@@ -1,337 +1,226 @@
-# UI Consolidation Research: Combining Calendar View with Manual Data Entry
+# Feature Research: Progress Tracking
 
-**Domain:** Health/Fitness App — Calendar + Activity/Food Log Consolidation
+**Domain:** Health/Fitness App — Weight Logging, Goal Setting, Weight Chart, Progress Dashboard
 **Researched:** 2026-06-01
-**Scope:** How health/fitness apps combine a planning calendar view with manual data entry on one page
-**Sources:** MyFitnessPal (2026 Today tab redesign), Lose It!, Cronometer, NutriPro, NutriTrace, shadcn diet journal block, healthcare UX research
+**Confidence:** HIGH
 
----
+## Feature Landscape
 
-## Part 1: The Dominant Pattern — Scroll-Based Single Page Scoped to a Date
+### Table Stakes (Users Expect These)
 
-The industry has converged on a **scroll-based single-page layout** where the entire page is scoped to one selected day. This is what MyFitnessPal's 2026 "Today" tab redesign champions, and what NutriPro, NutriTrace, Cronometer, and Lose It! all use (with variations).
+Features users assume exist. Missing these = product feels incomplete.
 
-### Anatomy of the Pattern
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| **Auto-log weight on profile update** | Users update their weight in the profile form; they expect it to be recorded historically, not just overwritten. Every fitness app (MyFitnessPal, Lose It!, Cronometer) saves weight changes as trackable history. | LOW | Intercept PUT `/api/profile` to INSERT into a new `weight_log` table. The existing `profiles.weight_kg` field is the "current" value; weight_log stores the time series. |
+| **Manual weight entry** | Users may weigh themselves without updating their full profile. A dedicated weight entry form (number input + optional notes) should be available. | LOW | Simple form: date pre-filled to today, weight input (decimal), optional note. Backend endpoint POST `/api/weight-log`. |
+| **Set target weight + target date** | Goal setting is the foundation of progress tracking. Users need to specify where they want to be and by when. Standard across all competitors. | LOW | Add `target_weight_kg` and `target_date` columns to `profiles` table. Already have `fitness_goal` and `calorieRate` — these are complementary. |
+| **Weight history view (table)** | Users expect to see a chronological list of past weight entries with dates and values, sortable or filterable. | LOW | GET `/api/weight-log` returns ordered list. Simple table view with date, weight, change from last entry. |
+| **Weight trend line chart** | A line chart showing weight over time is the universal standard — MyFitnessPal, Lose It!, Cronometer, WeightFit all have this as their primary progress visualization. | MEDIUM | Use Recharts (Lightweight: ~45 KB). LineChart with `type="monotone"` for smooth curve. X-axis = dates, Y-axis = weight. Dates sorted ascending. |
+| **Progress summary card** | Users expect a snapshot: current weight, starting weight, change, kg to goal, % complete. Displayed at top of progress dashboard. | LOW | Pure math on the frontend from weight_log data and profile target. No extra backend needed beyond existing GET endpoints. |
+| **Goal line on chart** | A horizontal dashed line at the target weight on the weight chart. Users need to see how far they are from their goal visually. | LOW | Recharts `ReferenceLine` component with `strokeDasharray="5 5"` and label "Goal: XX kg". |
 
-```
-┌─────────────────────────────────┐
-│  Date Navigator (horizontal)    │  ← sticky or scrolls away
-│  [<]  Mon, Jun 1  [>]           │
-├─────────────────────────────────┤
-│  Daily Summary / Macro Bar      │  ← calories consumed, remaining, macro rings
-├─────────────────────────────────┤
-│                                 │
-│  ~ Activity / Meal Sections ~   │  ← each section: header + entries + add button
-│                                 │
-│  Section 1: Breakfast / AM      │  ← "Log" or "+" button per section
-│  ├─ Item 1          ◯ ×        │
-│  ├─ Item 2          ◯ ×        │
-│  └─ [+ Add Item]               │
-│                                 │
-│  Section 2: Lunch / Midday      │
-│  ├─ Item 1          ◯ ×        │
-│  └─ [+ Add Item]               │
-│                                 │
-│  Section 3: Dinner / PM         │
-│  └─ [+ Add Item]               │
-│                                 │
-│  Section 4: Snacks / Other      │
-│  └─ [+ Add Item]               │
-│                                 │
-│  ~ Healthy Habits Section ~     │  ← exercise log, water, weight (MyFitnessPal)
-│  └─ [+ Log Exercise]           │
-│                                 │
-└─────────────────────────────────┘
-│  [FAB: + Quick Add]             │  ← floating action button (persistent)
-└─────────────────────────────────┘
-```
+### Differentiators (Competitive Advantage)
 
-**This is the proven, table-stakes layout for your consolidation.** Both the Activity page and the Food Log page should follow this structure.
+Features that set the product apart. Not required, but valuable.
 
----
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| **Trend prediction / projected date** | Calculates the current rate of weight change (kg/week) and projects when the user will reach their goal weight. Motivational and adds insight beyond raw data. | MEDIUM | Linear regression over last N entries (e.g., 14 days). Formula: slope = rate of change, projected_days = (target - current) / slope. Display as "On track to reach goal by [date]". |
+| **Moving average overlay** | A 7-day rolling average line overlaid on the weight chart smooths out daily fluctuations. Users learn to focus on trends, not daily noise. | MEDIUM | Calculate 7-day moving average from weight_log data. Display as a second line on the chart (lighter color or area fill). Common pattern in WeightFit and Cronometer. |
+| **Animated goal line** | When the user first sets a goal, the goal line animates from their current weight to the target position. Creates a "wow" moment. | LOW | Recharts supports animation natively. Use CSS transition or SVG animation on the ReferenceLine. |
+| **Milestone celebration** | When the user crosses a milestone (e.g., 10% of goal, 50%, 90%, or hits goal weight), show a congratulatory message or visual indicator. | MEDIUM | Compare last two weight_log entries. If `(start - current) / (start - target)` crosses a threshold (0.25, 0.5, 0.75, 0.9, 1.0), show toast/alert. Store `last_milestone` on profile to avoid re-triggering. |
+| **Weight change rate indicator** | Shows "You're losing 0.8 kg/week" or "You're gaining 0.3 kg/week" based on recent trend. Provides actionable feedback tied to the existing `calorieRate` targets. | MEDIUM | Calculate rate from slope of last 7+ entries. Compare to target rate (from `calorieRate`: 0.25/0.5/1.0 kg/week). Color-coded: green = on track, yellow = close, red = off track. |
 
-## Part 2: Where the Calendar Belongs
+### Anti-Features (Commonly Requested, Often Problematic)
 
-There are **three proven approaches** for integrating a calendar with this scroll-based daily log. Ranked by suitability for your use case:
+Features that seem good but create problems.
 
-### Approach A: Horizontal Day Selector + Scroll Log (Recommended for Food Log)
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| **Multiple weight entries per day** | "I weigh myself morning and night" or "I forgot to log and want to add a second entry" | Creates ambiguity: which value is the "current" weight? Charts get noisy with intra-day fluctuations. Conflicts with the auto-log-on-update pattern (what happens when profile update also creates a log entry on the same day?). | **Last-entry-wins per day.** If user enters 2+ weights on the same date, only the most recent is used for trend calculations. Store all entries in the DB but deduplicate for display. |
+| **Auto-generate weight goals from BMI** | "Just calculate my ideal weight from my height" | BMI ideal weight is a range (18.5-22.9 BMI). Picking a single number is arbitrary and the user may disagree. Creates confusion when auto-calculated goal doesn't match user expectation. | Let the user set their own target weight. Show BMI category as context, but don't auto-fill the goal. |
+| **Body fat / measurements tracking** | "I want to track more than just weight" | Scope creep. Requires new schema, separate chart, different visualization. Body fat measurement is unreliable without consistent technique. Not aligned with the Core Value (BMI + TDEE focused). | Document as "consider for v2" in OUT_OF_SCOPE. Weight-only focus for now keeps the feature vertical clean. |
+| **Weight logging reminders/notifications** | "Remind me to weigh myself every morning" | Requires push notification infrastructure (not currently built). Adds complexity for a non-critical feature. Users who want to track weight will do so. | Simple UI hint ("Tip: weigh yourself at the same time each morning for best results") without push infrastructure. |
 
-**Used by:** MyFitnessPal 2026 Today tab, Cronometer, NutriTrace
-
-The calendar is a **horizontal scrolling day-picker** pinned at the top of the page. The entire content below is the selected day's log.
+## Feature Dependencies
 
 ```
-┌────────────────────────────────────────┐
-│  [<]  M  T  W  T  F  S  S  [>]  Today │  ← horizontal day tiles
-│       5   6  █7█  8   9  10  11        │     selected day highlighted
-├────────────────────────────────────────┤
-│  Calories: 1,450 / 2,000  ████████░░  │
-│  Protein: 85g / 150g      ████░░░░░░  │
-├────────────────────────────────────────┤
-│  🥗 Lunch                              │
-│  ├─ Grilled chicken salad   450 kcal   │
-│  └─ [+ Add Item]                       │
-│                                        │
-│  🏃 Exercise                           │
-│  ├─ Running, 30 min        280 kcal    │
-│  └─ [+ Log Activity]                   │
-└────────────────────────────────────────┘
+[Auto-log weight on profile update]
+    └──requires──> [weight_log table] (new DB migration)
+                        └──requires──> [profiles table] (already exists)
+
+[Manual weight entry]
+    └──requires──> [weight_log table]
+
+[Weight trend chart]
+    └──requires──> [weight_log table]
+    └──requires──> [Recharts library] (add to frontend)
+
+[Goal setting (target weight + date)]
+    └──requires──> [profiles table columns: target_weight_kg, target_date]
+
+[Goal line on chart]
+    └──requires──> [Weight trend chart]
+    └──requires──> [Goal setting]
+
+[Progress summary card]
+    └──requires──> [Weight trend chart] (for start/current weight data)
+    └──requires──> [Goal setting] (for target values)
+
+[Trend prediction / projected date]
+    └──requires──> [Progress summary card] (consumes same data)
+    └──enhances──> [Weight trend chart]
+
+[Moving average overlay]
+    └──enhances──> [Weight trend chart]
+
+[Milestone celebration]
+    └──requires──> [Progress summary card] (to calculate % complete)
 ```
 
-**When to use:** This is the **primary pattern** for the consolidated Food Log page. The date selector replaces the separate Calendar page. "Quick-log" features (last-portion pre-fill) sit at the per-section level.
+### Dependency Notes
 
-**Pros:**
-- Minimal vertical space taken by date navigation
-- Fits the "today-focused" mental model
-- Swipe to change dates is intuitive (MyFitnessPal, Cronometer both support this)
-- The monthly planning view is **not needed** for food logging — users mostly log what they ate
+- **Auto-log requires new table:** The existing `profiles.weight_kg` is a single current value. Weight history needs a separate `weight_log` table with `(user_id, weight_kg, logged_date, notes)`. The profile update endpoint must `INSERT INTO weight_log` as a side effect.
+- **Goal setting enhances existing profile:** The `profiles` table already stores `fitness_goal`, `calorie_rate`, and `weight_kg`. Adding `target_weight_kg` and `target_date` is a natural extension — an ALTER TABLE migration, not a new table.
+- **Recharts is a new frontend dependency:** The project doesn't currently have a charting library. Recharts v3.x is recommended because it's React-native, composable, lightweight (~45 KB), and the most popular React charting library. Install: `npm install recharts`.
+- **Progress dashboard is a new page/route:** The dashboard needs its own route (e.g., `/progress`). Currently, the home route `/` shows `DashboardPlaceholder` — this can be replaced with the real dashboard.
 
-**Cons:**
-- No long-range planning view on this page
-- Poor for seeing weekly patterns at a glance
+## MVP Definition
 
-**Table-stakes UX expectations:**
-- Today button to jump back to current date
-- Selected date visually distinct (filled/highlighted)
-- Days with logged data have a small dot/indicator
-- Left/right swipe changes date
-- Tapping a tile opens that day's log
+### Launch With (v1.9)
 
----
+Minimum viable product — what's needed for progress tracking.
 
-### Approach B: Month Grid + Below-the-Fold Detail (For Activity Page — Hybrid)
+- [x] **weight_log table migration** — New table: `(id, user_id, weight_kg, logged_date, notes, created_at)`. Unique constraint on `(user_id, logged_date)`. Index on `(user_id, logged_date DESC)`.
+- [x] **Auto-log weight on profile update** — `PUT /api/profile` side-effect: insert weight into `weight_log`. If entry exists for today, UPDATE it (last-entry-wins).
+- [x] **Manual weight entry API** — `POST /api/weight-log` (create), `GET /api/weight-log` (list, paginated). Note: no DELETE — users should not be able to remove weight history (anti-cheat; log corrections only via admin if ever needed).
+- [x] **Goal setting on profile** — Add `target_weight_kg DECIMAL(5,2)` and `target_date DATE` to `profiles` table. Add to profile form (update Zod schema, add fields to ProfileForm).
+- [x] **Weight trend chart** — Recharts `LineChart` with `type="monotone"`, smooth curve. X-axis: logged_date, Y-axis: weight_kg. Min/max domain auto-scaled with padding.
+- [x] **Goal reference line** — Recharts `ReferenceLine` at `y={targetWeight}` with dashed stroke and "Goal" label.
+- [x] **Progress summary** — Display at top of dashboard: starting weight (first entry), current weight (last entry), change (current - start), kg to goal (current - target), % complete ((start - current) / (start - target) × 100).
+- [x] **Progress Dashboard page** — New route `/progress`. Replaces or augments `/` (DashboardPlaceholder). Combines summary card + chart + history table + goal display.
 
-**Used by:** shadcn diet journal block, NutriPro (optional)
+### Add After Validation (v1.9.x)
 
-A month grid calendar **sits at the top of the page** (above the fold). Tapping a day scrolls the page to the day's detail below. Or reverse: scroll past the month grid to reach the daily log.
+Features to add once core is working.
 
+- [ ] **Trend prediction** — Calculate rate from recent entries, project completion date. Show as "Predicted: [date]" on the dashboard.
+- [ ] **Moving average line** — 7-day rolling average overlay on the chart. Toggleable via legend click.
+- [ ] **Milestone celebrations** — Toast messages at 25%, 50%, 75%, 90%, 100% of goal.
+- [ ] **Weight change rate indicator** — "Losing 0.8 kg/week" with color-coded status.
+
+### Future Consideration (v2+)
+
+Features to defer until product-market fit is established.
+
+- [ ] **Body measurements** (waist, hip, chest, etc.) — New table, new chart type. Requires dedicated feature milestone.
+- [ ] **Progress photos** — Image upload + timeline view. Requires storage infrastructure.
+- [ ] **Wearable/smart scale integration** — Requires external API integration. Out of scope for web-only app.
+- [ ] **Weight logging reminders** — Requires push notification infrastructure.
+- [ ] **Data export** — CSV/PDF download of weight history. Nice-to-have, not core.
+- [ ] **Streak tracking** — "Logged weight for 7 days in a row" gamification. Adds engagement but not essential.
+
+## Feature Prioritization Matrix
+
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| weight_log table migration | HIGH | LOW | P1 |
+| Auto-log weight on profile update | HIGH | LOW | P1 |
+| Manual weight entry | HIGH | LOW | P1 |
+| Goal setting (target weight + date) | HIGH | LOW | P1 |
+| Weight trend chart | HIGH | MEDIUM | P1 |
+| Goal reference line on chart | HIGH | LOW | P1 |
+| Progress summary card | HIGH | LOW | P1 |
+| Progress Dashboard page | HIGH | MEDIUM | P1 |
+| Trend prediction / projected date | MEDIUM | MEDIUM | P2 |
+| Moving average overlay | MEDIUM | MEDIUM | P2 |
+| Milestone celebrations | MEDIUM | MEDIUM | P2 |
+| Weight change rate indicator | MEDIUM | MEDIUM | P2 |
+| Body measurements tracking | LOW | HIGH | P3 |
+| Progress photos | LOW | HIGH | P3 |
+| Data export | LOW | MEDIUM | P3 |
+
+**Priority key:**
+- P1: Must have for v1.9 launch
+- P2: Should have, add when v1.9 core is stable
+- P3: Nice to have, future milestone consideration
+
+## Competitor Feature Analysis
+
+| Feature | MyFitnessPal | Lose It! | Cronometer | WeightFit | Our Approach (v1.9) |
+|---------|--------------|----------|------------|-----------|---------------------|
+| Auto-log weight on profile update | Yes (implicit when editing profile) | No (separate weight entry) | Yes (profile edit saves to history) | No (dedicated entry only) | Auto-log on profile update + dedicated entry |
+| Manual weight entry | Dedicated "Check-In" on Today tab | Dedicated weight screen | "Log Weight" on dashboard | Main screen input | Dedicated form on Progress page |
+| Target weight | Guided setup wizard | Onboarding flow | More > Targets > Weight Goal | In profile settings | Profile form fields (target_weight_kg + target_date) |
+| Target date | Calculated from rate | Set by user | Auto-calculated from rate | Auto-calculated | User-specified (user + date) — simpler, more flexible |
+| Weight trend chart | Line chart with goal line | Line chart with goal line | Area chart with goal line | Line chart | Line chart with ReferenceLine (dashed goal line) |
+| Moving average | 7-day avg toggle | Not shown | Weighted trend line | 7-day avg toggle | P2 (post-launch) |
+| Progress summary | "X lbs to goal" card | "X% to goal" | Dashboard widget | Full stats page | Summary card: start/current/target, kg to goal, % complete |
+| Trend prediction | "On track by [date]" | "Projected to reach goal [date]" | Not shown | "Predicted" | P2 (post-launch) |
+| Milestone celebrations | Check-in animations | Achievement badges | Not shown | Notification | P2 (toast notifications at 25/50/75/90/100%) |
+| Rate indicator | "Avg loss: X lbs/week" | "Weekly trend" | "Trend" line label | "Avg change" | P2 (color-coded rate indicator) |
+
+## Technical Implementation Notes
+
+### Database Changes
+
+```sql
+-- New weight_log table
+CREATE TABLE IF NOT EXISTS weight_log (
+    id INT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    user_id INT NOT NULL,
+    weight_kg DECIMAL(5,2) NOT NULL CHECK (weight_kg > 0 AND weight_kg < 500),
+    logged_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    notes TEXT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(user_id, logged_date)  -- last-entry-wins per day
+);
+
+CREATE INDEX IF NOT EXISTS idx_weight_log_user_date ON weight_log(user_id, logged_date DESC);
+
+-- Profile addition (ALTER TABLE)
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS target_weight_kg DECIMAL(5,2) NULL;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS target_date DATE NULL;
 ```
-┌────────────────────────────────────────┐
-│  📅  June 2026                         │
-│  Su Mo Tu We Th Fr Sa                  │
-│      1  █2█  3   4   5   6             │  ← month grid, days with activity
-│   7   8   9  10  11  12  13            │     color-coded (green=done,
-│  14  15  16  17  18  19  20            │     yellow=partial, red=none)
-│  21  22  23  24  25  26  27            │
-│  28  29  30                            │
-├────────────────────────────────────────┤
-│  Selected Day: Wed, Jun 2              │
-├────────────────────────────────────────┤
-│  🏋️ Morning Activity                    │
-│  ├─ HIIT, 20 min, High   180 kcal      │
-│  └─ [+ Log Activity]                   │
-│                                        │
-│  🚶 Afternoon Activity                  │
-│  └─ [+ Log Activity]                   │
-│                                        │
-│  Daily Summary                          │
-│  Total: 2 activities | 280 kcal burned │
-└────────────────────────────────────────┘
+
+### Backend API Changes
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/weight-log` | GET | List weight history (paginated, ordered by date DESC) |
+| `/api/weight-log` | POST | Create manual weight entry |
+| `/api/profile` | PUT | **Modified:** side-effect INSERT/UPDATE into weight_log |
+| `/api/weight-log/stats` | GET | Computed stats: start weight, current, change, rate, projected date |
+
+### Charts Library Decision
+
+**Recharts v3.x** is the recommended library because:
+- Already included in the project's Recharts research (shadcn examples, v3.8.1 latest)
+- React-native composable components (fits existing component patterns)
+- No additional wrapper needed (unlike Chart.js which requires react-chartjs-2)
+- ReferenceLine for goal line is built-in
+- Responsive via `ResponsiveContainer` component
+- Tree-shakeable — only import what you use
+
+Required imports for the weight chart:
+```jsx
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts';
 ```
-
-**When to use:** This is the **recommended pattern** for the consolidated Activity page. The existing Activity Calendar page already has a month grid, and users expect a planning/retrospective view for workouts. The daily log sits naturally below the calendar.
-
-**Pros:**
-- Preserves the monthly planning/overview that Activity Calendar users expect
-- Color-coded days give immediate status at a glance
-- Single page for both planning and logging
-- The "Generate Week" feature still makes sense in this context
-
-**Cons:**
-- Month grid takes significant vertical space
-- On smaller screens, the daily log may feel pushed down
-- Need to handle the transition from "planning mode" to "logging mode" clearly
-
-**Table-stakes UX expectations:**
-- Color coding should follow a clear, accessible scheme (not green alone — use icons/shapes too)
-- Tapping a day in the grid shows that day's log below
-- The month grid should be collapsible (user can hide it to focus on the log)
-- Today's date marked clearly
-- Arrow navigation to change months
-- Quick action buttons per activity section
-
----
-
-### Approach C: Dual-Pane / Split-Screen (Desktop-Only Premium)
-
-**Used by:** MyFitnessPal web (partial), Eat This Much
-
-Calendar and log side-by-side. This is **not recommended** for this project. It's a desktop-only pattern that requires horizontal space the app will likely not have. The user's constraints specify "minimal" styling, ruling this out.
-
----
-
-## Part 3: Preferred Layout Recommendation for Each Page
-
-### For Food Log Page (Meal Calendar → Food Log)
-
-**Pattern: Approach A — Horizontal Day Selector + Scroll Log**
-
-Replace the meal calendar entirely. The horizontal date strip at the top lets users navigate days. The rest of the page is the existing food log scoped to that date. Rationale:
-
-- Food logging is a **retrospective** activity (you log what you ate, not what you plan to eat). A month grid adds unnecessary complexity.
-- The existing "Generate Day" from Meal Calendar is the only feature that needs calendar context. Generate Day should either:
-  - Be triggered from the date selector (generate for the selected day), or
-  - Be moved to a small "Generate" action button that opens a dialog asking which day(s)
-
-| Component | What It Replaces |
-|-----------|-----------------|
-| Horizontal date selector | Meal Calendar month grid + navigation |
-| Per-meal-type [+] buttons | Meal Calendar "Log" buttons per meal type |
-| Daily summary card | Macro summary (already exists) |
-| Generate action button | Meal Calendar "Generate Day" feature |
-
-### For Activity Page (Activity Calendar → Activity)
-
-**Pattern: Approach B — Month Grid + Below Detail**
-
-Keep the month grid at the top but make it **collapsible**. Below it, show the existing activity log for the selected day. Rationale:
-
-- Activity planning is often **prospective** (planning workouts for the week)
-- The month grid's color-coded days provide immediate status
-- "Generate Week" operates on the calendar view
-- The existing manual activity logging form sits naturally as per-section [+] actions below
-
-| Component | What It Replaces |
-|-----------|-----------------|
-| Collapsible month grid (top) | Standalone Activity Calendar page |
-| Per-type activity sections | Existing activity logging interface |
-| Per-section [+] buttons | Existing manual log form |
-| "Generate Week" button | Stays as calendar-level action |
-
----
-
-## Part 4: Table-Stakes UX Details — Getting These Right
-
-These are **non-negotiable** for a health/fitness app doing this kind of consolidation:
-
-### 1. Date Context Must Be Visible Always
-
-The user must never wonder "which day am I looking at?" The selected date should be visible in at least two places:
-- The date navigator/selector itself
-- The page title or section headers
-
-**Bad:** Only the calendar shows the date; the log below has no date indicator.
-
-### 2. Quick Entry Per Section, Not Just Global
-
-Each meal type (Food Log) or activity period (Activity page) must have its own [+ Add] or [Log] button. MyFitnessPal's 2026 redesign explicitly calls this out: "Tap on 'Log' next to any meal section." A single global FAB is not sufficient.
-
-### 3. Empty States Must Say Something Useful
-
-When a day has no data logged yet:
-
-| Good | Bad |
-|------|-----|
-| "No activities logged yet. Tap + to add one." | Blank white space |
-| "Start tracking your meals for today." | "No data" |
-
-### 4. Yesterday's Data Should Be One Tap Away
-
-Both MyFitnessPal and Lose It! offer "copy from yesterday" or "re-log last entry" as a core speed feature. The existing quick-add with last-portion pre-fill already addresses this — it should be surfaced prominently, not buried.
-
-### 5. Summary at the Top, Detail Below
-
-Every single major app in this space leads with a summary card (calories consumed/remaining, activity summary) before the detailed logs. This is table-stakes. The existing daily calorie/activity summaries should stay at the top of their respective pages.
-
-### 6. Swipe Between Days
-
-This is an expectation users bring from MyFitnessPal, Cronometer, and others. Left/right swipe to change the selected date.
-
-### 7. Color-Coded Calendar Days Must Be Accessible
-
-If you color-code days on the month grid (Approach B), do not rely solely on green/yellow/red. Use:
-- A visual pattern or icon in addition to color
-- Text labels like "Done", "Partial", "Missed"
-- Sufficient contrast ratios
-
----
-
-## Part 5: Anti-Patterns to Avoid
-
-### ❌ Tab-Based: Separate "Calendar" and "Log" Tabs on the Same Page
-
-Some apps try to split the page into "Plan" and "Log" tabs. This defeats the purpose of consolidation. Users have to tap to see the calendar, then tap again to see the log. That's the same friction as separate pages. **Do not use tabs.**
-
-### ❌ Fixed Month Grid That Hides the Log
-
-If the month grid is too tall and never collapses, on mobile it pushes the daily log below the fold so far that users can't see it without scrolling. This makes the page feel like two separate pages stacked vertically. The month grid must be **collapsible** or **short enough** that at least 2-3 log items are visible above the fold.
-
-### ❌ Modal/Overlay for Date Selection
-
-Some apps open a calendar in a modal when you tap the date. This adds an extra tap/closing step to every date change. Users change dates frequently — the date selector should be **visible at the page level**, not behind a tap.
-
-### ❌ Hiding the Day's Summary Below the Calendar
-
-If the month grid always sits at the top and the summary card sits below it, users must scroll past the calendar to see their daily totals. The summary should be above or alongside the calendar.
-
-### ❌ Removing the Calendar Altogether (for Activity)
-
-For the Food Log page, removing the month grid is fine. For the Activity page, the month grid has real value (planning, streak visibility, overview). Removing it flattens the experience. Keep the calendar as a collapsible top section.
-
-### ❌ Inconsistent Date Navigation Across Pages
-
-If Activity uses a month grid and Food Log uses a horizontal day strip, both pages must at least agree on **which date is currently selected** and **how changing it works**. Shared state (a global "selected date") is essential. Changing the date on the Activity page should also change it on the Food Log page, if the user navigates between them.
-
----
-
-## Part 6: "Generate" Feature Placement
-
-Both existing pages have "Generate" features (Generate Week for Activity Calendar, Generate Day for Meal Calendar). These need to be relocated:
-
-### For Activity Page (Approach B)
-- **Generate Week** stays as a button near the month grid header
-- Tapping it opens a context action (sidebar or modal) to configure the week's plan
-- The generated activities appear on the respective days in the month grid
-
-### For Food Log Page (Approach A)
-- **Generate Day** becomes a button next to the date selector or in the page header area
-- Tapping it generates meals for the currently selected day
-- Results populate the meal sections below
-
----
-
-## Part 7: Key Implementation Notes
-
-### Shared State Design
-Both consolidated pages need access to a shared "selected date" concept. When a user is on the Activity page looking at Wednesday, then navigates to the Food Log page, they expect to see Wednesday's food log. Options:
-
-1. **URL parameter:** `/activities?date=2026-06-01` and `/food-log?date=2026-06-01`
-2. **Global context/state:** Shared date state in a provider
-
-URL-based is simpler and more bookmarkable. Global state is smoother for navigation.
-
-### Scroll Position Memory
-If the month grid on Activity is collapsible and the user collapses it, the preference should be remembered per session (or better, persisted). Nothing frustrates users more than collapsing the calendar and having it re-expand on every navigation.
-
-### Mobile-First But Desktop-Aware
-The month grid (Approach B) works well on desktop where there's enough vertical space. On mobile, the collapsible behavior is critical. Consider:
-- Mobile: collapsed by default, tap to expand
-- Desktop: expanded by default, tap to collapse
-
----
-
-## Summary Table
-
-| Aspect | Food Log Page (Consolidated) | Activity Page (Consolidated) |
-|--------|------------------------------|------------------------------|
-| **Pattern** | Horizontal day selector + scroll log | Collapsible month grid + daily detail |
-| **Calendar type** | Mini day-picker strip (1 row) | Month grid (4-6 rows, collapsible) |
-| **Primary action** | Log food for selected day | View/plan week, log activity |
-| **Generate feature** | Button → generates for selected day | Button near month grid → generates week |
-| **Date navigation** | Tap day tile, swipe left/right | Tap day in grid |
-| **Summary location** | Top of page, above meal sections | Below month grid, above activity sections |
-| **Industry example** | MyFitnessPal Today tab, Cronometer | NutriPro, shadcn blocks, Samsung Health |
-
----
 
 ## Sources
 
-- MyFitnessPal 2026 Today Tab redesign — support.myfitnesspal.com (April 2026)
-- MyFitnessPal blog — New Today Screen & Progress Tab (Feb 2026)
-- Lose It! Android 2026 redesign — preview.loseitblog.com
-- NutriPro — github.com/BALAJIBHARGAV6/NutriPro (Dec 2025)
-- NutriTrace — github.com/traceapps/nutritrace (Apr 2026)
-- Cronometer Mobile Daily Report — support.cronometer.com
-- shadcn/ui Calendar Diet Journal block — shadcn.io
-- Clinical App Report — Best Calorie Tracker with Meal Planning 2026 — clinicalappreport.com
-- CalorieBliss — Best Calorie Tracking Apps 2026 comparison
+- **Competitor products analyzed:** MyFitnessPal (2026 Today tab + Progress tab), Lose It! (iOS/Android 2026), Cronometer (Mobile - Weight Goal), WeightFit (Google Play, 1M+ downloads), Withings Health Mate, WeightFlow
+- **MyFitnessPal Community Discussion:** "Does MyFitnessPal not recognize when you've hit your goal weight?" — February 2025. Confirms manual goal adjustment pattern.
+- **Cronometer Support Docs:** Mobile - Weight Goal (April 2026). Detailed goal setting flow: current weight → weight goal → loss/gain rate → goal forecast → energy target.
+- **NIDDK Body Weight Planner:** NIH resource for weight prediction modeling. Confirms the mathematical approach to trend prediction.
+- **Reddit r/1200isplenty:** "The correct way to track weight loss progression" — community-validated pattern of focusing on weekly averages over daily fluctuations.
+- **WeightFlow App:** weightflowapp.com — modern weight tracking app with multiple goals, advanced analytics, trend predictions.
+- **Recharts Official Docs:** recharts.org (v3.8.1, 2026). LineChart with ReferenceLine, ResponsiveContainer patterns.
+- **shadcn/ui Chart Examples:** shadcn.io — 70+ Recharts chart patterns, theme-aware styling via CSS variables.
+- **NIX United Fitness App Development Roadmap (2026):** Industry analysis confirming progress tracking and analytics as core features.
+
+---
+*Feature research for: Fitness_App v1.9 Progress Tracking*
+*Researched: 2026-06-01*

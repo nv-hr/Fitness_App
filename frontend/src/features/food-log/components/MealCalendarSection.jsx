@@ -283,7 +283,7 @@ export default function MealCalendarSection({
             return (
               <div key={meal.meal_type} style={{
                 border: '1px solid #e5e7eb', borderRadius: '4px', padding: '0.5rem',
-                opacity: isPast ? 0.6 : 1,
+                opacity: isPast ? 0.6 : allLogged ? 0.65 : 1,
               }}>
                 <div style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -297,7 +297,7 @@ export default function MealCalendarSection({
                       </span>
                     )}
                     {allLogged ? (
-                      <span style={{ color: '#16a34a', fontSize: '0.8rem' }}>Logged ✓</span>
+                      <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Logged ✓</span>
                     ) : isPast ? (
                       <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Not logged</span>
                     ) : (
@@ -337,7 +337,7 @@ export default function MealCalendarSection({
                               <span style={{
                                 width: '36px', height: '36px', minWidth: '36px',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                color: '#16a34a', fontSize: '14px', fontWeight: 'bold',
+                                color: '#9ca3af', fontSize: '14px', fontWeight: 'bold',
                               }} title="Logged">
                                 ✓
                               </span>

@@ -188,6 +188,24 @@ export async function getActivityLogsInRange(userId, startDate, endDate) {
 }
 
 /**
+ * Get an activity log entry by ID scoped by user.
+ * @param {number} logId
+ * @param {number} userId
+ * @returns {Promise<Object|null>}
+ */
+export async function getActivityLogById(logId, userId) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM activity_logs WHERE id = $1 AND user_id = $2 LIMIT 1`,
+      [logId, userId]
+    );
+    return rows[0] || null;
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to get activity log: ${err.message}`, 500);
+  }
+}
+
+/**
  * Delete an activity log entry scoped by user.
  * @param {number} logId
  * @param {number} userId
@@ -202,6 +220,62 @@ export async function deleteActivityLog(logId, userId) {
     return rows[0] ? rows[0].id : null;
   } catch (err) {
     throw new AppError('DatabaseError', `Failed to delete activity log: ${err.message}`, 500);
+  }
+}
+
+/**
+ * Upsert an activity log entry from a weekly plan toggle.
+ * Finds existing entry by (user_id, activity_id, logged_date), or inserts a new one.
+ * @param {number} userId
+ * @param {Object} data
+ * @param {number} data.activityId
+ * @param {number} data.durationMin
+ * @param {string} data.intensity
+ * @param {number} data.caloriesBurned
+ * @param {string} data.loggedDate
+ * @returns {Promise<Object>}
+ */
+export async function upsertActivityLogFromPlan(userId, { activityId, durationMin, intensity, caloriesBurned, loggedDate }) {
+  try {
+    const existing = await pool.query(
+      `SELECT id FROM activity_logs WHERE user_id = $1 AND activity_id = $2 AND logged_date = $3 LIMIT 1`,
+      [userId, activityId, loggedDate]
+    );
+    if (existing.rows.length > 0) {
+      const { rows } = await pool.query(
+        `UPDATE activity_logs SET duration_min = $1, intensity = $2, calories_burned = $3, created_at = NOW()
+         WHERE id = $4 RETURNING *`,
+        [durationMin, intensity, caloriesBurned, existing.rows[0].id]
+      );
+      return rows[0];
+    }
+    const { rows } = await pool.query(
+      `INSERT INTO activity_logs (user_id, activity_id, duration_min, intensity, calories_burned, logged_date)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [userId, activityId, durationMin, intensity, caloriesBurned, loggedDate]
+    );
+    return rows[0];
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to upsert activity log from plan: ${err.message}`, 500);
+  }
+}
+
+/**
+ * Delete an activity log entry by (user_id, activity_id, logged_date).
+ * @param {number} userId
+ * @param {number} activityId
+ * @param {string} loggedDate
+ * @returns {Promise<boolean>} Whether a row was deleted
+ */
+export async function deleteActivityLogByPlan(userId, activityId, loggedDate) {
+  try {
+    const { rowCount } = await pool.query(
+      `DELETE FROM activity_logs WHERE user_id = $1 AND activity_id = $2 AND logged_date = $3`,
+      [userId, activityId, loggedDate]
+    );
+    return (rowCount || 0) > 0;
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to delete activity log from plan: ${err.message}`, 500);
   }
 }
 

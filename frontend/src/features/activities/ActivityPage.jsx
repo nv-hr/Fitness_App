@@ -1,19 +1,24 @@
 import { useState, useEffect, useCallback } from 'react';
 import { startOfMonth } from 'date-fns';
-import { getDailySummary } from '../api/foodLogApi.js';
-import { useMonthMealData } from '../hooks/useMonthMealData.js';
-import CalorieSummary from './CalorieSummary.jsx';
-import FoodLogForm from './FoodLogForm.jsx';
-import MealCalendarSection from './MealCalendarSection.jsx';
+import { useMonthData } from '../../shared/calendar/index.js';
+import { getWeeklyPlan } from './api/activityCalendarApi.js';
+import { getActivitySummary } from './api/activityApi.js';
+import ActivityCalendarSection from './components/ActivityCalendarSection.jsx';
+import ActivitySummary from './components/ActivitySummary.jsx';
+import ActivityLogSection from './components/ActivityLogSection.jsx';
 
-export default function FoodLogPage() {
+export default function ActivityPage() {
   const [activeTab, setActiveTab] = useState('plan');
-  const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
 
-  const { dayStatusMap, loading, error } = useMonthMealData(currentMonth);
+  const fetchWeekFn = useCallback(async (weekStart) => {
+    const res = await getWeeklyPlan(weekStart);
+    return res.data;
+  }, []);
+
+  const { dayStatusMap, loading, error } = useMonthData(currentMonth, fetchWeekFn);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -21,7 +26,7 @@ export default function FoodLogPage() {
     async function loadSummary() {
       try {
         setSummaryLoading(true);
-        const res = await getDailySummary(today);
+        const res = await getActivitySummary(today);
         setSummary(res.data);
       } catch {
         // Silently fail
@@ -32,25 +37,16 @@ export default function FoodLogPage() {
     loadSummary();
   }, [today]);
 
-  const handleDaySelect = useCallback((day) => {
-    setSelectedDate(day);
-  }, []);
-
   const handleMonthChange = useCallback((month) => {
     setCurrentMonth(month);
   }, []);
 
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1rem' }}>
-      <h2>{'Log Food'}</h2>
+      <h2>{'Activity'}</h2>
 
       {!summaryLoading && summary && (
-        <CalorieSummary
-          totalConsumed={summary.totalConsumed}
-          calorieTarget={summary.calorieTarget}
-          remaining={summary.remaining}
-          isExtremeDeficit={summary.isExtremeDeficit}
-        />
+        <ActivitySummary summary={summary} />
       )}
 
       <div style={{ display: 'flex', gap: '0', marginBottom: '1rem', borderBottom: '2px solid #e5e7eb' }}>
@@ -85,17 +81,16 @@ export default function FoodLogPage() {
       </div>
 
       {activeTab === 'plan' && (
-        <MealCalendarSection
+        <ActivityCalendarSection
           dayStatusMap={dayStatusMap}
           loading={loading}
           error={error}
-          onDaySelect={handleDaySelect}
           onMonthChange={handleMonthChange}
         />
       )}
 
       {activeTab === 'log' && (
-        <FoodLogForm />
+        <ActivityLogSection />
       )}
     </div>
   );

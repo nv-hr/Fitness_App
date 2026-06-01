@@ -1,7 +1,7 @@
 import { buildPrompt, callLlmApi, getCachedPlan, setCachedPlan } from './llm.service.js';
 import { findByUserAndDate, upsertPlan } from '../repositories/dailyMealPlan.repository.js';
-import { fuzzyMatchFoodName, recalculateDayCalories } from './mealPlan.service.js';
 import { AppError } from '../utils/errors.js';
+import { fuzzyMatchFoodName, recalculateDayCalories } from './mealPlan.service.js';
 
 const VALID_MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 
@@ -185,6 +185,71 @@ function generateFallbackDailyMealPlan(calorieTarget, dbFoods) {
     generated_at: new Date().toISOString(),
     llm_model: 'template-fallback',
   };
+}
+
+/**
+ * Swap a single food item with a random different food from the same category.
+ */
+export async function swapMealItem(deps) {
+  const { userId, planDate, mealType, foodId, getFoodById, getFoodsByCategory } = deps;
+
+  // Look up current food
+  const currentFood = await getFoodById(foodId);
+  if (!currentFood) {
+    throw new AppError('NotFoundError', 'Food item not found', 404);
+  }
+
+  // Get other foods from the same category
+  const categoryFoods = await getFoodsByCategory(userId, currentFood.category);
+  const candidates = categoryFoods.filter(f => f.id !== foodId);
+  if (candidates.length === 0) {
+    throw new AppError('SwapError', 'No alternative foods available in this category', 400);
+  }
+
+  // Pick a random replacement
+  const replacement = candidates[Math.floor(Math.random() * candidates.length)];
+
+  // Get the current plan
+  const plan = await findByUserAndDate(userId, planDate);
+  if (!plan) {
+    throw new AppError('NotFoundError', 'No daily meal plan found', 404);
+  }
+
+  const data = JSON.parse(JSON.stringify(plan.plan_data));
+  let found = false;
+
+  for (const meal of data.meals) {
+    if (meal.meal_type !== mealType) continue;
+    if (!Array.isArray(meal.items)) continue;
+    for (const item of meal.items) {
+      if (item.food_id === foodId) {
+        // Replace with new food, keep same portion, recalculate calories
+        item.food_id = replacement.id;
+        item.food_name = replacement.name;
+        const newCalories = Math.round((replacement.calories_per_100g * item.portion_grams) / 100);
+        item.calories = newCalories;
+        item.logged = false;
+        found = true;
+        break;
+      }
+    }
+    if (found) {
+      // Recalculate meal total
+      meal.total_calories = meal.items.reduce((s, i) => s + (i.calories || 0), 0);
+      break;
+    }
+  }
+
+  if (!found) {
+    throw new AppError('NotFoundError', 'Food item not found in plan', 404);
+  }
+
+  // Recalculate day total
+  data.total_calories = data.meals.reduce((s, m) => s + (m.total_calories || m.items?.reduce((sum, i) => sum + (i.calories || 0), 0) || 0), 0);
+
+  // Persist
+  await upsertPlan(userId, planDate, data, plan.status);
+  return { plan: data };
 }
 
 export async function generateDailyMealPlan(deps) {

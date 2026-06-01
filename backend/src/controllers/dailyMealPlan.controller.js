@@ -1,10 +1,10 @@
 import { pool } from '../config/database.js';
 import { successResponse, errorResponse } from '../utils/response.js';
-import { getCachedPlan } from '../services/llm.service.js';
-import { generateDailyMealPlan } from '../services/dailyMealPlan.service.js';
+import { getCachedPlan, clearCachedPlan } from '../services/llm.service.js';
+import { generateDailyMealPlan, swapMealItem } from '../services/dailyMealPlan.service.js';
 import { getProfile } from '../services/profile.service.js';
-import { searchFoods, getLogHistory, batchLogItems } from '../repositories/food.repository.js';
-import { findByUserAndDate, markMealsLogged } from '../repositories/dailyMealPlan.repository.js';
+import { searchFoods, getLogHistory, batchLogItems, getFoodById, getFoodsByCategory, createFoodLog, deleteFoodLogByPlan } from '../repositories/food.repository.js';
+import { findByUserAndDate, markMealsLogged, markItemLogged } from '../repositories/dailyMealPlan.repository.js';
 
 function isValidDateString(str) {
   if (typeof str !== 'string') return false;
@@ -120,8 +120,109 @@ async function logMeals(req, res, next) {
   }
 }
 
+async function toggleItemLogged(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const { date, mealType, foodId, logged } = req.body;
+
+    if (date && !isValidDateString(date)) {
+      return errorResponse(res, 'Invalid date format (use YYYY-MM-DD)', 400, 'VALIDATION_ERROR');
+    }
+    const planDate = date || getTodayString();
+    const validMealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
+    if (!validMealTypes.includes(mealType)) {
+      return errorResponse(res, `Invalid mealType "${mealType}"`, 400, 'VALIDATION_ERROR');
+    }
+    if (typeof foodId !== 'number' || foodId < 1) {
+      return errorResponse(res, 'Invalid foodId', 400, 'VALIDATION_ERROR');
+    }
+    if (typeof logged !== 'boolean') {
+      return errorResponse(res, 'logged must be a boolean', 400, 'VALIDATION_ERROR');
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const updated = await markItemLogged(userId, planDate, mealType, foodId, logged, client);
+      if (!updated) {
+        await client.query('ROLLBACK');
+        return errorResponse(res, 'No daily meal plan found for the given date', 404, 'NOT_FOUND');
+      }
+
+      // Sync food_logs table
+      if (logged) {
+        const plan = await findByUserAndDate(userId, planDate, client);
+        if (plan) {
+          const data = plan.plan_data;
+          for (const meal of data.meals) {
+            if (meal.meal_type !== mealType) continue;
+            for (const item of meal.items) {
+              if (item.food_id === foodId) {
+                await createFoodLog(userId, {
+                  foodId: item.food_id,
+                  calories: item.calories,
+                  portionGrams: item.portion_grams,
+                  logDate: planDate,
+                  mealType: meal.meal_type,
+                }, client);
+              }
+            }
+          }
+        }
+      } else {
+        await deleteFoodLogByPlan(userId, foodId, planDate, mealType, client);
+      }
+
+      await client.query('COMMIT');
+      clearCachedPlan(userId, planDate, 'meal');
+      return successResponse(res, { plan: updated.plan_data });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function swapItemHandler(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const { date, mealType, foodId } = req.body;
+
+    if (date && !isValidDateString(date)) {
+      return errorResponse(res, 'Invalid date format (use YYYY-MM-DD)', 400, 'VALIDATION_ERROR');
+    }
+    const planDate = date || getTodayString();
+    const validMealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
+    if (!validMealTypes.includes(mealType)) {
+      return errorResponse(res, `Invalid mealType "${mealType}"`, 400, 'VALIDATION_ERROR');
+    }
+    if (typeof foodId !== 'number' || foodId < 1) {
+      return errorResponse(res, 'Invalid foodId', 400, 'VALIDATION_ERROR');
+    }
+
+    const result = await swapMealItem({
+      userId,
+      planDate,
+      mealType,
+      foodId,
+      getFoodById: (id) => getFoodById(id),
+      getFoodsByCategory: (userId, category) => getFoodsByCategory(userId, category),
+    });
+
+    return successResponse(res, result);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export default {
   get,
   generate,
   logMeals,
+  toggleItemLogged,
+  swapItem: swapItemHandler,
 };

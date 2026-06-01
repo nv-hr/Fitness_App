@@ -61,9 +61,10 @@ export async function createCustomFood(userId, { name, calories_per_100g, catego
  * @param {string} logData.mealType
  * @returns {Promise<Object>}
  */
-export async function createFoodLog(userId, { foodId, customFoodName, calories, portionGrams, logDate, mealType }) {
+export async function createFoodLog(userId, { foodId, customFoodName, calories, portionGrams, logDate, mealType }, clientOverride) {
+  const db = clientOverride || pool;
   try {
-    const { rows } = await pool.query(
+    const { rows } = await db.query(
       `INSERT INTO food_logs (user_id, food_id, custom_food_name, calories, portion_grams, log_date, meal_type)
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       [userId, foodId || null, customFoodName || null, calories, portionGrams, logDate, mealType]
@@ -247,6 +248,53 @@ export async function findByCategory(category, { is_custom } = {}) {
  * @param {number} foodId
  * @returns {Promise<Object|null>}
  */
+/**
+ * Get foods by category for a user.
+ * @param {number} userId
+ * @param {string} category
+ * @param {number} limit
+ * @returns {Promise<Array>}
+ */
+export async function getFoodsByCategory(userId, category, limit = 50) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, name, calories_per_100g, category
+       FROM foods
+       WHERE (is_custom = FALSE OR user_id = $1)
+         AND category ILIKE $2
+       ORDER BY name
+       LIMIT $3`,
+      [userId, category, limit]
+    );
+    return rows;
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to get foods by category: ${err.message}`, 500);
+  }
+}
+
+/**
+ * Delete a food log entry by food_id, log_date, and meal_type.
+ * @param {number} userId
+ * @param {number} foodId
+ * @param {string} logDate
+ * @param {string} mealType
+ * @returns {Promise<Object|null>}
+ */
+export async function deleteFoodLogByPlan(userId, foodId, logDate, mealType, clientOverride) {
+  const db = clientOverride || pool;
+  try {
+    const { rows } = await db.query(
+      `DELETE FROM food_logs
+       WHERE user_id = $1 AND food_id = $2 AND log_date = $3::date AND meal_type = $4
+       RETURNING *`,
+      [userId, foodId, logDate, mealType]
+    );
+    return rows[0] || null;
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to delete food log: ${err.message}`, 500);
+  }
+}
+
 export async function getFoodById(foodId) {
   try {
     const { rows } = await pool.query(
