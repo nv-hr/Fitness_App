@@ -1,50 +1,53 @@
 # Project State: KalaFit
 
 **Initialized:** 2026-06-02
-**Current Phase:** None (not started)
-**Last Activity:** 2026-06-02 - Project initialized with roadmap
+**Current State:** v1.0 Archived
+**Last Activity:** 2026-06-02 - v1.0 milestone archived
 
-## Project Reference
+## Milestone Summary
 
-See: .planning/PROJECT.md (updated 2026-06-02)
-
-**Core value:** Users can track their fitness metrics and get personalized AI-generated workout and meal plans tailored to their goals.
-**Current focus:** Phase 1 - Install Dependencies
-
-## Active Phase
-
-<!-- Populated when a phase is in progress -->
-
-No phase currently active.
+| Milestone | Status | Phases | Completed |
+|-----------|--------|--------|-----------|
+| v1.0 | ✅ Archived | 2/2 | 2026-06-02 |
+| v1.1 | ○ Not started | — | — |
 
 ## Phase Summary
 
 | Phase | Status | Plans | Progress |
 |-------|--------|-------|----------|
-| 1. Install Dependencies | ○ Not started | 0/TBD | 0% |
-| 2. Run & Verify | ○ Not started | 0/TBD | 0% |
+| 1. Install Dependencies | ✓ Complete | 5/5 | 100% |
+| 2. Run & Verify | ✓ Complete | 5/5 | 100% |
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Express.js + React SPA | Simple, well-understood stack | — Existing |
-| PostgreSQL via Supabase | Managed Postgres with good free tier | — Existing |
-| OpenRouter for LLM | Multiple models via single API | — Existing |
-| JWT cookies for auth | HttpOnly cookies for security | — Existing |
-| npm workspaces monorepo | Shared tooling | — Existing |
+| Express.js + React SPA | Simple, well-understood stack | ✓ Shipped |
+| PostgreSQL via Supabase | Managed Postgres with good free tier | ✓ Shipped |
+| OpenRouter for LLM | Multiple models via single API | ✓ Shipped |
+| JWT cookies for auth | HttpOnly cookies for security | ✓ Shipped |
+| npm workspaces monorepo | Shared tooling | ✓ Shipped |
 
-## Blockers/Concerns
+## Fixes Applied During v1.0
 
-- 279 source files deleted from working tree (must be restored in Phase 1)
-- Requires Supabase PostgreSQL instance with DATABASE_URL
-- Requires OpenRouter API key for AI features
+| Issue | Fix |
+|-------|-----|
+| Cross-platform env vars | Added cross-env for PORT=3001 on Windows |
+| Missed backend files | Restored 31 backend source files from git history |
+| dotenv path resolution (server.js) | Fixed dotenv.config() path to '../.env' |
+| dotenv path resolution (passport.js) | Fixed path, guarded GoogleStrategy init |
+| dotenv path resolution (database.js) | Fixed path from '../../.env' to '../../../.env' |
+| Google OAuth startup crash | Wrapped GoogleStrategy in GOOGLE_CLIENT_ID guard |
+| SSL connection to Supabase | Disabled SSL for pooler compatibility |
+| Vite v8 CLI syntax | Changed --host arg to --host=value format |
+| Missing test helpers | Restored helpers.js from git history |
 
-## Quick Tasks Completed
+## Blockers/Concerns (Resolved)
 
-| # | Description | Date | Directory |
-|---|-------------|------|-----------|
+- ~~279 source files deleted from working tree~~ → Restored from git
+- ~~Requires Supabase PostgreSQL instance~~ → Connected
+- ~~Requires OpenRouter API key~~ → Configured
 
 ---
 
-*State last updated: 2026-06-02 after project initialization*
+*State last updated: 2026-06-02 after v1.0 archival*
