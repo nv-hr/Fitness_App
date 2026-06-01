@@ -70,7 +70,7 @@ Last activity: 2026-06-01 — v1.9 Progress Tracking shipped
 | 260601-237 | Disable logged meal items in plan | 2026-06-01 | `ce20c72` | [260601-237-disable-logged-meals](./quick/260601-237-disable-logged-meals/) |
 | 260601-gry | Grey-out logged meal items persistently | 2026-06-01 | `eebbdad` | [260601-gry-grey-logged-meals](./quick/260601-gry-grey-logged-meals/) |
 | 260601-m13 | Fix activity calendar persistence | 2026-06-01 | `a7c148e` | [260601-m13-fix-the-activity-callender-after-check-c](./quick/260601-m13-fix-the-activity-callender-after-check-c/) |
-| 260601-dr1 | Restrict all logging/toggling to today only | 2026-06-01 | `b794bcd` | [260601-dr1-date-restrict-logging](./quick/260601-dr1-date-restrict-logging/) |
+| 260601-dr1 | Restrict all logging/toggling to today only | 2026-06-01 | `6b56b31` | [260601-dr1-date-restrict-logging](./quick/260601-dr1-date-restrict-logging/) |
 
 ## Session Continuity
 
