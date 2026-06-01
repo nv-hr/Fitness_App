@@ -341,8 +341,11 @@ Plans:
   3. Dashed horizontal goal reference line (ReferenceLine) rendered at target_weight_kg when goal is set
   4. Chart handles all states: empty (0 entries → prompt to log first weight), insufficient (1 entry → message to log more), normal (2+ entries → chart renders)
   5. Date range filter (30/60/90 days) controls the chart's time window with selected range highlighted
-**Plans**: TBD
+**Plans**: 1 plan
 **UI hint**: yes
+
+Plans:
+- [ ] 44-01-PLAN.md — Recharts weight trend chart with goal line, date range filter, and state handling — Wave 1
 
 ### Phase 45: Progress Dashboard
 **Goal**: Complete /progress dashboard page integrating chart, weight history, goal display, and summary stats
