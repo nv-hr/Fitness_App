@@ -81,6 +81,27 @@ async function logActivity(req, res, next) {
       loggedDate: logDate,
     });
 
+    try {
+      const weekStart = getMonday(new Date(logDate));
+      const plan = await findByUserAndWeek(req.user.userId, weekStart);
+      if (plan?.plan_data?.days) {
+        const day = plan.plan_data.days.find(d => d.date === logDate);
+        if (day?.activities) {
+          const actIdx = day.activities.findIndex(a => a.activity_id === activityId);
+          if (actIdx !== -1) {
+            day.activities[actIdx].completed = true;
+            const allCompleted = day.activities.length > 0 && day.activities.every(a => a.completed === true);
+            if (allCompleted) day.completed = true;
+            else delete day.completed;
+            await upsertPlan(req.user.userId, weekStart, plan.plan_data, plan.status);
+            setCachedPlan(req.user.userId, weekStart, plan.plan_data);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to sync activity log to weekly plan:', err.message);
+    }
+
     return successResponse(res, {
       ...log,
       logged_date: log.logged_date instanceof Date ? log.logged_date.toLocaleDateString('en-CA') : log.logged_date,

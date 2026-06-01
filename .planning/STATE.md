@@ -4,8 +4,8 @@ milestone: v1.9
 milestone_name: Progress Tracking
 status: shipped
 stopped_at: All v1.9 phases (42-46) complete
-last_updated: "2026-06-01T14:00:00.000Z"
-last_activity: 2026-06-01 — Grey-out logged meal items persistently (quick task 260601-gry)
+last_updated: "2026-06-01T14:51:00.000Z"
+last_activity: 2026-06-01 — Fix activity calendar persistence (quick task 260601-m13)
 progress:
   total_phases: 46
   completed_phases: 46
@@ -68,11 +68,12 @@ Last activity: 2026-06-01 — v1.9 Progress Tracking shipped
 | 260601-fhd | Update Documentation | 2026-06-01 | `8d494e6` | [260601-fhd-update-documentation](./quick/260601-fhd-update-documentation/) |
 | 260601-601 | Sync weight logs to profile weight | 2026-06-01 | `e63efc8` | [260601-601-sync-weight-to-profile](./quick/260601-601-sync-weight-to-profile/) |
 | 260601-237 | Disable logged meal items in plan | 2026-06-01 | `ce20c72` | [260601-237-disable-logged-meals](./quick/260601-237-disable-logged-meals/) |
-| 260601-gry | Grey-out logged meal items persistently | 2026-06-01 | (pending) | [260601-gry-grey-logged-meals](./quick/260601-gry-grey-logged-meals/) |
+| 260601-gry | Grey-out logged meal items persistently | 2026-06-01 | `eebbdad` | [260601-gry-grey-logged-meals](./quick/260601-gry-grey-logged-meals/) |
+| 260601-m13 | Fix activity calendar persistence | 2026-06-01 | `f31cd99` | [260601-m13-fix-the-activity-callender-after-check-c](./quick/260601-m13-fix-the-activity-callender-after-check-c/) |
 
 ## Session Continuity
 
-Last session: 2026-06-01T14:00:00.000Z
+Last session: 2026-06-01T14:51:00.000Z
 Stopped at: v1.9 shipped — all milestones complete
-Last activity: 2026-06-01 — Grey-out logged meal items persistently (quick task 260601-gry)
+Last activity: 2026-06-01 — Fix activity calendar persistence (quick task 260601-m13)
 Resume file: (none — all milestones complete)
