@@ -1,40 +1,41 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.7
-milestone_name: Calendar-Based Plan UI
-status: completed
-last_updated: "2026-06-01T22:05:00.000Z"
+milestone: v1.8
+milestone_name: UI Consolidation
+status: planning
+last_updated: "2026-06-01T23:00:00.000Z"
 last_activity: 2026-06-01
 progress:
   total_phases: 4
-  completed_phases: 4
-  total_plans: 4
-  completed_plans: 4
-  percent: 100
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-31)
+See: .planning/PROJECT.md (updated 2026-06-01)
 
 **Core value:** Users can accurately calculate their BMI and TDEE, log daily food intake by selecting ingredients and entering weight in grams, log physical activities with intensity-based calorie tracking, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
 
-**Current focus:** Building v1.7 Calendar-Based Plan UI — Replace existing section-based plan displays with calendar-driven UIs for activity and meal plans.
+**Current focus:** v1.8 UI Consolidation — Merge standalone Activity Calendar and Meal Calendar pages into their respective manual-log pages using tabs.
 
 ## Current Position
 
-Phase: Phase 37 — Cleanup
-Plan: complete
-Status: All 4 v1.7 phases executed — 141 tests passing
-Last activity: 2026-06-01 — v1.7 shipped: Calendar shared components, activity calendar page, meal calendar page, old component cleanup
+Phase: 38 of 41 (Route Cleanup & Calendar Infrastructure)
+Plan: —
+Status: Ready to plan
+Last activity: 2026-06-01 — Roadmap created for v1.8
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
-
-- Total plans completed: 68 (v1.0–v1.6)
+- Total plans completed: 68 (v1.0–v1.7)
 - Average duration: N/A
 - Total execution time: N/A
 
@@ -42,27 +43,13 @@ Last activity: 2026-06-01 — v1.7 shipped: Calendar shared components, activity
 
 ### Decisions
 
-- D-01: Weekly plans always 7 days with rest_day boolean flag on each day (true for rest, false for activity)
-- D-02: Validation counts rest_day=false entries and verifies against availableDays (4-6 range)
-- D-03: Prompt includes goal-specific activity selection instructions (lose weight/maintain/build muscle)
-- D-04: Activity level guidance included in prompt for duration/intensity scaling
-- D-05: format_version: 1 at plan root level for future migration detection (Phase 33)
-- D-06: buildSystemPrompt() loads weekly-plan-prompt.md for weekly plans; system-prompt.md retained for daily plans
-- D-07: Swap prompt is self-contained (no weekly-plan-prompt dependency) — single-activity replacement with own role, context, and constraints
-- D-08: swapActivity() uses callLlmApi() for consistent model fallback chain rather than manual model iteration
-- D-09: validateActivities + fuzzyMatchActivityName used to validate LLM replacement before cache merge
-- D-10: format_version: 1 added to old-format plans during swap merge (lazy migration)
-- D-11: Toast accepts `type` prop (success/error/info) for flexible reuse beyond swap errors
-- D-12: Swap countdown managed at WeeklyPlanPage level via swapRetryAfter state + useEffect interval pattern
-- D-13: Toast state uses single {message} object that replaces on new error; rendered in all 5 return branches
-- [Phase ?]: availableDays default for migrated plans = 5 (CONTEXT.md discretion)
-- D-14 (v1.7): Calendar uses custom CSS Grid + date-fns — no full calendar library (wrong paradigm for day-status model)
-- D-15 (v1.7): CalendarGrid receives precomputed status enums — stays pure and reusable across activity/meal pages
-- D-16 (v1.7): Month data fetched via 5-6 parallel weekly plan calls (not 28-31 daily) using getWeekStartsForMonth()
-- D-17 (v1.7): DayActivityRow extended with onToggleLog prop for completion toggle in activity calendar detail panel
-- D-18 (v1.7): Past days read-only enforced in detail panel — no swap, no toggle, no log interactions for past dates
-- D-19 (v1.7): Auto-generate gated with ref guard — fires only when viewing today with no plan, not on month navigation
-- D-20 (v1.7): Cleanup Phase 37 must wait until both calendar pages deployed — verifies zero imports before deletion
+Key layout/architectural decisions for v1.8 (new):
+
+- D-21 (v1.8): Both merged pages use **Tabs** layout ("Plan" / "Log") — resolves research divergence on layout strategy
+- D-22 (v1.8): Daily summary bar displayed on **both** Plan and Log tabs (not just Log)
+- D-23 (v1.8): Auto-generation gated by tab visibility — only fires on Plan tab; uses `display:none` (not conditional rendering) to preserve CalendarPageLayout internal state across tab switches
+- D-24 (v1.8): CalendarPageLayout gets optional `defaultDay` prop for initializing selected day on page load (backward-compatible, defaults to `null`)
+- D-25 (v1.8): Food Log merge done first (higher architectural risk — date-awareness, CalendarPageLayout embedding); Activity merge second (additive, lower risk)
 
 ### Pending Todos
 
@@ -70,25 +57,18 @@ Last activity: 2026-06-01 — v1.7 shipped: Calendar shared components, activity
 
 ### Blockers/Concerns
 
-- LLM reliability with variable-length output (4-6 days) — existing correction loop mitigates but untested at boundary conditions
-
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260531-sgr | test all endpoint | 2026-05-31 | 85bdcc7 | [260531-sgr-test-all-endpoint](./quick/260531-sgr-test-all-endpoint/) |
+- Food Log Page Merge (Phase 39) is highest risk — date-awareness generalization and CalendarPageLayout embedding in a non-calendar page may surface structural issues
+- 14 existing tests will break and need replacement (7 MealCalendarPage + 7 ActivityCalendarPage)
+- Dual auto-generation must be resolved: Calendar page auto-gen + PlanSection auto-gen must not conflict
 
 ## Deferred Items
-
-Items acknowledged and carried forward from v1.5 milestone close:
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
 | *(none)* | | | |
-| Phase 33-plan-migration-edge-cases P01 | 3min | - tasks | - files |
 
 ## Session Continuity
 
-Last session: 2026-06-01T22:05:00.000Z
-Stopped at: v1.7 shipped — all 4 phases complete, 141 tests passing, old components deleted
+Last session: 2026-06-01T23:00:00.000Z
+Stopped at: Roadmap created for v1.8 UI Consolidation — 4 phases defined (38-41), ready for Phase 38 planning
 Resume file: None
