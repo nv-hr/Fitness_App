@@ -301,12 +301,15 @@ Plans:
 **Depends on**: Nothing (first phase of v1.9)
 **Requirements**: DB-01, DB-02, DB-03, DB-04
 **Success Criteria** (what must be TRUE):
-  1. weight_logs table exists with columns (id, user_id, weight_kg, logged_date, source, notes, created_at) and UNIQUE(user_id, logged_date) constraint
-  2. target_weight_kg and target_date columns added to profiles table with correct data types
-  3. Existing user weights backfilled from profiles.weight_kg → weight_logs on migration — verified by row count match
-  4. B-tree index on weight_logs(user_id, logged_date DESC) exists for efficient range queries
-  5. All migrations are re-runnable (idempotent) — no errors on second apply
-**Plans**: TBD
+   1. weight_logs table exists with columns (id, user_id, weight_kg, logged_date, source, notes, created_at) and UNIQUE(user_id, logged_date) constraint
+   2. target_weight_kg and target_date columns added to profiles table with correct data types
+   3. Existing user weights backfilled from profiles.weight_kg → weight_logs on migration — verified by row count match
+   4. B-tree index on weight_logs(user_id, logged_date DESC) exists for efficient range queries
+   5. All migrations are re-runnable (idempotent) — no errors on second apply
+**Plans**: 1 plan
+
+Plans:
+- [ ] 42-01-PLAN.md — Create weight_logs table, profiles ALTER, backfill, and index — Wave 1
 
 ### Phase 43: Weight Logging & Goal Setting
 **Goal**: Users can log weight entries and set weight goals with target date; weight auto-logs on profile updates
@@ -406,7 +409,7 @@ Plans:
 | 39. Food Log Page Merge | v1.8 | 0/0 | Complete | 2026-06-01 |
 | 40. Activity Page Merge | v1.8 | 0/0 | Complete | 2026-06-01 |
 | 41. Test Restructuring | v1.8 | 0/0 | Complete | 2026-06-01 |
-| 42. Database Schema & Migration | v1.9 | 0/0 | Not started | - |
+| 42. Database Schema & Migration | v1.9 | 0/1 | Planned | - |
 | 43. Weight Logging & Goal Setting | v1.9 | 0/0 | Not started | - |
 | 44. Weight Trend Chart | v1.9 | 0/0 | Not started | - |
 | 45. Progress Dashboard | v1.9 | 0/0 | Not started | - |
