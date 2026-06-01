@@ -44,6 +44,48 @@
 - Sessions: ~12 sessions across 5 phases + quick tasks
 - Notable: Most efficient execution was Phase 14 (Activity Logger) — single plan, 13 files, no rework
 
+## Milestone: v1.7 — Calendar-Based Plan UI
+
+**Shipped:** 2026-06-01
+**Phases:** 4 | **Plans:** 4 | **Commits:** ~164
+
+### What Was Built
+- Shared calendar components: CalendarGrid (react-day-picker v9), MonthNav, DayDetailPanel, CalendarPageLayout, useMonthData, calendarUtils — 896 LOC, 33 tests
+- Activity Calendar page: month grid view, Generate Week, per-activity swap, completion toggle (○/✓), auto-gen with ref guard, past-day read-only
+- Meal Calendar page: month grid view, Generate Day, per-meal-type Log buttons (breakfast/lunch/dinner/snack), auto-gen with ref guard, past-day read-only
+- Backend toggle-complete endpoint: POST /api/weekly-plans/toggle-complete with validation
+- Cleanup: old WeeklyPlanPage, MealPlanPage, DayCard, DayMealCard, ActivitiesPage components + 32 tests removed
+- 141 tests passing across 15 test files (0 failures)
+
+### What Worked
+- **Shared calendar component abstraction**: CalendarPageLayout + useMonthData generic hook made both calendar pages easy to build — each just provides its own fetch function
+- **Clear state management pattern**: useState for selectedDay/currentMonth, useRef for auto-gen guard, useEffect for side effects — consistent between both pages
+- **Parallel milestone phases ordered correctly**: Shared components (34) → activity page (35) → meal page (36) → cleanup (37) with zero rework
+- **Code review at phase boundaries**: Phase 34 generated 6 findings that were all fixed before Phase 35 started
+- **Per-meal-type log buttons**: Cleaner UX than a monolithic "Log All" button — user chooses which meal to log independently
+
+### What Was Inefficient
+- **Autonomous execution without plan files**: Phases 35-37 had PLANNING.md but no formal SUMMARY.md or VERIFICATION.md — made audit harder (had to grep source code for evidence)
+- **REQUIREMENTS.md traceability stale (again)**: Same issue as v1.3 — traceability table not updated during execution; 19/27 showed "Pending" despite being done
+- **Zero-plan phases**: Phases 36 and 37 technically had "0 plans" which meant no formal plan tracking — better to define at least 1 plan per phase for auditability
+- **No commit range extraction**: v1.7 commits interleaved with other work (same day as v1.6 tag), making git range stats less clean
+
+### Patterns Established
+- **Calendar day-status model**: Custom CSS Grid + date-fns modifierStyles — color-coded day cells without a full calendar library
+- **Per-feature API module pattern**: activityCalendarApi.js wraps weeklyPlanApi.js, exposes only what the calendar page needs (+ new endpoints)
+- **Slot-based detail panel**: DayDetailPanel renders children passed from parent — same component, different content per feature page
+
+### Key Lessons
+1. Even "0 plan" phases should have at least 1 plan entry for audit traceability
+2. REQUIREMENTS.md must be updated per-phase to avoid end-of-milestone gaps — automate if possible
+3. Shared component extraction pays off immediately when consumed by multiple feature pages in same milestone
+4. Auto-gen with useRef guard is a clean pattern — test that monthNavRef behavior is covered
+
+### Cost Observations
+- Model mix: 100% default (opencode/deepseek-v4-flash-free)
+- Sessions: ~5 sessions across 4 phases
+- Notable: Phase 37 cleanup was the most satisfying — deleting 32 old tests and 5+ stale files
+
 ---
 
 ## Cross-Milestone Trends
@@ -56,6 +98,7 @@
 | v1.1 | 3 | 9 | International + English migration |
 | v1.2 | 4 | 13 | Supabase PostgreSQL migration |
 | v1.3 | 5 | 9 | Activity tracking + LLM integration |
+| v1.7 | 4 | 4 | Calendar-based plan UI + cleanup |
 
 ### Cumulative Quality
 
@@ -65,9 +108,11 @@
 | v1.1 | — | 18 | +1,228 |
 | v1.2 | 105+ | 62 | +4,419 |
 | v1.3 | 260 | 110 | +13,786 |
+| v1.7 | 141 | 161 | +1,650 |
 
 ### Top Lessons (Verified Across Milestones)
 
 1. **Dependency ordering**: Build foundational layers (DB, auth) before feature layers for clean execution
 2. **Phase granularity matters**: 1-plan phases (DB schema, Activity Logger) execute faster than multi-plan phases due to reduced coordination overhead
 3. **Requirements doc hygiene**: Traceability tables must be updated synchronously with phase completion to avoid false gaps at milestone close
+4. **Autonomous phase auditability**: Even "0 plan" phases need a SUMMARY.md or equivalent for the milestone audit
