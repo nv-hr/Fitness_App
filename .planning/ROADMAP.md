@@ -246,7 +246,11 @@ Plans:
   3. PROJECT.md corrected — references `/activities` not `/activity-calendar`
   4. `<ActivityCalendarSection>` and `<MealCalendarSection>` wrapper components extracted from their pages with self-contained state
   5. CalendarPageLayout accepts optional `defaultDay` prop (backward-compatible, defaults to `null`)
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 38-01-PLAN.md — Route cleanup (redirect /meal-calendar, nav update, CalendarPageLayout defaultDay, PROJECT.md fix) — Wave 1
+- [ ] 38-02-PLAN.md — Component extraction (ActivityCalendarSection, MealCalendarSection) — Wave 1
 
 ### Phase 39: Food Log Page Merge (Higher Risk)
 **Goal**: Meal Calendar merged into Food Log page with tabs, date-awareness, and summary bar on both tabs
@@ -326,7 +330,7 @@ Plans:
 | 35. Activity Calendar Page | v1.7 | 2/2 | Complete | 2026-05-31 |
 | 36. Meal Calendar Page | v1.7 | 0/0 | Complete | 2026-06-01 |
 | 37. Cleanup — Remove Old Components & Update Nav | v1.7 | 0/0 | Complete | 2026-06-01 |
-| 38. Route Cleanup & Calendar Infrastructure | v1.8 | 0/0 | Not started | - |
+| 38. Route Cleanup & Calendar Infrastructure | v1.8 | 0/2 | Not started | - |
 | 39. Food Log Page Merge | v1.8 | 0/0 | Not started | - |
 | 40. Activity Page Merge | v1.8 | 0/0 | Not started | - |
 | 41. Test Restructuring | v1.8 | 0/0 | Not started | - |
