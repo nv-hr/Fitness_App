@@ -8,7 +8,7 @@ import { ValidationError } from '../utils/errors.js';
 export async function createProfile(req, res, next) {
   try {
     const userId = req.user.userId;
-    const { weightKg, heightCm, age, gender, fitnessGoal } = req.body;
+    const { weightKg, heightCm, age, gender, fitnessGoal, targetWeightKg, targetDate } = req.body;
 
     const { profile, bmi, bmiCategory, tdee, tdeeRange, calorieTarget } = await profileService.createProfile(userId, {
       weightKg,
@@ -18,6 +18,8 @@ export async function createProfile(req, res, next) {
       fitnessGoal,
       activityLevel: req.body.activityLevel,
       calorieRate: req.body.calorieRate,
+      targetWeightKg,
+      targetDate,
     });
 
     return successResponse(res, { profile, bmi, bmiCategory, tdee, tdeeRange, calorieTarget }, 201);
@@ -56,7 +58,7 @@ export async function getProfile(req, res, next) {
 export async function updateProfile(req, res, next) {
   try {
     const userId = req.user.userId;
-    const { weightKg, heightCm, age, gender, fitnessGoal } = req.body;
+    const { weightKg, heightCm, age, gender, fitnessGoal, targetWeightKg, targetDate } = req.body;
 
     const { profile, bmi, bmiCategory, tdee, tdeeRange, calorieTarget } = await profileService.updateProfile(userId, {
       weightKg,
@@ -66,6 +68,8 @@ export async function updateProfile(req, res, next) {
       fitnessGoal,
       activityLevel: req.body.activityLevel,
       calorieRate: req.body.calorieRate,
+      targetWeightKg,
+      targetDate,
     });
 
     return successResponse(res, { profile, bmi, bmiCategory, tdee, tdeeRange, calorieTarget });

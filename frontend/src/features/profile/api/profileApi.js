@@ -8,6 +8,8 @@ export async function createProfile(data) {
     gender: data.gender,
     fitnessGoal: data.fitnessGoal,
     activityLevel: data.activityLevel,
+    targetWeightKg: data.targetWeightKg || null,
+    targetDate: data.targetDate || null,
   });
 }
 
@@ -25,6 +27,8 @@ export async function updateProfile(data) {
       gender: data.gender,
       fitnessGoal: data.fitnessGoal,
       activityLevel: data.activityLevel,
+      targetWeightKg: data.targetWeightKg || null,
+      targetDate: data.targetDate || null,
     }),
   });
 }

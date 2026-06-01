@@ -15,6 +15,7 @@ import activityRoutes from './routes/activity.routes.js';
 import weeklyPlanRoutes from './routes/weeklyPlan.routes.js';
 import dailyMealPlanRoutes from './routes/dailyMealPlan.routes.js';
 import activityPlanRoutes from './routes/activityPlan.routes.js';
+import progressRoutes from './routes/progress.routes.js';
 import docsRoutes from './routes/docs.routes.js';
 import { errorResponse } from './utils/response.js';
 
@@ -136,6 +137,9 @@ app.use('/api/daily-meal-plans', dailyMealPlanRoutes);
 
 // Activity plan routes
 app.use('/api/activity-plans', activityPlanRoutes);
+
+// Progress routes (weight logging, goal tracking)
+app.use('/api/progress', progressRoutes);
 
 // Google OAuth routes (must be separate from authRoutes for Passport middleware)
 app.get(
