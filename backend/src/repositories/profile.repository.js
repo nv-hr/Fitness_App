@@ -46,6 +46,25 @@ export async function findByUserId(userId) {
 }
 
 /**
+ * Update only the weight_kg field on a user's profile.
+ * Used when weight is logged via the progress tracking feature.
+ * @param {number} userId
+ * @param {number} weightKg
+ * @returns {Promise<{success: boolean}>}
+ */
+export async function updateWeightKg(userId, weightKg) {
+  try {
+    const { rowCount } = await pool.query(
+      'UPDATE profiles SET weight_kg = $1, updated_at = NOW() WHERE user_id = $2',
+      [weightKg, userId]
+    );
+    return { success: rowCount > 0 };
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to update profile weight: ${err.message}`, 500);
+  }
+}
+
+/**
  * Update a profile by user ID.
  * @param {number} userId
  * @param {Object} params
