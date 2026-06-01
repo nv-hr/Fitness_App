@@ -63,9 +63,16 @@ export default function DayActivityRow({ activity, onSwap, isSwapping, swapRetry
             {completed ? '✓' : '○'}
           </button>
         )}
-        {/* Past days: show completion indicator without toggle */}
-        {disabled && completed && (
-          <span style={{ color: '#16a34a', fontSize: '16px', fontWeight: 'bold' }}>✓</span>
+        {/* Non-today: show completion status indicator (no toggle) */}
+        {disabled && (
+          <span style={{
+            width: '44px', height: '44px', minWidth: '44px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: completed ? '#16a34a' : '#d1d5db',
+            fontSize: '16px', fontWeight: 'bold',
+          }}>
+            {completed ? '✓' : '○'}
+          </span>
         )}
 
         {/* Swap button or spinner — hidden when disabled */}
