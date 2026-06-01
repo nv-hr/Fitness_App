@@ -98,7 +98,7 @@ export async function googleCallback(req, res, next) {
     res.cookie('token', token, cookieOptions);
 
     // Redirect to frontend
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     return res.redirect(frontendUrl);
   } catch (err) {
     next(err);

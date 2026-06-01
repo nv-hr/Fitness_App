@@ -29,7 +29,7 @@ app.set('trust proxy', 1);
 
 // Validate and sanitize FRONTEND_URL for CORS and OAuth redirects (WR-02)
 const parseFrontendUrl = () => {
-  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
   try {
     const parsed = new URL(FRONTEND_URL);
     if (!['http:', 'https:'].includes(parsed.protocol)) {
@@ -38,7 +38,7 @@ const parseFrontendUrl = () => {
     return FRONTEND_URL;
   } catch {
     console.error('Invalid FRONTEND_URL:', FRONTEND_URL);
-    return 'http://localhost:5173'; // safe fallback
+    return 'http://localhost:3000'; // safe fallback
   }
 };
 const FRONTEND_URL = parseFrontendUrl();
