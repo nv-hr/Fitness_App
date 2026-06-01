@@ -1,113 +1,72 @@
----
-title: "Tech Stack"
-last_updated: "2026-05-31"
-focus: tech
----
+# Technology Stack
 
-# STACK.md — Technology Stack
-
-## Overview
-
-Fitness_App is a full-stack web application for fitness tracking — BMI/TDEE calculation, food logging, activity tracking, LLM-powered weekly activity plans, and LLM-powered meal recommendations.
+**Analysis Date:** 2026-06-01
 
 ## Languages
 
-- **JavaScript** (Node.js 20+) — Both backend (ESM) and frontend (ESM via Vite)
-- **SQL** — PostgreSQL queries via `pg` driver (raw SQL, parameterized)
+**Primary:**
+- JavaScript (ES Modules) - Full stack (Frontend uses `.jsx`, Backend uses `.js` modules)
 
-## Runtime / Platform
+**Secondary:**
+- CSS - Styling via Tailwind CSS and standard `.css` files (`backend/frontend/src/index.css`)
 
-- **Node.js 20+** — Backend API server (Express 5)
-- **Browser** — React 19 SPA served by Vite 8 (dev) or Express static (production)
-- **Docker** — Multi-stage production container (Express serves built frontend)
+## Runtime
+
+**Environment:**
+- Node.js (>= 18)
+
+**Package Manager:**
+- npm (workspaces used for `frontend` and `backend`)
+- Lockfile: present (`package-lock.json`)
 
 ## Frameworks
 
-| Layer | Framework | Version |
-|-------|-----------|---------|
-| Frontend | React | 19 |
-| Frontend | Vite | 8 |
-| Frontend | React Router | 7 |
-| Backend | Express | 5 (ESM) |
-| Testing (backend) | Jest | — |
-| Testing (frontend) | Vitest | — |
+**Core:**
+- React 19.0.1 - Frontend UI library
+- Express 5.2.0 - Backend web framework
 
-## Database
+**Testing:**
+- Jest 30.4.2 - Backend unit and integration testing
+- Vitest - Frontend testing
+- Supertest 7.2.2 - API endpoint integration testing
 
-- **Supabase PostgreSQL 17** — Managed PostgreSQL with connection pooling (via `pg` driver)
-- **Migrations**: `node-pg-migrate` for schema versioning
-- **No ORM** — Raw SQL queries in repository layer
-
-## Authentication
-
-- **Passport.js** — Local strategy (email/password) + Google OAuth 2.0
-- **JWT** — HS256 httpOnly cookies (7-day expiry)
-- **bcrypt** — Password hashing
+**Build/Dev:**
+- Vite 6.2.3 - Frontend bundler & dev server
+- Tailwind CSS 4.1.14 - Utility-first styling framework
+- Nodemon 3.1.0 - Backend dev server
 
 ## Key Dependencies
 
-### Backend
-| Package | Purpose |
-|---------|---------|
-| `express` | HTTP server framework |
-| `passport`, `passport-local`, `passport-google-oauth20` | Auth strategies |
-| `jsonwebtoken` | JWT signing/verification |
-| `pg` | PostgreSQL client (raw queries) |
-| `node-pg-migrate` | Database migrations |
-| `bcrypt` | Password hashing |
-| `helmet` | Security headers |
-| `express-rate-limit` | Rate limiting |
-| `openai` | OpenAI SDK (OpenRouter API) |
-| `node-cache` | In-memory plan caching |
-| `zod` | Request validation schemas |
-| `jest` | Testing framework |
+**Critical:**
+- `pg` 8.21.0 - PostgreSQL client for database interactions
+- `openai` 6.39.1 - Used as OpenRouter client for LLM features
+- `@google/genai` 2.4.0 - Google GenAI SDK
+- `passport` 0.7.0 - Authentication middleware
 
-### Frontend
-| Package | Purpose |
-|---------|---------|
-| `react`, `react-dom` | UI framework |
-| `react-router-dom` | Client-side routing |
-| `@tanstack/react-query` | Server state management |
-| `react-hook-form` | Form handling |
-| `zod`, `@hookform/resolvers` | Form validation |
-| `@vitejs/plugin-react` | Vite React plugin |
-| `vitest`, `@testing-library/react` | Testing |
+**Infrastructure:**
+- `dotenv` 17.4.0 - Environment variable management
+- `node-cache` 5.1.2 - In-memory caching for API responses
+- `express-rate-limit` 8.5.0 - API rate limiting
+- `helmet` 8.1.0 - Security headers
 
-## Configuration Files
+## Configuration
 
-| File | Purpose |
-|------|---------|
-| `backend/.env` | Environment variables (DB, JWT, OAuth, OpenRouter) |
-| `backend/.env.example` | Template with documented variables |
-| `backend/package.json` | Backend dependencies and scripts |
-| `frontend/package.json` | Frontend dependencies and scripts |
-| `frontend/vite.config.js` | Vite config with API proxy |
-| `Dockerfile` | Multi-stage production build |
-| `docker-compose.yml` | Container orchestration |
-| `supabase/migrations/` | Database schema migrations |
+**Environment:**
+- Loaded via `dotenv`. Configurations include `DATABASE_URL` and `OPENROUTER_API_KEY`.
 
-## Build / Tooling
+**Build:**
+- `vite.config.js` (`backend/frontend/vite.config.js`) configures Vite with `@vitejs/plugin-react` and `@tailwindcss/vite`.
+- Workspace defined in `backend/package.json` indicating a monorepo setup (`frontend` and `backend` workspaces).
 
-- **Vite 8** — Frontend bundler and dev server
-- **Docker** — Multi-stage build (builder + production stages)
-- **Jest** — Backend unit/integration tests
-- **Vitest** — Frontend component tests
-- **Total tests**: 239 (backend 114 + frontend 125)
+## Platform Requirements
 
-## LLM Integration
+**Development:**
+- Node.js >= 18
+- PostgreSQL / Supabase pooler connection.
 
-- **Provider**: OpenRouter API (OpenAI-compatible)
-- **SDK**: `openai` (v6+) npm package
-- **Primary model**: `nvidia/nemotron-3-nano-30b-a3b:free`
-- **Fallback model**: `openai/gpt-oss-20b:free`
-- **Caching**: `node-cache` (1-hour TTL) for in-memory plan caching
-- **Rate limiting (Activity Plans)**: 5 req/15 min for generate, 5 req/15 min for regenerate-day
-- **Rate limiting (Meal Plans)**: 5 req/15 min for generate, 3 req/30 min for regenerate-day, 30 req/15 min for log-day
+**Production:**
+- Standard Node.js hosting.
 
-## Notes
+---
 
-- Repository is hosted at `https://github.com/nv-hr/Fitness_App.git`
-- Milestone v1.3 (Activity Tracking & Smart Suggestions) is complete and shipped
-- Milestone v1.4 (LLM Food Recommendations) is complete and shipped — 6 phases (18-23)
-- Meal Plan feature: LLM-powered daily meal recommendations based on fitness goal, ingredients from existing database, auto-calculated portions to meet calorie target, fuzzy ingredient matching, correction loop with template fallback
-- Deployed via Docker single-container setup (Express serves built frontend)
+*Stack analysis: 2026-06-01*
