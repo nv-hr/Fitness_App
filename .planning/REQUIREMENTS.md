@@ -56,26 +56,26 @@ Deferred to future milestone.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| UI-ACT-01 | | Pending |
-| UI-ACT-02 | | Pending |
-| UI-ACT-03 | | Pending |
-| UI-ACT-04 | | Pending |
-| UI-FOOD-01 | | Pending |
-| UI-FOOD-02 | | Pending |
-| UI-FOOD-03 | | Pending |
-| UI-FOOD-04 | | Pending |
-| UI-ROUTE-01 | | Pending |
-| UI-ROUTE-02 | | Pending |
-| UI-ROUTE-03 | | Pending |
-| UI-TEST-01 | | Pending |
-| UI-TEST-02 | | Pending |
-| UI-TEST-03 | | Pending |
-| UI-TEST-04 | | Pending |
+| UI-ACT-01 | Phase 40 | Pending |
+| UI-ACT-02 | Phase 40 | Pending |
+| UI-ACT-03 | Phase 40 | Pending |
+| UI-ACT-04 | Phase 40 | Pending |
+| UI-FOOD-01 | Phase 39 | Pending |
+| UI-FOOD-02 | Phase 39 | Pending |
+| UI-FOOD-03 | Phase 39 | Pending |
+| UI-FOOD-04 | Phase 39 | Pending |
+| UI-ROUTE-01 | Phase 38 | Pending |
+| UI-ROUTE-02 | Phase 38 | Pending |
+| UI-ROUTE-03 | Phase 38 | Pending |
+| UI-TEST-01 | Phase 41 | Pending |
+| UI-TEST-02 | Phase 41 | Pending |
+| UI-TEST-03 | Phase 41 | Pending |
+| UI-TEST-04 | Phase 41 | Pending |
 
 **Coverage:**
 - v1.8 requirements: 15 total
-- Mapped to phases: 0
-- Unmapped: 15 ⚠️
+- Mapped to phases: 15
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-06-01*
