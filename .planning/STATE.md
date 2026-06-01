@@ -5,7 +5,7 @@ milestone_name: Progress Tracking
 status: Awaiting next milestone
 stopped_at: v1.9 shipped — all milestones complete
 last_updated: "2026-06-01T09:53:55.933Z"
-last_activity: 2026-06-01 — Milestone v1.9 completed and archived
+last_activity: 2026-06-01 — Updated README.md and AGENTS.md (v1.9 docs refresh)
 progress:
   total_phases: 46
   completed_phases: 46
@@ -94,7 +94,8 @@ Items acknowledged at v1.9 milestone close on 2026-06-01:
 | quick_task | 260601-237-disable-logged-meals | missing |
 | quick_task | 260601-601-sync-weight-to-profile | missing |
 | quick_task | 260601-f5g-unused-file-code-route-folder-cleanup | missing |
-| quick_task | 260601-fhd-update-documentation | missing |
+| quick_task | 260601-fhd-update-documentation | completed |
+| quick_task | 260601-nma-update-all-documentation | completed |
 | quick_task | 260601-m13-fix-the-activity-callender-after-check-c | missing |
 
 ### Pre-existing Deferred Items
