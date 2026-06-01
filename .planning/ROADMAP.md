@@ -368,8 +368,11 @@ Plans:
   1. Estimated completion date calculated from linear regression of actual weight entries (not calorie_rate)
   2. Trend prediction displayed on dashboard when sufficient data exists (3+ entries across 2+ weeks)
   3. Progress direction shown as rate string (e.g., "losing 0.5 kg/week" or "gaining 0.3 kg/week") with color coding (green for on-track, amber for slow, red for off-track)
-**Plans**: TBD
+**Plans**: 1 plan
 **UI hint**: yes
+
+Plans:
+- [ ] 46-01-PLAN.md — Trend Prediction — OLS regression hook, TrendPredictionCard component, ProgressPage integration — Wave 1
 
 ## Progress
 
