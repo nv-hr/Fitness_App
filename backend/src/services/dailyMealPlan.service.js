@@ -190,58 +190,43 @@ function generateFallbackDailyMealPlan(calorieTarget, dbFoods) {
 /**
  * Swap a single food item with a random different food from the same category.
  */
-export async function swapMealItem(deps) {
-  const { userId, planDate, mealType, foodId, getFoodById, getFoodsByCategory } = deps;
+export async function regenerateCategory(deps) {
+  const { userId, planDate, mealType, getProfile, getAllFoods, getLogHistory } = deps;
 
-  // Look up current food
-  const currentFood = await getFoodById(foodId);
-  if (!currentFood) {
-    throw new AppError('NotFoundError', 'Food item not found', 404);
-  }
-
-  // Get other foods from the same category
-  const categoryFoods = await getFoodsByCategory(userId, currentFood.category);
-  const candidates = categoryFoods.filter(f => f.id !== foodId);
-  if (candidates.length === 0) {
-    throw new AppError('SwapError', 'No alternative foods available in this category', 400);
-  }
-
-  // Pick a random replacement
-  const replacement = candidates[Math.floor(Math.random() * candidates.length)];
-
-  // Get the current plan
+  // 1. Get the existing plan
   const plan = await findByUserAndDate(userId, planDate);
   if (!plan) {
     throw new AppError('NotFoundError', 'No daily meal plan found', 404);
   }
 
-  const data = JSON.parse(JSON.stringify(plan.plan_data));
-  let found = false;
-
-  for (const meal of data.meals) {
-    if (meal.meal_type !== mealType) continue;
-    if (!Array.isArray(meal.items)) continue;
-    for (const item of meal.items) {
-      if (item.food_id === foodId) {
-        // Replace with new food, keep same portion, recalculate calories
-        item.food_id = replacement.id;
-        item.food_name = replacement.name;
-        const newCalories = Math.round((replacement.calories_per_100g * item.portion_grams) / 100);
-        item.calories = newCalories;
-        item.logged = false;
-        found = true;
-        break;
-      }
-    }
-    if (found) {
-      // Recalculate meal total
-      meal.total_calories = meal.items.reduce((s, i) => s + (i.calories || 0), 0);
-      break;
-    }
+  // 2. Generate a new full plan (reuse generateDailyMealPlan functionality)
+  // We need to pass the dependencies correctly to generateDailyMealPlan
+  const newPlanResult = await generateDailyMealPlan(deps);
+  const newPlan = newPlanResult.plan;
+  if (!newPlan) {
+    throw new AppError('GenerationError', 'Failed to generate new meals', 500);
   }
 
-  if (!found) {
-    throw new AppError('NotFoundError', 'Food item not found in plan', 404);
+  // 3. Find the meal to replace in the new plan
+  const newMeal = newPlan.meals.find(m => m.meal_type === mealType);
+  if (!newMeal) {
+    throw new AppError('GenerationError', 'Failed to generate new meal for the requested category', 500);
+  }
+
+  // 4. Update the existing plan
+  const data = JSON.parse(JSON.stringify(plan.plan_data));
+  for (const meal of data.meals) {
+    if (meal.meal_type === mealType) {
+      meal.items = newMeal.items;
+      meal.total_calories = newMeal.total_calories;
+      // Reset logged status if it exists
+      if (meal.items) {
+        for (const item of meal.items) {
+          item.logged = false;
+        }
+      }
+      break;
+    }
   }
 
   // Recalculate day total

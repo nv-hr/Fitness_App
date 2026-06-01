@@ -177,8 +177,8 @@ export function validateActivities(activities, prefix, allowEmpty = false) {
     if (!act.name || typeof act.name !== 'string' || act.name.trim().length === 0) {
       errors.push(`${prefix}activity ${j + 1}: name is required`);
     }
-    if (!act.duration_min || act.duration_min < 10 || act.duration_min > 180) {
-      errors.push(`${prefix}activity ${j + 1}: duration_min must be 10-180`);
+    if (!act.duration_min || act.duration_min < 5 || act.duration_min > 480) {
+      errors.push(`${prefix}activity ${j + 1}: duration_min must be 5-480`);
     }
     if (!['light', 'moderate', 'vigorous'].includes(act.intensity)) {
       errors.push(`${prefix}activity ${j + 1}: intensity must be light/moderate/vigorous`);

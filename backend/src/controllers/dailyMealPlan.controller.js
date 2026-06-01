@@ -1,7 +1,7 @@
 import { pool } from '../config/database.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { getCachedPlan, setCachedPlan, clearCachedPlan } from '../services/llm.service.js';
-import { generateDailyMealPlan, swapMealItem } from '../services/dailyMealPlan.service.js';
+import { generateDailyMealPlan, regenerateCategory } from '../services/dailyMealPlan.service.js';
 import { getProfile } from '../services/profile.service.js';
 import { searchFoods, getLogHistory, batchLogItems, getFoodById, getFoodsByCategory, createFoodLog, deleteFoodLogByPlan } from '../repositories/food.repository.js';
 import { findByUserAndDate, markMealsLogged, markItemLogged } from '../repositories/dailyMealPlan.repository.js';
@@ -199,33 +199,28 @@ async function toggleItemLogged(req, res, next) {
   }
 }
 
-async function swapItemHandler(req, res, next) {
+async function regenerateCategoryHandler(req, res, next) {
   try {
     const userId = req.user.userId;
-    const { date: swapDate, mealType, foodId } = req.body;
+    const { date: planDate, mealType } = req.body;
 
-    if (swapDate && !isValidDateString(swapDate)) {
+    if (planDate && !isValidDateString(planDate)) {
       return errorResponse(res, 'Invalid date format (use YYYY-MM-DD)', 400, 'VALIDATION_ERROR');
     }
-    const planDate = swapDate || getTodayString();
-    if (planDate !== getTodayString()) {
-      return errorResponse(res, 'Can only swap meals for today', 400, 'VALIDATION_ERROR');
-    }
+    const targetDate = planDate || getTodayString();
+    
     const validMealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
     if (!validMealTypes.includes(mealType)) {
       return errorResponse(res, `Invalid mealType "${mealType}"`, 400, 'VALIDATION_ERROR');
     }
-    if (typeof foodId !== 'number' || foodId < 1) {
-      return errorResponse(res, 'Invalid foodId', 400, 'VALIDATION_ERROR');
-    }
 
-    const result = await swapMealItem({
+    const result = await regenerateCategory({
       userId,
-      planDate,
+      planDate: targetDate,
       mealType,
-      foodId,
-      getFoodById: (id) => getFoodById(id),
-      getFoodsByCategory: (userId, category) => getFoodsByCategory(userId, category),
+      getProfile: (id) => getProfile(id),
+      getAllFoods: (id) => searchFoods(id, '', 200),
+      getLogHistory: (id, days) => getLogHistory(id, days),
     });
 
     return successResponse(res, result);
@@ -239,5 +234,5 @@ export default {
   generate,
   logMeals,
   toggleItemLogged,
-  swapItem: swapItemHandler,
+  regenerateCategory: regenerateCategoryHandler,
 };

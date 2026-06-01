@@ -8,8 +8,8 @@ import { findById } from '../repositories/user.repository.js';
  */
 const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax',
+  secure: true,
+  sameSite: 'none',
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
 };
 
@@ -60,7 +60,7 @@ export async function login(req, res, next) {
  * Clear the session cookie.
  */
 export async function logout(req, res) {
-  res.clearCookie('token');
+  res.clearCookie('token', cookieOptions);
   return successResponse(res, { message: 'Logged out successfully' });
 }
 
@@ -98,7 +98,7 @@ export async function googleCallback(req, res, next) {
     res.cookie('token', token, cookieOptions);
 
     // Redirect to frontend
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     return res.redirect(frontendUrl);
   } catch (err) {
     next(err);

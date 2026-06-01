@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -79,7 +80,7 @@ function rolldownCompatPlugin() {
 }
 
 export default defineConfig({
-  plugins: [react(), esToolkitCompatPlugin()],
+  plugins: [tailwindcss(), react(), esToolkitCompatPlugin()],
   optimizeDeps: {
     rolldownOptions: {
       plugins: [rolldownCompatPlugin()],
@@ -88,7 +89,9 @@ export default defineConfig({
   },
   server: {
     host: '0.0.0.0',
-    port: 5173,
+    port: 3000,
+    hmr: process.env.DISABLE_HMR !== 'true',
+    watch: process.env.DISABLE_HMR === 'true' ? null : {},
     proxy: {
       '/api': {
         target: process.env.VITE_API_PROXY_TARGET || 'http://localhost:3001',

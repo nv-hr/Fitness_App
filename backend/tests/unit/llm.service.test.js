@@ -143,27 +143,27 @@ describe('validatePlanStructure', () => {
       d.setDate(d.getDate() + i);
       days.push({
         date: d.toISOString().split('T')[0],
-        activities: [{ activity_id: 1, name: 'Test', duration_min: 5, intensity: 'moderate' }],
+        activities: [{ activity_id: 1, name: 'Test', duration_min: 2, intensity: 'moderate' }],
       });
     }
     const result = validatePlanStructure({ days }, '2026-01-05');
     expect(result.valid).toBe(false);
-    expect(result.errors.some(e => e.includes('10-180'))).toBe(true);
+    expect(result.errors.some(e => e.includes('5-480'))).toBe(true);
   });
 
-  it('duration_min > 180 returns error', () => {
+  it('duration_min > 480 returns error', () => {
     const days = [];
     for (let i = 0; i < 7; i++) {
       const d = new Date('2026-01-05T00:00:00Z');
       d.setDate(d.getDate() + i);
       days.push({
         date: d.toISOString().split('T')[0],
-        activities: [{ activity_id: 1, name: 'Test', duration_min: 200, intensity: 'moderate' }],
+        activities: [{ activity_id: 1, name: 'Test', duration_min: 500, intensity: 'moderate' }],
       });
     }
     const result = validatePlanStructure({ days }, '2026-01-05');
     expect(result.valid).toBe(false);
-    expect(result.errors.some(e => e.includes('10-180'))).toBe(true);
+    expect(result.errors.some(e => e.includes('5-480'))).toBe(true);
   });
 
   it('invalid intensity returns error', () => {

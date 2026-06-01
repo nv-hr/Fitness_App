@@ -3,9 +3,10 @@ import rateLimit from 'express-rate-limit';
 const isTest = process.env.NODE_ENV === 'test';
 
 const dailyMealPlanLimiter = rateLimit({
-  windowMs: isTest ? 1000 : 15 * 60 * 1000,
-  max: isTest ? 1000 : 50,
+  windowMs: isTest ? 1000 : 1 * 60 * 1000,
+  max: isTest ? 1000 : 20,
   keyGenerator: (req) => `user_${req.user.userId}`,
+  validate: { xForwardedForHeader: false, trustProxy: false, default: true },
   handler: (req, res) => {
     const retryAfter = Math.ceil((req.rateLimit.resetTime - Date.now()) / 1000);
     return res.status(429).json({

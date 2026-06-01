@@ -1,113 +1,124 @@
----
-title: "Tech Stack"
-last_updated: "2026-05-31"
-focus: tech
----
+# Technology Stack
 
-# STACK.md — Technology Stack
-
-## Overview
-
-Fitness_App is a full-stack web application for fitness tracking — BMI/TDEE calculation, food logging, activity tracking, LLM-powered weekly activity plans, and LLM-powered meal recommendations.
+**Analysis Date:** 2026-06-02
 
 ## Languages
 
-- **JavaScript** (Node.js 20+) — Both backend (ESM) and frontend (ESM via Vite)
-- **SQL** — PostgreSQL queries via `pg` driver (raw SQL, parameterized)
+**Primary:**
+- JavaScript (ESM) - Backend (`backend/src/**/*.js`) and Frontend (`frontend/src/**/*.jsx`)
+- JSX - React component files in `frontend/src/**/*.jsx`
 
-## Runtime / Platform
+**Secondary:**
+- TypeScript (config only, `.js` runtime) - `tsconfig.json` present with `allowJs: true`, `noEmit: true`. Actual source files are `.js`/`.jsx`, not `.ts`/`.tsx`.
+- SQL - Database migration scripts (referenced in `scripts/db-init.js` as `backend/db/schema.sql`, `backend/db/seed.sql`)
 
-- **Node.js 20+** — Backend API server (Express 5)
-- **Browser** — React 19 SPA served by Vite 8 (dev) or Express static (production)
-- **Docker** — Multi-stage production container (Express serves built frontend)
+## Runtime
+
+**Environment:**
+- Node.js >=18 (enforced by `backend/package.json` `engines.node`)
+- Tested via npm workspaces monorepo
+
+**Package Manager:**
+- npm workspaces (root `package.json` defines `workspaces: ["frontend", "backend"]`)
+- Lockfile: Not detected in repo (likely `.gitignore`d)
 
 ## Frameworks
 
-| Layer | Framework | Version |
-|-------|-----------|---------|
-| Frontend | React | 19 |
-| Frontend | Vite | 8 |
-| Frontend | React Router | 7 |
-| Backend | Express | 5 (ESM) |
-| Testing (backend) | Jest | — |
-| Testing (frontend) | Vitest | — |
+**Core:**
+- Express ^5.2.0 (`backend/package.json`) - HTTP server framework, ESM (`"type": "module"`)
+- React ^19.2.0 (`frontend/package.json`) - UI component library
+- Vite ^8.0.0 (`frontend/package.json`) - Build tool and dev server
+- React Router ^7.6.0 (`frontend/package.json`) - Client-side routing
 
-## Database
+**Testing:**
+- Jest ^30.4.2 (`backend/package.json`) - Test runner for backend
+- Supertest ^7.2.2 (`backend/package.json`) - HTTP integration test assertions
 
-- **Supabase PostgreSQL 17** — Managed PostgreSQL with connection pooling (via `pg` driver)
-- **Migrations**: `node-pg-migrate` for schema versioning
-- **No ORM** — Raw SQL queries in repository layer
-
-## Authentication
-
-- **Passport.js** — Local strategy (email/password) + Google OAuth 2.0
-- **JWT** — HS256 httpOnly cookies (7-day expiry)
-- **bcrypt** — Password hashing
+**Build/Dev:**
+- Vite ^8.0.0 + @vitejs/plugin-react ^6.0.0 - Frontend build pipeline
+- @tailwindcss/vite ^4.1.14 - Tailwind CSS integration via Vite plugin
+- tailwindcss ^4.1.14 - Utility CSS framework
+- esbuild ^0.25.0 - Bundler used by Vite
+- tsx ^4.21.0 - TypeScript execution
+- nodemon ^3.1.0 - Backend dev server restart (devDependency)
+- autoprefixer ^10.4.21 - CSS vendor prefixing
 
 ## Key Dependencies
 
-### Backend
-| Package | Purpose |
-|---------|---------|
-| `express` | HTTP server framework |
-| `passport`, `passport-local`, `passport-google-oauth20` | Auth strategies |
-| `jsonwebtoken` | JWT signing/verification |
-| `pg` | PostgreSQL client (raw queries) |
-| `node-pg-migrate` | Database migrations |
-| `bcrypt` | Password hashing |
-| `helmet` | Security headers |
-| `express-rate-limit` | Rate limiting |
-| `openai` | OpenAI SDK (OpenRouter API) |
-| `node-cache` | In-memory plan caching |
-| `zod` | Request validation schemas |
-| `jest` | Testing framework |
+**Critical:**
+- `express ^5.2.0` (backend) - All HTTP routing and middleware
+- `pg ^8.21.0` (backend) - PostgreSQL client, direct connection pool
+- `openai ^6.39.1` (backend) - OpenAI SDK used to call OpenRouter API for LLM features
+- `@google/genai ^2.4.0` (root) - Google Gemini AI SDK
+- `react ^19.2.0` / `react-dom ^19.2.0` (frontend) - UI rendering
+- `react-router-dom ^7.6.0` (frontend) - Navigation/routing
+- `@tanstack/react-query ^5.80.0` (frontend) - Server state management and API data fetching
+- `tailwindcss ^4.1.14` (root config) - All styling via utility classes
 
-### Frontend
-| Package | Purpose |
-|---------|---------|
-| `react`, `react-dom` | UI framework |
-| `react-router-dom` | Client-side routing |
-| `@tanstack/react-query` | Server state management |
-| `react-hook-form` | Form handling |
-| `zod`, `@hookform/resolvers` | Form validation |
-| `@vitejs/plugin-react` | Vite React plugin |
-| `vitest`, `@testing-library/react` | Testing |
+**Infrastructure:**
+- `cors ^2.8.5` - Cross-origin requests from frontend
+- `helmet ^8.1.0` - Security headers
+- `express-rate-limit ^8.5.0` - Rate limiting for all API routes
+- `compression ^1.8.1` - Gzip compression
+- `morgan ^1.10.0` - HTTP request logging
+- `cookie-parser ^1.4.7` - Cookie parsing for JWT
+- `jsonwebtoken ^9.0.2` - JWT creation/verification (HS256, 7-day expiry)
+- `bcryptjs ^2.4.3` - Password hashing (10 salt rounds)
+- `passport ^0.7.0` / `passport-local ^1.0.0` / `passport-google-oauth20 ^2.0.0` - Authentication strategies
+- `node-cache ^5.1.2` - In-memory caching for LLM plans (1 hour TTL)
+- `express-validator ^7.3.0` - Request validation
+- `lucide-react ^0.546.0` (root) - Icon library
+- `recharts ^3.8.1` (frontend) - Charts/graphs
+- `date-fns ^3.6.0` (frontend) - Date utilities
+- `react-day-picker ^9.14.0` (frontend) - Date picker component
+- `react-hook-form ^7.58.0` + `zod ^3.25.0` (frontend devDeps) - Form validation
+- `@hookform/resolvers ^4.1.0` - Zod resolver for react-hook-form
+- `motion ^12.23.24` (root) - Animation library
 
-## Configuration Files
+## Configuration
 
-| File | Purpose |
-|------|---------|
-| `backend/.env` | Environment variables (DB, JWT, OAuth, OpenRouter) |
-| `backend/.env.example` | Template with documented variables |
-| `backend/package.json` | Backend dependencies and scripts |
-| `frontend/package.json` | Frontend dependencies and scripts |
-| `frontend/vite.config.js` | Vite config with API proxy |
-| `Dockerfile` | Multi-stage production build |
-| `docker-compose.yml` | Container orchestration |
-| `supabase/migrations/` | Database schema migrations |
+**Environment:**
+- `backend/src/server.js` loads `dotenv` at startup
+- `backend/src/config/database.js` loads `.env` from `../../.env` relative to config directory
+- Env vars consumed:
+  - `DATABASE_URL` - PostgreSQL connection string (Supabase, session mode port 6543)
+  - `JWT_SECRET` - HS256 signing key
+  - `OPENROUTER_API_KEY` - LLM API key
+  - `OPENROUTER_BASE_URL` - LLM API base URL (defaults to `https://openrouter.ai/api/v1`)
+  - `LLM_MODEL` - Model name (defaults to `openrouter/owl-alpha`)
+  - `LLM_FALLBACK_MODEL` / `LLM_FALLBACK_MODEL_2` - Fallback models
+  - `GEMINI_API_KEY` - Google Gemini AI key
+  - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` - Google OAuth credentials
+  - `GOOGLE_CALLBACK_URL` - OAuth callback URL
+  - `FRONTEND_URL` - CORS origin and OAuth redirect target (defaults to `http://localhost:5173`)
+  - `PORT` - Server port (defaults to 3001)
+  - `VITE_API_PROXY_TARGET` - Dev proxy target (defaults to `http://localhost:3001`)
+  - `NODE_ENV` - Environment mode (development/test/production)
 
-## Build / Tooling
+**Build:**
+- `frontend/vite.config.js` - Vite configuration with Tailwind, React plugin, dev proxy for `/api` to backend
+- `tsconfig.json` (root) - TypeScript config targeting ES2022, bundler module resolution
+- Root `package.json` scripts orchestrate via npm workspaces
 
-- **Vite 8** — Frontend bundler and dev server
-- **Docker** — Multi-stage build (builder + production stages)
-- **Jest** — Backend unit/integration tests
-- **Vitest** — Frontend component tests
-- **Total tests**: 239 (backend 114 + frontend 125)
+**Dev scripts:**
+```bash
+npm run dev               # Starts both backend (port 3001) and frontend (port 5173) via concurrently
+npm run build             # Builds frontend only via workspace
+npm run lint              # TypeScript type-check (noEmit)
+```
 
-## LLM Integration
+## Platform Requirements
 
-- **Provider**: OpenRouter API (OpenAI-compatible)
-- **SDK**: `openai` (v6+) npm package
-- **Primary model**: `nvidia/nemotron-3-nano-30b-a3b:free`
-- **Fallback model**: `openai/gpt-oss-20b:free`
-- **Caching**: `node-cache` (1-hour TTL) for in-memory plan caching
-- **Rate limiting (Activity Plans)**: 5 req/15 min for generate, 5 req/15 min for regenerate-day
-- **Rate limiting (Meal Plans)**: 5 req/15 min for generate, 3 req/30 min for regenerate-day, 30 req/15 min for log-day
+**Development:**
+- Node.js >=18
+- PostgreSQL instance (Supabase recommended, session mode pooler port 6543)
+- `.env` file with required secrets (see `.env.example`)
 
-## Notes
+**Production:**
+- Deployed as a single service — backend serves React static build from `frontend/dist/`
+- Express SPA catch-all serves `index.html` for non-API GET requests
+- No Dockerfile present in repo (`.dockerignore` exists, but actual Dockerfile not committed)
 
-- Repository is hosted at `https://github.com/nv-hr/Fitness_App.git`
-- Milestone v1.3 (Activity Tracking & Smart Suggestions) is complete and shipped
-- Milestone v1.4 (LLM Food Recommendations) is complete and shipped — 6 phases (18-23)
-- Meal Plan feature: LLM-powered daily meal recommendations based on fitness goal, ingredients from existing database, auto-calculated portions to meet calorie target, fuzzy ingredient matching, correction loop with template fallback
-- Deployed via Docker single-container setup (Express serves built frontend)
+---
+
+*Stack analysis: 2026-06-02*

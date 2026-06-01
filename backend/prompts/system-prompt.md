@@ -45,7 +45,7 @@ Return ONLY valid JSON. No markdown, no explanation, no code fences.
     {
       "activity_id": <integer>,
       "name": "<exact name from the list>",
-      "duration_min": <integer 10-180>,
+      "duration_min": <integer 5-480>,
       "intensity": "light" | "moderate" | "vigorous",
       "logged": false,
       "calories_burned": <integer>
@@ -66,7 +66,7 @@ Return ONLY valid JSON. No markdown, no explanation, no code fences.
 
 # Constraints
 - 1-4 activities per day
-- Each activity is 10-180 minutes
+- Each activity is 5-480 minutes
 - All activities on the same date: {{weekStartDate}}
 - Activities MUST use exact names from the provided Available Activities list
 - Prioritize activities the user has done recently (from history)

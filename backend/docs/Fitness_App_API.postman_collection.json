@@ -56,8 +56,13 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/health",
-              "host": ["{{base_url}}"],
-              "path": ["api", "health"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
             }
           }
         }
@@ -87,7 +92,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -95,8 +103,14 @@
             },
             "url": {
               "raw": "{{base_url}}/api/auth/register",
-              "host": ["{{base_url}}"],
-              "path": ["api", "auth", "register"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
             }
           }
         },
@@ -120,7 +134,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -128,8 +145,14 @@
             },
             "url": {
               "raw": "{{base_url}}/api/auth/login",
-              "host": ["{{base_url}}"],
-              "path": ["api", "auth", "login"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
             }
           }
         },
@@ -140,8 +163,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/auth/logout",
-              "host": ["{{base_url}}"],
-              "path": ["api", "auth", "logout"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
             }
           }
         },
@@ -168,8 +197,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/auth/me",
-              "host": ["{{base_url}}"],
-              "path": ["api", "auth", "me"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
             }
           }
         },
@@ -180,8 +215,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/auth/google",
-              "host": ["{{base_url}}"],
-              "path": ["api", "auth", "google"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "google"
+              ]
             }
           }
         }
@@ -213,7 +254,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -221,8 +265,13 @@
             },
             "url": {
               "raw": "{{base_url}}/api/profile",
-              "host": ["{{base_url}}"],
-              "path": ["api", "profile"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "profile"
+              ]
             }
           }
         },
@@ -249,8 +298,13 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/profile",
-              "host": ["{{base_url}}"],
-              "path": ["api", "profile"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "profile"
+              ]
             }
           }
         },
@@ -274,7 +328,10 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -282,8 +339,13 @@
             },
             "url": {
               "raw": "{{base_url}}/api/profile",
-              "host": ["{{base_url}}"],
-              "path": ["api", "profile"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "profile"
+              ]
             }
           }
         }
@@ -319,10 +381,19 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/food/search?q=rice",
-              "host": ["{{base_url}}"],
-              "path": ["api", "food", "search"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "food",
+                "search"
+              ],
               "query": [
-                { "key": "q", "value": "rice" }
+                {
+                  "key": "q",
+                  "value": "rice"
+                }
               ]
             }
           }
@@ -347,7 +418,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -355,8 +429,13 @@
             },
             "url": {
               "raw": "{{base_url}}/api/food",
-              "host": ["{{base_url}}"],
-              "path": ["api", "food"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "food"
+              ]
             }
           }
         },
@@ -380,7 +459,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -388,8 +470,14 @@
             },
             "url": {
               "raw": "{{base_url}}/api/food/log",
-              "host": ["{{base_url}}"],
-              "path": ["api", "food", "log"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "food",
+                "log"
+              ]
             }
           }
         },
@@ -398,7 +486,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -406,8 +497,14 @@
             },
             "url": {
               "raw": "{{base_url}}/api/food/log",
-              "host": ["{{base_url}}"],
-              "path": ["api", "food", "log"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "food",
+                "log"
+              ]
             }
           }
         },
@@ -435,10 +532,19 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/food/summary?date={{today}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "food", "summary"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "food",
+                "summary"
+              ],
               "query": [
-                { "key": "date", "value": "{{today}}" }
+                {
+                  "key": "date",
+                  "value": "{{today}}"
+                }
               ]
             }
           }
@@ -469,10 +575,19 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/food/logs?date={{today}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "food", "logs"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "food",
+                "logs"
+              ],
               "query": [
-                { "key": "date", "value": "{{today}}" }
+                {
+                  "key": "date",
+                  "value": "{{today}}"
+                }
               ]
             }
           }
@@ -503,10 +618,19 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/food/history?days=7",
-              "host": ["{{base_url}}"],
-              "path": ["api", "food", "history"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "food",
+                "history"
+              ],
               "query": [
-                { "key": "days", "value": "7" }
+                {
+                  "key": "days",
+                  "value": "7"
+                }
               ]
             }
           }
@@ -533,8 +657,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/food/recent",
-              "host": ["{{base_url}}"],
-              "path": ["api", "food", "recent"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "food",
+                "recent"
+              ]
             }
           }
         }
@@ -570,8 +700,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/activities/recommendations",
-              "host": ["{{base_url}}"],
-              "path": ["api", "activities", "recommendations"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "activities",
+                "recommendations"
+              ]
             }
           }
         },
@@ -598,10 +734,18 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/activities?goal=maintain",
-              "host": ["{{base_url}}"],
-              "path": ["api", "activities"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "activities"
+              ],
               "query": [
-                { "key": "goal", "value": "maintain" }
+                {
+                  "key": "goal",
+                  "value": "maintain"
+                }
               ]
             }
           }
@@ -626,7 +770,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -634,8 +781,14 @@
             },
             "url": {
               "raw": "{{base_url}}/api/activities/log",
-              "host": ["{{base_url}}"],
-              "path": ["api", "activities", "log"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "activities",
+                "log"
+              ]
             }
           }
         },
@@ -661,10 +814,19 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/activities/logs?date={{today}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "activities", "logs"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "activities",
+                "logs"
+              ],
               "query": [
-                { "key": "date", "value": "{{today}}" }
+                {
+                  "key": "date",
+                  "value": "{{today}}"
+                }
               ]
             }
           }
@@ -691,10 +853,19 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/activities/history?days=7",
-              "host": ["{{base_url}}"],
-              "path": ["api", "activities", "history"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "activities",
+                "history"
+              ],
               "query": [
-                { "key": "days", "value": "7" }
+                {
+                  "key": "days",
+                  "value": "7"
+                }
               ]
             }
           }
@@ -720,8 +891,15 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/activities/log/1",
-              "host": ["{{base_url}}"],
-              "path": ["api", "activities", "log", "1"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "activities",
+                "log",
+                "1"
+              ]
             }
           }
         },
@@ -747,10 +925,19 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/activities/summary?date={{today}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "activities", "summary"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "activities",
+                "summary"
+              ],
               "query": [
-                { "key": "date", "value": "{{today}}" }
+                {
+                  "key": "date",
+                  "value": "{{today}}"
+                }
               ]
             }
           }
@@ -780,7 +967,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -788,8 +978,14 @@
             },
             "url": {
               "raw": "{{base_url}}/api/weekly-plans/generate",
-              "host": ["{{base_url}}"],
-              "path": ["api", "weekly-plans", "generate"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "weekly-plans",
+                "generate"
+              ]
             }
           }
         },
@@ -814,10 +1010,18 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/weekly-plans?weekStart={{week_start}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "weekly-plans"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "weekly-plans"
+              ],
               "query": [
-                { "key": "weekStart", "value": "{{week_start}}" }
+                {
+                  "key": "weekStart",
+                  "value": "{{week_start}}"
+                }
               ]
             }
           }
@@ -841,7 +1045,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -849,8 +1056,14 @@
             },
             "url": {
               "raw": "{{base_url}}/api/weekly-plans/regenerate-day",
-              "host": ["{{base_url}}"],
-              "path": ["api", "weekly-plans", "regenerate-day"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "weekly-plans",
+                "regenerate-day"
+              ]
             }
           }
         },
@@ -873,7 +1086,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -881,8 +1097,14 @@
             },
             "url": {
               "raw": "{{base_url}}/api/weekly-plans/swap",
-              "host": ["{{base_url}}"],
-              "path": ["api", "weekly-plans", "swap"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "weekly-plans",
+                "swap"
+              ]
             }
           }
         },
@@ -905,7 +1127,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -913,8 +1138,14 @@
             },
             "url": {
               "raw": "{{base_url}}/api/weekly-plans/toggle-complete",
-              "host": ["{{base_url}}"],
-              "path": ["api", "weekly-plans", "toggle-complete"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "weekly-plans",
+                "toggle-complete"
+              ]
             }
           }
         }
@@ -944,10 +1175,18 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/daily-meal-plans?date={{today}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "daily-meal-plans"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "daily-meal-plans"
+              ],
               "query": [
-                { "key": "date", "value": "{{today}}" }
+                {
+                  "key": "date",
+                  "value": "{{today}}"
+                }
               ]
             }
           }
@@ -972,7 +1211,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -980,8 +1222,14 @@
             },
             "url": {
               "raw": "{{base_url}}/api/daily-meal-plans/generate",
-              "host": ["{{base_url}}"],
-              "path": ["api", "daily-meal-plans", "generate"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "daily-meal-plans",
+                "generate"
+              ]
             }
           }
         },
@@ -1004,7 +1252,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1012,8 +1263,14 @@
             },
             "url": {
               "raw": "{{base_url}}/api/daily-meal-plans/log",
-              "host": ["{{base_url}}"],
-              "path": ["api", "daily-meal-plans", "log"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "daily-meal-plans",
+                "log"
+              ]
             }
           }
         },
@@ -1036,7 +1293,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1044,8 +1304,14 @@
             },
             "url": {
               "raw": "{{base_url}}/api/daily-meal-plans/toggle-item",
-              "host": ["{{base_url}}"],
-              "path": ["api", "daily-meal-plans", "toggle-item"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "daily-meal-plans",
+                "toggle-item"
+              ]
             }
           }
         },
@@ -1068,7 +1334,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1076,107 +1345,14 @@
             },
             "url": {
               "raw": "{{base_url}}/api/daily-meal-plans/swap-item",
-              "host": ["{{base_url}}"],
-              "path": ["api", "daily-meal-plans", "swap-item"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Activity Plans",
-      "item": [
-        {
-          "name": "GET /api/activity-plans?date=",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Returns activity plan', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json.success).to.be.true;",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/activity-plans?date={{today}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "activity-plans"],
-              "query": [
-                { "key": "date", "value": "{{today}}" }
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "daily-meal-plans",
+                "swap-item"
               ]
-            }
-          }
-        },
-        {
-          "name": "POST /api/activity-plans/generate",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Activity plan generated', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json.success).to.be.true;",
-                  "  pm.expect(json.data.plan).to.have.property('activities');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"date\": \"{{today}}\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/activity-plans/generate",
-              "host": ["{{base_url}}"],
-              "path": ["api", "activity-plans", "generate"]
-            }
-          }
-        },
-        {
-          "name": "POST /api/activity-plans/log",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Activities logged', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json.success).to.be.true;",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"date\": \"{{today}}\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/api/activity-plans/log",
-              "host": ["{{base_url}}"],
-              "path": ["api", "activity-plans", "log"]
             }
           }
         }
@@ -1205,7 +1381,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1213,8 +1392,14 @@
             },
             "url": {
               "raw": "{{base_url}}/api/progress/weight",
-              "host": ["{{base_url}}"],
-              "path": ["api", "progress", "weight"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "progress",
+                "weight"
+              ]
             }
           }
         },
@@ -1240,10 +1425,19 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/progress/weight?limit=10",
-              "host": ["{{base_url}}"],
-              "path": ["api", "progress", "weight"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "progress",
+                "weight"
+              ],
               "query": [
-                { "key": "limit", "value": "10" }
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
               ]
             }
           }
@@ -1270,8 +1464,15 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/progress/weight/1",
-              "host": ["{{base_url}}"],
-              "path": ["api", "progress", "weight", "1"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "progress",
+                "weight",
+                "1"
+              ]
             }
           }
         }

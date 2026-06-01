@@ -1,0 +1,6 @@
+{
+  "name": "KalaFit",
+  "description": "KalaFit - Track your biometrics, daily calorie budget, and get personalized AI workout recommendations or log your workouts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

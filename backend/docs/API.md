@@ -59,7 +59,6 @@ The API uses httpOnly JWT cookie authentication (per D-01).
 | Weekly Plans Swap | 10 per 5 minutes | POST /api/weekly-plans/swap|
 | Weekly Plans Toggle-Complete | 60 per 1 minute | POST /api/weekly-plans/toggle-complete|
 | Daily Meal Plans| 50 per 15 minutes | POST /api/daily-meal-plans/generate|
-| Activity Plans Generate | 50 per 15 minutes | POST /api/activity-plans/generate|
 
 Rate-limited requests return a 429 status with `RATE_LIMITED` error code.
 
@@ -1155,110 +1154,7 @@ All daily meal plan endpoints require authentication.
 
 ---
 
-### 9. Activity Plans — `/api/activity-plans`
-
-All activity plan endpoints require authentication.
-
-#### GET /api/activity-plans
-
-- **Auth:** Required
-- **Rate Limit:** Global
-- **Description:** Retrieve the current activity plan. Checks in-memory cache first, then falls back to the `activity_plans` database table.
-- **Query Parameters:**
-  - `date` (optional): Format `YYYY-MM-DD`. Defaults to today.
-- **Response 200 (cached):**
-  ```json
-  {
-    "success": true,
-    "data": {
-      "plan": {
-        "date": "2026-05-31",
-        "activities": [
-          {
-            "name": "Brisk Walking",
-            "duration_min": 30,
-            "intensity": "moderate",
-            "calories_burned": 165,
-            "category": "Cardio",
-            "logged": false
-          }
-        ],
-        "total_calories_burned": 330,
-        "total_minutes": 60,
-        "generated_at": "2026-05-31T12:00:00.000Z"
-      },
-      "fromCache": true
-    }
-  }
-  ```
-- **Response 200 (no plan):**
-  ```json
-  {
-    "success": true,
-    "data": {
-      "plan": null,
-      "fromCache": false
-    }
-  }
-  ```
-- **Error Codes:** `VALIDATION_ERROR` (400), `AUTHENTICATION_ERROR` (401)
-
-#### POST /api/activity-plans/generate
-
-- **Auth:** Required
-- **Rate Limit:** Activity Plans Generate (50 per 15 minutes)
-- **Description:** Generate an activity plan for a given date using LLM (OpenRouter). Plan is personalized based on user profile, fitness goal, and activity history.
-- **Request Body:**
-  ```json
-  {
-    "date": "2026-05-31"
-  }
-  ```
-- **Notes:** `date` is optional. Defaults to today.
-- **Response 200:**
-  ```json
-  {
-    "success": true,
-    "data": {
-      "plan": {
-        "date": "2026-05-31",
-        "activities": [ ... ],
-        "total_calories_burned": 330,
-        "total_minutes": 60,
-        "generated_at": "2026-05-31T12:00:00.000Z"
-      },
-      "fromCache": false
-    }
-  }
-  ```
-- **Error Codes:** `VALIDATION_ERROR` (400), `RATE_LIMITED` (429), `AUTHENTICATION_ERROR` (401)
-
-#### POST /api/activity-plans/log
-
-- **Auth:** Required
-- **Rate Limit:** Global
-- **Description:** Log all activities from the plan to the activity log. Uses an explicit database transaction for atomicity. Items with `logged: true` are skipped (idempotent).
-- **Request Body:**
-  ```json
-  {
-    "date": "2026-05-31"
-  }
-  ```
-- **Response 200:**
-  ```json
-  {
-    "success": true,
-    "data": {
-      "logged": 3,
-      "items": [ ... ]
-    }
-  }
-  ```
-- **Error Codes:** `VALIDATION_ERROR` (400), `AUTHENTICATION_ERROR` (401)
-
----
-
-### 10. Progress — `/api/progress`
+### 9. Progress — `/api/progress`
 
 All progress endpoints require authentication. Rate limit: Progress (50 per 15 minutes).
 

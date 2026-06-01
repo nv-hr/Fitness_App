@@ -11,6 +11,6 @@ router.get('/', dailyMealPlanController.get);
 router.post('/generate', dailyMealPlanLimiter, dailyMealPlanController.generate);
 router.post('/log', dailyMealPlanController.logMeals);
 router.post('/toggle-item', dailyMealPlanController.toggleItemLogged);
-router.post('/swap-item', dailyMealPlanController.swapItem);
+router.post('/regenerate-category', dailyMealPlanLimiter, dailyMealPlanController.regenerateCategory);
 
 export default router;

@@ -1,13 +1,20 @@
-import { apiPost } from '../../../shared/lib/http.js';
-import {
-  getWeeklyPlan as wpGetWeeklyPlan,
-  generateWeeklyPlan as wpGenerate,
-  swapActivity as wpSwap,
-} from '../../weekly-plan/api/weeklyPlanApi.js';
+import { apiGet, apiPost } from '../../../shared/lib/http.js';
 
-export const getWeeklyPlan = wpGetWeeklyPlan;
-export const generateWeeklyPlan = wpGenerate;
-export const swapActivity = wpSwap;
+export async function getWeeklyPlan(weekStart) {
+  const params = weekStart ? `?weekStart=${encodeURIComponent(weekStart)}` : '';
+  return apiGet(`/api/weekly-plans${params}`);
+}
+
+export async function generateWeeklyPlan(weekStart, availableDays) {
+  return apiPost('/api/weekly-plans/generate', {
+    weekStart,
+    ...(availableDays != null && { availableDays }),
+  });
+}
+
+export async function swapActivity(weekStart, activityId, dayIndex) {
+  return apiPost('/api/weekly-plans/swap', { weekStart, activityId, dayIndex });
+}
 
 /**
  * Toggle completion status for a specific activity in a weekly plan day.
@@ -22,3 +29,12 @@ export const swapActivity = wpSwap;
 export async function toggleActivityComplete(weekStart, dayIndex, activityId, completed) {
   return apiPost('/api/weekly-plans/toggle-complete', { weekStart, dayIndex, activityId, completed });
 }
+
+export async function regenerateDay(weekStart, dayIndex, availableDays) {
+  return apiPost('/api/weekly-plans/regenerate-day', {
+    weekStart,
+    dayIndex,
+    ...(availableDays != null && { availableDays }),
+  });
+}
+

@@ -1,5 +1,5 @@
 import { successResponse, errorResponse } from '../utils/response.js';
-import { getRecommendations, getAllActivitiesByGoal } from '../services/activity.service.js';
+import { getAllActivitiesByGoal } from '../services/activity.service.js';
 import * as activityLogService from '../services/activityLog.service.js';
 import { findByUserId as findProfileByUserId } from '../repositories/profile.repository.js';
 import { getDailyTotal } from '../repositories/food.repository.js';
@@ -7,28 +7,6 @@ import { getCalorieTarget, calculateTdee } from '../services/profile.service.js'
 import * as activityRepo from '../repositories/activity.repository.js';
 import { getCachedPlan, setCachedPlan } from '../services/llm.service.js';
 import { findByUserAndWeek, upsertPlan } from '../repositories/weeklyPlan.repository.js';
-
-/**
- * GET /api/activities/recommendations — Randomized goal-based activity recommendations (ACT-01).
- */
-async function getRecommendationsHandler(req, res, next) {
-  try {
-    // Fetch user profile for fitness_goal
-    const profile = await findProfileByUserId(req.user.userId);
-
-    let activities;
-    if (profile && profile.fitness_goal) {
-      activities = await getRecommendations(req.user.userId, profile.fitness_goal);
-    } else {
-      // Fallback: return all activities if no profile
-      activities = await getRecommendations(req.user.userId, 'maintain');
-    }
-
-    return successResponse(res, { activities, count: activities.length });
-  } catch (err) {
-    next(err);
-  }
-}
 
 /**
  * GET /api/activities — Full activity pool filtered by user's goal.
@@ -312,7 +290,6 @@ async function getActivitySummary(req, res, next) {
 }
 
 export default {
-  getRecommendations: getRecommendationsHandler,
   getAllActivities: getAllActivitiesHandler,
   logActivity,
   getActivityLogs,

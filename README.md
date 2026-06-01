@@ -32,7 +32,6 @@ Built with React 19, Express 5, and Supabase PostgreSQL.
 | Auth        | Email/password registration + login, Google OAuth, httpOnly JWT cookies   |
 | LLM         | OpenRouter API (free-tier models), node-cache                             |
 | Deployment  | Docker multi-stage build (single container, Express serves built frontend) |
-| Testing     | Jest (backend), Vitest (frontend)                                         |
 
 ## Quick Start
 
@@ -68,26 +67,14 @@ Edit `backend/.env` with your settings:
 ### 2. Install dependencies
 
 ```bash
-cd backend
-npm install
-
-cd ../frontend
 npm install
 ```
 
 ### 3. Start development servers
 
-**Terminal 1 — Backend:**
+Start both backend and frontend development servers simultaneously using:
 
 ```bash
-cd backend
-npm run dev
-```
-
-**Terminal 2 — Frontend:**
-
-```bash
-cd frontend
 npm run dev
 ```
 
@@ -132,14 +119,13 @@ fitness-app/
 ├── frontend/                 # React 19 + Vite SPA
 │   ├── src/
 │   │   ├── app/              # App root, providers, router
-│   │   ├── features/         # Feature modules (auth, food-log, activities, profile)
-│   │   ├── shared/           # Shared components and utilities
-│   │   │   ├── calendar/     # CalendarGrid, MonthNav, DayDetailPanel, hooks, utils
-│   │   │   └── hooks/        # useResponsive, etc.
-│   │   └── __tests__/        # Vitest test suites
+│   │   ├── features/         # Feature modules (auth, food-log, activities, profile, progress)
+│   │   └── shared/           # Shared components and utilities
+│   │       ├── calendar/     # CalendarGrid, MonthNav, DayDetailPanel, hooks, utils
+│   │       └── hooks/        # useResponsive, etc.
 │   └── vite.config.js        # Vite config (dev proxy included)
 ├── supabase/                 # Database configuration and migrations
-├── scripts/                  # Utility scripts
+├── scripts/                  # Utility scripts (start-all.sh)
 ├── Dockerfile                # Multi-stage production build
 ├── docker-compose.yml        # Production container setup
 └── LICENSE                   # GNU General Public License v3
