@@ -2,6 +2,43 @@
 
 **Analysis Date:** 2026-06-01
 
+## Resolved Issues
+
+### All 32 Empty Backend Files Restored from Git History
+
+**Status:** ✅ Resolved (quick task 260601-w2w, 2026-06-01)
+
+All 32 backend source files that were 0 bytes (empty) after the workspace restructure have been restored from git history (`HEAD:backend/src/`). This includes:
+- All utilities (errors.js, response.js, string.js, dbErrors.js, food.js)
+- Auth middleware (auth.middleware.js)
+- Passport config (passport.js)
+- All repositories (activity, dailyMealPlan, food, mealPlan, profile, user, weeklyPlan, weightLog)
+- All controllers (food, profile, weeklyPlan, weightLog)
+- All routes (auth, docs, food, profile, progress, weeklyPlan)
+- All services (activity, activityLog, food, mealPlan, profile, weightLog)
+- Test file (food.utils.test.js)
+
+**Impact:** The backend now starts without import errors. All modules load correctly.
+
+### 5 Orphan Activity Plan Files Integrated into Workspace
+
+**Status:** ✅ Resolved (quick task 260601-w2w, 2026-06-01)
+
+Activity plan files that were stuck at the old `backend/src/` location (outside the workspace) have been copied to `backend/backend/src/`:
+- activityPlan.service.js (7627 bytes)
+- activityPlan.controller.js (4864 bytes)
+- activityPlan.repository.js (1986 bytes)
+- activityPlan.routes.js (543 bytes)
+- activityPlanRateLimiter.js (804 bytes)
+
+**Impact:** Activity plan feature is now accessible via the Express app.
+
+### app.js Updated with Activity Plan Routes
+
+**Status:** ✅ Resolved (quick task 260601-w2w, 2026-06-01)
+
+`backend/backend/src/app.js` now imports `activityPlanRoutes` from `./routes/activityPlan.routes.js` and mounts it at `/api/activity-plans`. The empty comment placeholder was replaced with the actual route mount call.
+
 ## Tech Debt
 
 ### Critical: Migration to npm Workspaces — Implementation Files Empty

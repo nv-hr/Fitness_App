@@ -1,7 +1,7 @@
 <!-- refreshed: 2026-06-01 -->
 # Architecture
 
-**Analysis Date:** 2026-06-01
+**Analysis Date:** 2026-06-01 (updated 260601-w2w — backend verified running)
 
 ## System Overview
 

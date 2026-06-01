@@ -1,6 +1,6 @@
 # Technology Stack
 
-**Analysis Date:** 2026-06-01
+**Analysis Date:** 2026-06-01 (updated 260601-w2w — verified backend starts and runs)
 
 ## Languages
 
