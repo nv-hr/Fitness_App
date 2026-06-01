@@ -150,6 +150,13 @@ async function generate(req, res, next) {
       availableDays = 4; // default
     }
 
+    // Check DB for existing plan before regenerating (cache was wiped on restart)
+    const existingPlan = await findByUserAndWeek(userId, weekStart);
+    if (existingPlan && existingPlan.plan_data && Array.isArray(existingPlan.plan_data.days) && !isOldFormat(existingPlan.plan_data)) {
+      setCachedPlan(userId, weekStart, existingPlan.plan_data);
+      return successResponse(res, { plan: existingPlan.plan_data, fromCache: false });
+    }
+
     const result = await generateWeeklyPlan({
       getProfile: (id) => findProfileByUserId(id),
       getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),

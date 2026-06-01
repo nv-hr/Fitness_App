@@ -1,6 +1,6 @@
 import { pool } from '../config/database.js';
 import { successResponse, errorResponse } from '../utils/response.js';
-import { getCachedPlan, clearCachedPlan } from '../services/llm.service.js';
+import { getCachedPlan, setCachedPlan, clearCachedPlan } from '../services/llm.service.js';
 import { generateDailyMealPlan, swapMealItem } from '../services/dailyMealPlan.service.js';
 import { getProfile } from '../services/profile.service.js';
 import { searchFoods, getLogHistory, batchLogItems, getFoodById, getFoodsByCategory, createFoodLog, deleteFoodLogByPlan } from '../repositories/food.repository.js';
@@ -46,6 +46,12 @@ async function generate(req, res, next) {
       return errorResponse(res, 'Invalid date format (use YYYY-MM-DD)', 400, 'VALIDATION_ERROR');
     }
     planDate = planDate || getTodayString();
+    // Check DB for existing plan before regenerating (cache was wiped on restart)
+    const existing = await findByUserAndDate(userId, planDate);
+    if (existing && existing.plan_data && existing.status !== 'fallback') {
+      setCachedPlan(userId, planDate, structuredClone(existing.plan_data), 'meal');
+      return successResponse(res, { plan: existing.plan_data, fromCache: false, status: 'active' });
+    }
     const result = await generateDailyMealPlan({
       getProfile: (id) => getProfile(id),
       getAllFoods: (id) => searchFoods(id, '', 200),

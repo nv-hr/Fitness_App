@@ -101,6 +101,7 @@ export default function ActivityCalendarSection({
 
     if (currentMonthStr !== todayMonthStr) return;
 
+    if (loading) return;
     const todayStatus = dayStatusMap.get(todayStr);
     if (todayStatus && todayStatus !== 'incomplete') return;
 

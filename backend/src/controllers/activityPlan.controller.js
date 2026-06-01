@@ -1,6 +1,6 @@
 import { pool } from '../config/database.js';
 import { successResponse, errorResponse } from '../utils/response.js';
-import { getCachedPlan } from '../services/llm.service.js';
+import { getCachedPlan, setCachedPlan } from '../services/llm.service.js';
 import { generateActivityPlan } from '../services/activityPlan.service.js';
 import { getProfile } from '../services/profile.service.js';
 import { getAllActivities, getActivityHistoryWithEntries, batchLogActivities } from '../repositories/activity.repository.js';
@@ -46,6 +46,12 @@ async function generate(req, res, next) {
       return errorResponse(res, 'Invalid date format (use YYYY-MM-DD)', 400, 'VALIDATION_ERROR');
     }
     planDate = planDate || getTodayString();
+    // Check DB for existing plan before regenerating (cache was wiped on restart)
+    const existing = await findByUserAndDate(userId, planDate);
+    if (existing && existing.plan_data && existing.status !== 'fallback') {
+      setCachedPlan(userId, planDate, structuredClone(existing.plan_data), 'activity');
+      return successResponse(res, { plan: existing.plan_data, fromCache: false, status: 'active' });
+    }
     const result = await generateActivityPlan({
       getProfile: (id) => getProfile(id),
       getAllActivities: (id) => getAllActivities(),
