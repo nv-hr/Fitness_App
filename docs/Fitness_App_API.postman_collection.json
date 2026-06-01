@@ -24,6 +24,11 @@
       "key": "food_id",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "week_start",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -598,6 +603,675 @@
               "query": [
                 { "key": "goal", "value": "maintain" }
               ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/activities/log",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Calories burned calculated', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.calories_burned).to.be.greaterThan(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activityId\": 1,\n  \"durationMin\": 30,\n  \"intensity\": \"moderate\",\n  \"loggedDate\": \"{{today}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/activities/log",
+              "host": ["{{base_url}}"],
+              "path": ["api", "activities", "log"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/activities/logs?date=",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns logs array', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/activities/logs?date={{today}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "activities", "logs"],
+              "query": [
+                { "key": "date", "value": "{{today}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /api/activities/history?days=",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns history array', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/activities/history?days=7",
+              "host": ["{{base_url}}"],
+              "path": ["api", "activities", "history"],
+              "query": [
+                { "key": "days", "value": "7" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/activities/log/:id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Activity log deleted', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/activities/log/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "activities", "log", "1"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/activities/summary?date=",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns summary with netCalories', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data).to.have.property('netCalories');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/activities/summary?date={{today}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "activities", "summary"],
+              "query": [
+                { "key": "date", "value": "{{today}}" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Weekly Plans",
+      "item": [
+        {
+          "name": "POST /api/weekly-plans/generate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Weekly plan generated', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.plan).to.have.property('days');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weekStart\": \"{{week_start}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/weekly-plans/generate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "weekly-plans", "generate"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/weekly-plans?weekStart=",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns weekly plan', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/weekly-plans?weekStart={{week_start}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "weekly-plans"],
+              "query": [
+                { "key": "weekStart", "value": "{{week_start}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/weekly-plans/regenerate-day",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Day regenerated', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weekStart\": \"{{week_start}}\",\n  \"dayIndex\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/weekly-plans/regenerate-day",
+              "host": ["{{base_url}}"],
+              "path": ["api", "weekly-plans", "regenerate-day"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/weekly-plans/swap",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Activity swapped', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weekStart\": \"{{week_start}}\",\n  \"dayIndex\": 2,\n  \"oldActivityName\": \"Brisk Walking\",\n  \"intensity\": \"moderate\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/weekly-plans/swap",
+              "host": ["{{base_url}}"],
+              "path": ["api", "weekly-plans", "swap"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/weekly-plans/toggle-complete",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Toggle completed', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weekStart\": \"{{week_start}}\",\n  \"dayIndex\": 2,\n  \"activityName\": \"Brisk Walking\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/weekly-plans/toggle-complete",
+              "host": ["{{base_url}}"],
+              "path": ["api", "weekly-plans", "toggle-complete"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Daily Meal Plans",
+      "item": [
+        {
+          "name": "GET /api/daily-meal-plans?date=",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns daily meal plan', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/daily-meal-plans?date={{today}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "daily-meal-plans"],
+              "query": [
+                { "key": "date", "value": "{{today}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/daily-meal-plans/generate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Meal plan generated', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.plan).to.have.property('meals');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"{{today}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/daily-meal-plans/generate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "daily-meal-plans", "generate"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/daily-meal-plans/log",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Meals logged', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"{{today}}\",\n  \"mealType\": \"lunch\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/daily-meal-plans/log",
+              "host": ["{{base_url}}"],
+              "path": ["api", "daily-meal-plans", "log"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/daily-meal-plans/toggle-item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Item toggled', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"{{today}}\",\n  \"mealType\": \"lunch\",\n  \"itemIndex\": 0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/daily-meal-plans/toggle-item",
+              "host": ["{{base_url}}"],
+              "path": ["api", "daily-meal-plans", "toggle-item"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/daily-meal-plans/swap-item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Item swapped', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"{{today}}\",\n  \"mealType\": \"lunch\",\n  \"itemIndex\": 0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/daily-meal-plans/swap-item",
+              "host": ["{{base_url}}"],
+              "path": ["api", "daily-meal-plans", "swap-item"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Activity Plans",
+      "item": [
+        {
+          "name": "GET /api/activity-plans?date=",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns activity plan', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/activity-plans?date={{today}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "activity-plans"],
+              "query": [
+                { "key": "date", "value": "{{today}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/activity-plans/generate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Activity plan generated', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.plan).to.have.property('activities');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"{{today}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/activity-plans/generate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "activity-plans", "generate"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/activity-plans/log",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Activities logged', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"{{today}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/activity-plans/log",
+              "host": ["{{base_url}}"],
+              "path": ["api", "activity-plans", "log"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Progress/Weight",
+      "item": [
+        {
+          "name": "POST /api/progress/weight",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Weight entry created', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.entry).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weightKg\": 70.5,\n  \"loggedDate\": \"{{today}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/progress/weight",
+              "host": ["{{base_url}}"],
+              "path": ["api", "progress", "weight"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/progress/weight?limit=",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns entries array', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.entries).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/progress/weight?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "progress", "weight"],
+              "query": [
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/progress/weight/:id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Weight entry deleted', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.deleted).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/progress/weight/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "progress", "weight", "1"]
             }
           }
         }
