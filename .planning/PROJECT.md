@@ -10,12 +10,12 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 
 ## Current State
 
-**Building:** Planning next milestone
-**Shipped:** v1.7 Calendar-Based Plan UI (2026-06-01)
-**Phases:** 37 complete (v1.0: 5, v1.1: 3, v1.2: 4, v1.3: 5, v1.4: 6, v1.5: 6, v1.6: 4, v1.7: 4) | **Plans:** 68 | **Commits:** 450+
+**Building:** v1.9 Progress Tracking
+**Shipped:** v1.8 UI Consolidation (2026-06-01)
+**Phases:** 41 complete (v1.0: 5, v1.1: 3, v1.2: 4, v1.3: 5, v1.4: 6, v1.5: 6, v1.6: 4, v1.7: 4, v1.8: 4) | **Plans:** 70 | **Commits:** 450+
 
 ### v1.7 shipped:
-- **Activity Calendar Page** — Month grid view at `/activity-calendar` with color-coded days (blue=incomplete, green=completed, grey=missed past), above-calendar Generate Week button, day-click detail panel with DayActivityRow cards including per-activity swap and completion toggle
+- **Activity Calendar Page** — Month grid view at `/activities` with color-coded days (blue=incomplete, green=completed, grey=missed past), above-calendar Generate Week button, day-click detail panel with DayActivityRow cards including per-activity swap and completion toggle
 - **Meal Calendar Page** — Month grid view at `/meal-calendar` with same color coding, above-calendar Generate Day button, day-click detail panel with per-meal-type sections and individual Log buttons (breakfast, lunch, dinner, snack)
 - **Past Days Read-Only** — Both calendars: past days are greyed out with no interactions (no swap, no toggle, no log)
 - **Auto-Generation** — Both pages auto-generate plans when viewing today with no existing plan; ref guard prevents re-fire on month navigation
@@ -38,9 +38,17 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 - **LLM Weekly Activity Plans** — AI-generated 7-day personalized plans via OpenRouter with day-by-day cards, single-day regeneration, and rate-limit UX
 - **260/260 tests passing** — backend 134 + frontend 126
 
-## Next Milestone: v2.0 (Planning Phase)
+## Current Milestone: v1.9 Progress Tracking
 
-**Goal:** TBD — awaiting requirements definition.
+**Goal:** Enable users to set weight goals, automatically track weight changes over time, and visualize progress toward their target.
+
+**Target features:**
+- Set target weight and target date on profile
+- Auto-save weight to history on profile update
+- Weight trend chart with goal line
+- Progress dashboard (% complete, kg to goal, estimated completion)
+
+**Version increment rationale:** Natural continuation from v1.8 UI Consolidation — adds a new feature vertical (tracking) using existing profile infrastructure.
 
 ## Requirements
 
@@ -125,9 +133,19 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 - ✓ Old-format plans lazy-migrate on next visit (transparent) — v1.6
 - ✓ format_version field distinguishes old vs new plan format — v1.6
 
+#### v1.8 UI Consolidation
+- ✓ UI-01: Activity Calendar view integrated into the Activity page alongside manual logging — v1.8
+- ✓ UI-02: Meal Calendar view integrated into the Food Log page alongside manual meal logging — v1.8
+- ✓ UI-03: Standalone `/activities` and `/meal-calendar` routes removed — v1.8
+
 ### Active
 
-*(None — next requirements to be defined)*
+<!-- Current scope. Building toward these. -->
+
+- [ ] User can set a target weight and target date as part of their profile
+- [ ] Weight is automatically logged to history when user updates their profile
+- [ ] User can view a weight trend chart showing their progress over time
+- [ ] User can see progress summary (kg to goal, % complete, estimated completion)
 
 ### Out of Scope
 
@@ -241,4 +259,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-01 after v1.7 milestone completion*
+*Last updated: 2026-06-01 after starting v1.9 milestone*
