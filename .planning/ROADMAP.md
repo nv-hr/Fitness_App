@@ -2,8 +2,8 @@
 
 **Created:** 2026-05-17
 **Updated:** 2026-06-01 (v1.9 Progress Tracking)
-**Phases:** 41 complete, 5 planned
-**Milestones:** 7 shipped, 1 in progress
+**Phases:** 46 complete
+**Milestones:** 8 shipped
 
 ## Milestones
 
@@ -16,7 +16,7 @@
 - ✅ **v1.6 Activity Planner Rework** — Phases 30-33 (shipped 2026-05-31)
 - ✅ **v1.7 Calendar-Based Plan UI** — Phases 34-37 (shipped 2026-06-01)
 - ✅ **v1.8 UI Consolidation** — Phases 38-41 (completed 2026-06-01)
-- 🚧 **v1.9 Progress Tracking** — Phases 42-46 (in progress)
+- ✅ **v1.9 Progress Tracking** — Phases 42-46 (shipped 2026-06-01)
 
 ## Phases
 
@@ -112,13 +112,13 @@
 - [x] **Phase 40: Activity Page Merge**
 - [x] **Phase 41: Test Restructuring**
 
-### 🚧 v1.9 Progress Tracking (In Progress)
+### ✅ v1.9 Progress Tracking (Shipped 2026-06-01)
 
-- [ ] **Phase 42: Database Schema & Migration**
-- [ ] **Phase 43: Weight Logging & Goal Setting**
-- [ ] **Phase 44: Weight Trend Chart**
-- [ ] **Phase 45: Progress Dashboard**
-- [ ] **Phase 46: Trend Prediction**
+- [x] **Phase 42: Database Schema & Migration**
+- [x] **Phase 43: Weight Logging & Goal Setting**
+- [x] **Phase 44: Weight Trend Chart**
+- [x] **Phase 45: Progress Dashboard**
+- [x] **Phase 46: Trend Prediction**
 
 ### Phase 30: Prompt & Validation Rework
 **Goal**: LLM generates variable-day plans with profile-driven activity selection and rest days
@@ -309,7 +309,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 42-01-PLAN.md — Create weight_logs table, profiles ALTER, backfill, and index — Wave 1
+- [x] 42-01-PLAN.md — Create weight_logs table, profiles ALTER, backfill, and index — completed 2026-06-01
 
 ### Phase 43: Weight Logging & Goal Setting
 **Goal**: Users can log weight entries and set weight goals with target date; weight auto-logs on profile updates
@@ -328,8 +328,8 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 43-01-PLAN.md — Backend: weight log API, profile goal fields, auto-log, seed, validation — Wave 1
-- [ ] 43-02-PLAN.md — Frontend: profile goal fields, weight entry card, weight history table — Wave 1
+- [x] 43-01-PLAN.md — Backend: weight log API, profile goal fields, auto-log, seed, validation — completed 2026-06-01
+- [x] 43-02-PLAN.md — Frontend: profile goal fields, weight entry card, weight history table — completed 2026-06-01
 
 ### Phase 44: Weight Trend Chart
 **Goal**: Interactive weight trend line chart with goal reference line and date range filter
@@ -345,7 +345,7 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 44-01-PLAN.md — Recharts weight trend chart with goal line, date range filter, and state handling — Wave 1
+- [x] 44-01-PLAN.md — Recharts weight trend chart with goal line, date range filter, and state handling — completed 2026-06-01
 
 ### Phase 45: Progress Dashboard
 **Goal**: Complete /progress dashboard page integrating chart, weight history, goal display, and summary stats
@@ -372,7 +372,7 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 46-01-PLAN.md — Trend Prediction — OLS regression hook, TrendPredictionCard component, ProgressPage integration — Wave 1
+- [x] 46-01-PLAN.md — Trend Prediction — OLS regression hook, TrendPredictionCard component, ProgressPage integration — completed 2026-06-01
 
 ## Progress
 
@@ -419,13 +419,13 @@ Plans:
 | 39. Food Log Page Merge | v1.8 | 0/0 | Complete | 2026-06-01 |
 | 40. Activity Page Merge | v1.8 | 0/0 | Complete | 2026-06-01 |
 | 41. Test Restructuring | v1.8 | 0/0 | Complete | 2026-06-01 |
-| 42. Database Schema & Migration | v1.9 | 0/1 | Planned | - |
-| 43. Weight Logging & Goal Setting | v1.9 | 0/2 | Planned | - |
-| 44. Weight Trend Chart | v1.9 | 0/0 | Not started | - |
-| 45. Progress Dashboard | v1.9 | 0/0 | Not started | - |
-| 46. Trend Prediction | v1.9 | 0/0 | Not started | - |
+| 42. Database Schema & Migration | v1.9 | 1/1 | Complete | 2026-06-01 |
+| 43. Weight Logging & Goal Setting | v1.9 | 2/2 | Complete | 2026-06-01 |
+| 44. Weight Trend Chart | v1.9 | 1/1 | Complete | 2026-06-01 |
+| 45. Progress Dashboard | v1.9 | 1/1 | Complete | 2026-06-01 |
+| 46. Trend Prediction | v1.9 | 1/1 | Complete | 2026-06-01 |
 
 
 ---
 *Roadmap created: 2026-05-17*
-*Last updated: 2026-06-01 (v1.9 Progress Tracking)*
+*Last updated: 2026-06-01 (v1.9 Progress Tracking — shipped)*

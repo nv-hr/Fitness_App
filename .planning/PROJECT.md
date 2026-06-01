@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A web-based health application that helps users monitor their body condition through BMI calculation and daily calorie estimation (TDEE), track food consumption by ingredient and weight, log physical activities with calorie burn, and receive AI-generated weekly activity plans. It's designed for both general public and fitness enthusiasts who want to build healthier habits through digital tools.
+A web-based health application that helps users monitor their body condition through BMI calculation and daily calorie estimation (TDEE), track food consumption by ingredient and weight, log physical activities with calorie burn, track weight with trend visualization and trend prediction, and receive AI-generated weekly activity plans. It's designed for both general public and fitness enthusiasts who want to build healthier habits through digital tools.
 
 ## Core Value
 
@@ -10,9 +10,8 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 
 ## Current State
 
-**Building:** v1.9 Progress Tracking
-**Shipped:** v1.8 UI Consolidation (2026-06-01)
-**Phases:** 41 complete (v1.0: 5, v1.1: 3, v1.2: 4, v1.3: 5, v1.4: 6, v1.5: 6, v1.6: 4, v1.7: 4, v1.8: 4) | **Plans:** 70 | **Commits:** 450+
+**Shipped:** v1.9 Progress Tracking (2026-06-01)
+**Phases:** 46 complete (v1.0: 5, v1.1: 3, v1.2: 4, v1.3: 5, v1.4: 6, v1.5: 6, v1.6: 4, v1.7: 4, v1.8: 4, v1.9: 5) | **Plans:** 76 | **Commits:** 450+
 
 ### v1.7 shipped:
 - **Activity Calendar Page** — Month grid view at `/activities` with color-coded days (blue=incomplete, green=completed, grey=missed past), above-calendar Generate Week button, day-click detail panel with DayActivityRow cards including per-activity swap and completion toggle
@@ -38,15 +37,18 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 - **LLM Weekly Activity Plans** — AI-generated 7-day personalized plans via OpenRouter with day-by-day cards, single-day regeneration, and rate-limit UX
 - **260/260 tests passing** — backend 134 + frontend 126
 
-## Current Milestone: v1.9 Progress Tracking
+## v1.9 Progress Tracking (Shipped 2026-06-01)
 
 **Goal:** Enable users to set weight goals, automatically track weight changes over time, and visualize progress toward their target.
 
-**Target features:**
-- Set target weight and target date on profile
-- Auto-save weight to history on profile update
-- Weight trend chart with goal line
-- Progress dashboard (% complete, kg to goal, estimated completion)
+**Shipped features:**
+- Weight tracking database schema (weight_logs table with UPSERT, backfill migration)
+- Weight logging API with CRUD, auto-log on profile update, goal validation (2-300kg, date >= today, direction match)
+- Frontend weight entry form, history table with delete, goal fields in profile form
+- Weight Trend Chart: Recharts LineChart with goal reference line, 30/60/90 day date range filter, all state handling
+- Progress Dashboard: /progress route with all sub-components and coordinated refreshKey state
+- Trend Prediction: OLS linear regression hook, TrendPredictionCard with color-coded status (green/amber/red), estimated completion date
+- **171/175 tests passing** (4 pre-existing integration test failures)
 
 **Version increment rationale:** Natural continuation from v1.8 UI Consolidation — adds a new feature vertical (tracking) using existing profile infrastructure.
 
