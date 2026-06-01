@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { getWeightHistory } from '../api/weightApi.js';
 import { useTrendPrediction } from '../hooks/useTrendPrediction.js';

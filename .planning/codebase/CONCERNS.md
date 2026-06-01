@@ -1,409 +1,594 @@
 # Codebase Concerns
 
-**Analysis Date:** 2026-06-01
-
-## Resolved Issues
-
-### All 32 Empty Backend Files Restored from Git History
-
-**Status:** ✅ Resolved (quick task 260601-w2w, 2026-06-01)
-
-All 32 backend source files that were 0 bytes (empty) after the workspace restructure have been restored from git history (`HEAD:backend/src/`). This includes:
-- All utilities (errors.js, response.js, string.js, dbErrors.js, food.js)
-- Auth middleware (auth.middleware.js)
-- Passport config (passport.js)
-- All repositories (activity, dailyMealPlan, food, mealPlan, profile, user, weeklyPlan, weightLog)
-- All controllers (food, profile, weeklyPlan, weightLog)
-- All routes (auth, docs, food, profile, progress, weeklyPlan)
-- All services (activity, activityLog, food, mealPlan, profile, weightLog)
-- Test file (food.utils.test.js)
-
-**Impact:** The backend now starts without import errors. All modules load correctly.
-
-### 5 Orphan Activity Plan Files Integrated into Workspace
-
-**Status:** ✅ Resolved (quick task 260601-w2w, 2026-06-01)
-
-Activity plan files that were stuck at the old `backend/src/` location (outside the workspace) have been copied to `backend/backend/src/`:
-- activityPlan.service.js (7627 bytes)
-- activityPlan.controller.js (4864 bytes)
-- activityPlan.repository.js (1986 bytes)
-- activityPlan.routes.js (543 bytes)
-- activityPlanRateLimiter.js (804 bytes)
-
-**Impact:** Activity plan feature is now accessible via the Express app.
-
-### app.js Updated with Activity Plan Routes
-
-**Status:** ✅ Resolved (quick task 260601-w2w, 2026-06-01)
-
-`backend/backend/src/app.js` now imports `activityPlanRoutes` from `./routes/activityPlan.routes.js` and mounts it at `/api/activity-plans`. The empty comment placeholder was replaced with the actual route mount call.
-
-## Tech Debt
-
-### Critical: Migration to npm Workspaces — Implementation Files Empty
-
-**Issue:** The repository was restructured from a flat `backend/` layout into npm workspaces (`backend/` root → `backend/backend/` + `backend/frontend/`), but the file contents were not migrated. 32 of 45 backend source files and 42 of 72 frontend source files are **0 bytes (empty)**.
-
-**Files (empty in `backend/backend/src/`):**
-- **All utilities:** `backend/backend/src/utils/errors.js`, `response.js`, `string.js`, `dbErrors.js`, `food.js`
-- **Auth middleware:** `backend/backend/src/middlewares/auth.middleware.js`
-- **All repositories:** `backend/backend/src/repositories/activity.repository.js`, `dailyMealPlan.repository.js`, `food.repository.js`, `mealPlan.repository.js`, `profile.repository.js`, `user.repository.js`, `weeklyPlan.repository.js`, `weightLog.repository.js`
-- **Most services:** `backend/backend/src/services/activity.service.js`, `activityLog.service.js`, `food.service.js`, `mealPlan.service.js`, `profile.service.js`, `weightLog.service.js`
-- **Most controllers:** `backend/backend/src/controllers/food.controller.js`, `profile.controller.js`, `weeklyPlan.controller.js`, `weightLog.controller.js`
-- **Most routes:** `backend/backend/src/routes/auth.routes.js`, `docs.routes.js`, `food.routes.js`, `profile.routes.js`, `progress.routes.js`, `weeklyPlan.routes.js`
-- **Passport config:** `backend/backend/src/config/passport.js`
-- **Test file:** `backend/backend/src/__tests__/food.utils.test.js`
-- **Most test suites:** 7 of 10 test files in `backend/backend/tests/` are empty (only `remaining-endpoints.test.js` and `llm.service.test.js` have content)
-
-**Impact:** The app will crash at startup when importing from these files. For example:
-- `backend/backend/src/services/auth.service.js` (line 8) imports `ValidationError` and `AuthenticationError` from `../utils/errors.js` — empty file → import fails at module evaluation
-- `backend/backend/src/services/llm.service.js` (line 6) imports `AppError`, `ValidationError`, `NotFoundError` from `../utils/errors.js` — empty → crash
-- `backend/backend/src/controllers/auth.controller.js` (line 3) imports from `../utils/response.js` and `../utils/errors.js` — both empty → crash
-- `backend/backend/src/routes/activity.routes.js` (line 3) imports `authenticateToken` from `../middlewares/auth.middleware.js` — empty → crash
-- All route files import empty middleware → every endpoint broken
-
-**Fix approach:** Restore the file contents from git history (old `backend/src/` files at HEAD commit). The old implementations exist in the git working tree as deleted files and can be recovered by copying from `HEAD:backend/src/` to `backend/backend/src/`.
-
-### Critical: Frontend Workspace Also Empty
-
-**Issue:** The `backend/frontend/` workspace (the npm workspace for the frontend) has 42 of 72 source files at 0 bytes. This includes all React components, hooks, API modules, test files, and App-level files.
-
-**Key empty files:**
-- `backend/frontend/src/app/App.jsx` — App entry point (app in `backend/frontend/vite.config.js` references `src/main.jsx` which is missing)
-- `backend/frontend/src/app/Router.jsx` — Router for all features
-- `backend/frontend/src/main.jsx` — Main entry point
-- All feature components across `activities/`, `auth/`, `food-log/`, `profile/`, `progress/` directories
-- All `shared/` UI components (CalendarGrid, DayDetailPanel, etc.)
-- All API modules (`authApi.js`, `foodLogApi.js`, `profileApi.js`, etc.)
-- All test files
-
-**Impact:** The frontend cannot build or run. `vite build` and `npm run dev` will fail to resolve imports.
-
-**Fix approach:** Restore from the old `frontend/` source files at HEAD commit (they were removed in the restructuring).
-
-### Critical: ActivityPlan Feature in Wrong Location
-
-**Issue:** Activity plan files exist at `backend/src/` (the old source root, outside the workspace) and are not integrated into the Express app at `backend/backend/src/app.js`.
-
-**Files stuck outside workspace:**
-- `backend/src/services/activityPlan.service.js` (7627 bytes — has content)
-- `backend/src/controllers/activityPlan.controller.js` (4864 bytes)
-- `backend/src/repositories/activityPlan.repository.js` (1986 bytes)
-- `backend/src/routes/activityPlan.routes.js` (543 bytes)
-- `backend/src/middlewares/activityPlanRateLimiter.js` (804 bytes)
-
-**Impact:** These files exist but are unreferenced by the new app. They're not copied into the workspace structure. The activity plan feature is effectively inaccessible.
-
-### No Logging Library
-
-**Issue:** The codebase uses raw `console.log()`, `console.error()`, `console.warn()` throughout instead of a structured logging library.
-
-**Files:**
-- `backend/backend/src/services/llm.service.js` — 17 console.* calls
-- `backend/backend/src/services/dailyMealPlan.service.js` — 8 console.* calls
-- `backend/backend/src/controllers/activity.controller.js` — 2 console.* calls
-- `backend/backend/src/config/database.js` — 4 console.* calls
-- `backend/backend/src/server.js` — 6 console.* calls
-- `backend/backend/src/app.js` — 2 console.* calls
-
-**Impact:** No structured log format, no log levels (debug/info/warn/error), no log routing, no searchability. Production debugging and monitoring depend on unstructured stdout.
-
-**Fix approach:** Integrate a logging library like `pino` or `winston`, replace console.* calls, and configure log levels via env var.
-
-## Known Bugs
-
-### `errors.js` Empty — AppError Classes Missing at Import Time
-
-**Symptoms:** Any route or service that imports from `../utils/errors.js` will crash on import. Affected files:
-- `backend/backend/src/services/auth.service.js` (imports ValidationError, AuthenticationError)
-- `backend/backend/src/services/llm.service.js` (imports AppError, ValidationError, NotFoundError)
-- `backend/backend/src/services/dailyMealPlan.service.js` (imports AppError)
-- `backend/backend/src/controllers/auth.controller.js` (imports ValidationError, AuthenticationError)
-
-**Trigger:** Any HTTP request hitting auth routes, activity routes, daily meal plan routes, or any route requiring the error classes.
-
-**Fix:** Restore error class definitions from old `backend/src/utils/errors.js` at HEAD commit.
-
-### `response.js` Empty — `successResponse`/`errorResponse` Missing
-
-**Symptoms:** `backend/backend/src/controllers/auth.controller.js` imports `successResponse` and `errorResponse` from `../utils/response.js`. Module will fail to load.
-
-**Trigger:** Starting the server. `app.js` (line 23) also imports `errorResponse` from this file.
-
-**Fix:** Restore response utility functions from old `backend/src/utils/response.js`.
-
-### `auth.middleware.js` Empty — Authentication Middleware Missing
-
-**Symptoms:** `backend/backend/src/routes/activity.routes.js` (line 3), `dailyMealPlan.routes.js` (line 3) import `authenticateToken`. All protected routes will fail.
-
-**Trigger:** Any request to `/api/activities/*` or `/api/daily-meal-plans/*`.
-
-**Fix:** Restore `authenticateToken` from old `backend/src/middlewares/auth.middleware.js`.
-
-### `string.js` Empty — `levenshteinDistance` Missing
-
-**Symptoms:** `backend/backend/src/services/llm.service.js` (line 7) imports `levenshteinDistance`. LLM activity matching will crash.
-
-**Trigger:** An LLM prompt response that requires fuzzy-matching activity names (happens on every weekly plan generation that finds non-exact matches).
-
-**Fix:** Restore `levenshteinDistance` from old `backend/src/utils/string.js`.
-
-### `food.service.js` Empty — Food Service Missing
-
-**Symptoms:** `backend/backend/src/app.js` (line 17) imports `foodRoutes` from `./routes/food.routes.js` which is empty. Routes to food endpoints will not exist.
-
-**Trigger:** Any request to `/api/food/*`.
-
-**Fix:** Restore from old `backend/src/services/food.service.js`.
-
-### `passport.js` Empty — Google OAuth Config Missing
-
-**Symptoms:** `backend/backend/src/app.js` (line 13) imports passport from `./config/passport.js`, which is empty. Google OAuth `/api/auth/google` and `/api/auth/google/callback` will fail.
-
-**Trigger:** Google OAuth login attempts.
-
-**Fix:** Restore Passport configuration from old `backend/src/config/passport.js`.
-
-### Dockerfile References Old Structure
-
-**Symptoms:** The `Dockerfile` at repo root copies from `frontend/` and `backend/` directories, but the new structure nests these under `backend/backend/` and `backend/frontend/`. Multi-stage build will fail with missing files.
-
-**Fix:** Update Dockerfile paths to match the new workspace layout (`backend/backend/` for server, `backend/frontend/` for frontend source).
-
-## Security Considerations
-
-### JWT Secret — No Default Validation
-
-**Issue:** `backend/backend/src/services/auth.service.js` reads `process.env.JWT_SECRET` with no fallback or runtime validation. If unset, `jwt.sign()` with an undefined/empty key produces a trivially forged token.
-
-- File: `backend/backend/src/services/auth.service.js`, line 148
-- Risk: Authentication bypass if env var is missing
-- Current mitigation: `.env.example` documents it as required
-- Recommendation: Add runtime check at server startup (fail if `JWT_SECRET` is missing or too short)
-
-### Database SSL — `rejectUnauthorized: false`
-
-**Issue:** `backend/backend/src/config/database.js` (line 24) sets `ssl: { rejectUnauthorized: false }`. This disables TLS certificate verification for the PostgreSQL connection.
-
-- Risk: Man-in-the-middle attacks on database connections
-- Current mitigation: Uses Supabase connection pooler with session mode (port 6543)
-- Recommendation: Set `rejectUnauthorized: true` for production, configure proper CA certificate
-
-### OpenRouter API Key — Module-Level Check
-
-**Issue:** `backend/backend/src/services/llm.service.js` (lines 15-18) checks `OPENROUTER_API_KEY` at module load time. The module is imported at app startup, so a missing key causes early console.error but does NOT prevent app startup.
-
-- Risk: LLM features silently fail if key is missing; `getClient()` returns `null`, subsequent calls throw `LlmConfigError`
-- Recommendation: Add a boot-time health check that verifies all required env vars
-
-### Cookie Security — SameSite None Over HTTP
-
-**Issue:** `backend/backend/src/controllers/auth.controller.js` (line 12) sets `sameSite: 'none'` and `secure: true` on JWT cookies. This is correct for HTTPS but the app also runs locally on HTTP.
-
-- Risk: If deployed without HTTPS or behind a proxy that terminates SSL, the cookie won't be set
-- Recommendation: Conditionally set `secure` based on `NODE_ENV` (true for production, false for local dev)
-
-### Password Stub for Timing Attack Prevention
-
-**Issue:** `backend/backend/src/services/auth.service.js` (line 76) uses `'$2b$10$' + 'a'.repeat(53)` as a dummy bcrypt hash for timing side-channel protection. This is a valid approach but the hardcoded string format could break if bcryptjs changes its hash format.
-
-- File: `backend/backend/src/services/auth.service.js`
-- Risk: Low — approach is standard, but the hardcoded string is brittle
-- Recommendation: Extract to a named constant with comment
-
-### `.env` File Present
-
-**Issue:** A `.env` file exists at `backend/.env` (1237 bytes). Contains environment configuration.
-
-- Risk: Standard — `.env` is in `.gitignore` but should be double-checked for accidental commits
-- Recommendation: Ensure `.gitignore` excludes `.env` and audit git history for any committed secrets
-
-## Performance Bottlenecks
-
-### LLM Plan Generation — Blocking Synchronous Cache
-
-**Issue:** `backend/backend/src/services/llm.service.js` (line 52) uses a per-user in-memory mutex (`locks` Map) that spins with `setTimeout(100ms)` busy-waiting. During high concurrency, this adds latency and wastes event loop cycles.
-
-- Files: `backend/backend/src/services/llm.service.js`, lines 54-62
-- Cause: `acquireLock()` does a 100ms polling loop for up to 15 seconds
-- Impact: Under concurrent requests for the same user+week, requests queue serially
-- Improvement path: Use an async semaphore library or a dedicated locking mechanism
-
-### In-Memory Plan Cache — No Distributed Invalidation
-
-**Issue:** `backend/backend/src/services/llm.service.js` (line 48) uses `node-cache` with 1-hour TTL. In multi-instance deployments, cache is per-process and not shared.
-
-- File: `backend/backend/src/services/llm.service.js` (NodeCache)
-- Impact: Stale data on one instance, inconsistent user experience across instances
-- Recommendation: Replace with Redis or Supabase-based caching for production
-
-### ORDER BY RAND() Queries
-
-**Issue:** Rate limiter comment in `backend/backend/src/app.js` (line 136) references "ORDER BY RAND() queries" as the reason for stricter rate limiting on activity endpoints.
-
-- Risk: `ORDER BY RAND()` scans the entire table, generates a random value for every row, sorts, then returns a small result. On large activity tables, this becomes extremely slow.
-- Recommendation: Use a `TABLESAMPLE` or application-level random offset approach
-
-### Deep Clone Patterns (JSON.parse/stringify)
-
-**Issue:** `backend/backend/src/services/llm.service.js` uses `JSON.parse(JSON.stringify(plan))` for deep cloning in multiple places (lines 320, 525, 571, 577, 755, 766). This is expensive on large plan objects and loses Date objects, undefined values, and prototypes.
-
-- Impact: Performance overhead on every plan generation and swap operation
-- Recommendation: Use a structuredClone() or a fast deep-clone library for large objects
-
-### All-Generations-Failed Fallback Path
-
-**Issue:** When all LLM calls fail (up to 2 attempts × 3 models × 2 validation stages), the `generateFallbackPlan()` still makes additional async calls to `getTopActivities()` and `getRandomActivity()`. The worst-case path can take 30+ seconds with 15+ HTTP calls to OpenRouter before returning a fallback.
-
-- File: `backend/backend/src/services/llm.service.js`
-- Recommendation: Add circuit breaker pattern; cache a simple fallback plan keyed by user profile
-
-## Fragile Areas
-
-### Activity Plan File Duplication
-
-**Issue:** The activity plan feature has files in TWO locations:
-1. `backend/src/` (old source root) — has actual implementation
-2. `backend/backend/src/` (new workspace) — activity controller and related files DO exist here
-
-The `backend/backend/src/controllers/activity.controller.js` (10338 bytes) references activity plan operations inline, while `backend/src/services/activityPlan.service.js` (7627 bytes) has a parallel implementation. It's unclear which is the primary implementation.
-
-**Files:**
-- `backend/backend/src/controllers/activity.controller.js` (has content — activity + activity plan logic mixed)
-- `backend/src/services/activityPlan.service.js` (has content — separate activity plan service)
-- `backend/src/controllers/activityPlan.controller.js` (has content)
-- `backend/src/routes/activityPlan.routes.js` (has content)
-
-**Why fragile:** Duplicate implementations will diverge over time. Mixed responsibilities in the activity controller make the file large (10338 bytes).
-
-**Test coverage:** Only `llm.service.test.js` (23427 bytes) has substantial test content. Activity plan logic has no tests.
-
-### Large File: `llm.service.js` (29305 bytes)
-
-**File:** `backend/backend/src/services/llm.service.js`
-
-**Why fragile:** This single file handles prompt building, multiple LLM API call strategies, model fallback logic (3-tier), response parsing, structure validation, name fuzzy matching (exact/contains/Levenshtein), plan caching with TTL, per-user mutex locking, day regeneration, activity swapping, fallback plan generation, and cache invalidation.
-
-**Safe modification:** Changes to any one concern (e.g., prompt format) risk breaking other logic (e.g., cache key format, validation, swapping). Testing is essential.
-
-**Test coverage:** `llm.service.test.js` exists (23427 bytes) but depends on empty `errors.js` and `string.js` — will not run until those are restored.
-
-### Large File: `dailyMealPlan.service.js` (13311 bytes)
-
-**File:** `backend/backend/src/services/dailyMealPlan.service.js`
-
-**Why fragile:** Contains LLM call logic for meal plan generation, persistence, validation, meal logging, and regeneration. Similar to `llm.service.js` in complexity.
-
-**Test coverage:** No test file exists specifically for this service.
-
-### `activity.controller.js` (10338 bytes) — Mixed Concerns
-
-**File:** `backend/backend/src/controllers/activity.controller.js`
-
-**Why fragile:** Mixes activity CRUD, activity plan logic, and plan synchronization in a single controller. Has inline database access patterns that should be in repositories.
-
-**Safe modification:** Each exported function has clear responsibility (log, getLogs, delete, getHistory, getSummary, syncToPlan) but the file is too large for a controller.
-
-### Module-Level Module Instance (`openaiClient`)
-
-**File:** `backend/backend/src/services/llm.service.js`, line 20
-
-**Why fragile:** The `openaiClient` is a module-level singleton created lazily. If `API_KEY` changes at runtime (e.g., updated env var), the old client is still used. In tests, this state leaks between test suites unless explicitly reset.
-
-### Test Files Empty — 80% Test Coverage Gap
-
-**Files (empty):**
-- `backend/backend/tests/unit/activity.service.test.js`
-- `backend/backend/tests/unit/auth.service.test.js`
-- `backend/backend/tests/unit/dbErrors.test.js`
-- `backend/backend/tests/unit/food.service.test.js`
-- `backend/backend/tests/unit/profile.service.test.js`
-- `backend/backend/tests/integration/api.test.js`
-- `backend/backend/tests/integration/helpers.js`
-- `backend/backend/tests/integration/weeklyPlan.e2e.test.js`
-- `backend/frontend/tests/CustomFoodForm.test.js`
-- All `__tests__` directories in frontend features
-
-**Files with content:**
-- `backend/backend/tests/unit/llm.service.test.js` (23427 bytes)
-- `backend/backend/tests/integration/remaining-endpoints.test.js` (14597 bytes)
-- `backend/backend/src/__tests__/food.utils.test.js` (0 bytes)
-
-**Impact:** Most test coverage is lost. Only LLM service and remaining-endpoint integration tests survive.
-
-## Scaling Limits
-
-### LLM Model Fallback (3-tier)
-
-**Issue:** `backend/backend/src/services/llm.service.js` (lines 143-147) tries up to 3 models in sequence. Each model call has a 30-second timeout. In worst case, 3 timeouts = 90 seconds before falling back.
-
-- Current capacity: ~3 concurrent LLM users before rate limits hit
-- Limit: OpenRouter token limits and per-IP rate limits (shared across users)
-- Scaling path: Queue-based LLM requests, use streaming responses, pre-generate plans on user profile creation
-
-### Database Connection Pool
-
-**Issue:** `backend/backend/src/config/database.js` (line 25) uses `max: 10` for the pg Pool.
-
-- Current capacity: 10 concurrent database connections
-- Limit: Supabase free tier connection limits (typically 15-30 simultaneous connections)
-- Scaling path: Increase pool size proportionally to server instances, use connection pooling via PgBouncer (Supabase already provides this on port 6543)
-
-### No Redis/Session Store
-
-**Issue:** The app uses in-memory state for plan cache (NodeCache), rate limiting (express-rate-limit in-memory), and no session persistence beyond JWT cookies.
-
-- Limit: Cannot scale to multiple instances without losing rate limit state and plan cache
-- Scaling path: Use Redis or shared cache for rate limiting and plan caching
-
-## Dependencies at Risk
-
-### Express 5.x (Release Candidate)
-
-**Issue:** `backend/backend/package.json` uses `"express": "^5.2.0"`. Express 5 is a newer major version with breaking changes from Express 4. Some middleware (morgan, express-rate-limit) has had compatibility issues with Express 5.
-
-- Risk: Middleware incompatibility, unexpected breaking changes on minor updates
-- Impact: If `^5.2.0` resolves to 5.3.x with breaking changes, the app could break
-- Migration plan: Pin to exact version `5.2.0`, or analyze Express 5 compatibility matrix
-
-### `tsx` for Dev Only
-
-**Issue:** `backend/package.json` devDependencies includes `tsx` for running TypeScript files, but the actual backend uses plain JS (`.js` files). The need for tsx from the root workspace is unclear.
-
-- Risk: Confusion about TypeScript usage — `tsconfig.json` exists at `backend/` but all source is `.js`
-- Recommendation: Either adopt TypeScript for the `backend/backend/` workspace or remove tsconfig.json and tsx dependency
-
-### `@google/genai` in Root Dependencies
-
-**Issue:** `backend/package.json` includes `@google/genai` as a dependency, but the LLM service uses OpenRouter (OpenAI-compatible API, uses `openai` npm package in the `backend/backend/` workspace).
-
-- Risk: Unused dependency at the workspace root adds bloat and potential confusion
-- Recommendation: Move `@google/genai` to the correct workspace or remove if unused
-
-### `motion` (Framer Motion) in Root Dependencies
-
-**Issue:** `backend/package.json` includes `motion ^12.23.24` at the workspace root. If the frontend uses Framer Motion for animations, it should be in `backend/frontend/package.json`, not the root.
-
-## Missing Critical Features
-
-### Database Migration Strategy
-
-**Issue:** The `backend/backend/db/` directory contains raw SQL files (`schema.sql`, `seed.sql`, etc.) but there is no migration runner or schema versioning. The `db:migrate` script in `backend/backend/package.json` manually pipes SQL files to `psql`.
-
-- Problem: No up/down migrations, no version tracking, no automated rollback
-- Blocks: Safe schema changes across environments (dev/staging/prod)
-
-### No Input Validation Library Usage
-
-**Issue:** `backend/backend/package.json` includes `express-validator` as a dependency, but it's unclear from the existing code whether validation middleware is consistently applied across all routes.
-
-- Risk: Manual validation in controllers is error-prone and inconsistent
-
-### Rate Limiter Config References Removed `activityPlan.routes.js`
-
-**Issue:** The new `backend/backend/src/app.js` imports `weeklyPlanRoutes` and `dailyMealPlanRoutes` but NOT `activityPlanRoutes`. The old app.js referenced `activityPlanRoutes` from `./routes/activityPlan.routes.js`. The activity plan route integration is missing in the new app.
+**Analysis Date:** 2026-06-02
+
+## CRITICAL: 279 Files Deleted from Working Tree
+
+**Issue:** A massive number of files — 279 total — have been deleted from the working tree (`git status` shows `D` for them) but still exist in git HEAD. This includes 47+ essential backend source files and 20+ essential frontend source files that are imported by existing code.
+
+**Impact:** The codebase is in a non-functional state. Any attempt to run the application will produce dozens of `ERR_MODULE_NOT_FOUND` import errors. The application cannot start, build, or run tests without restoring these files.
+
+**Fix approach:** Run `git checkout HEAD -- <file>` for each deleted source file, or `git restore .` (caution — also restores .planning/ files). Alternatively, review the diff to determine intentional deletions vs. accidental ones.
+
+### Backend source files deleted from working tree (47 files)
+
+**Config:**
+- `backend/src/config/passport.js`
+
+**Controllers:**
+- `backend/src/controllers/activityPlan.controller.js`
+- `backend/src/controllers/food.controller.js`
+- `backend/src/controllers/profile.controller.js`
+- `backend/src/controllers/weeklyPlan.controller.js`
+- `backend/src/controllers/weightLog.controller.js`
+
+**Middleware:**
+- `backend/src/middlewares/activityPlanRateLimiter.js`
+- `backend/src/middlewares/auth.middleware.js`
+
+**Repositories (all deleted):**
+- `backend/src/repositories/activity.repository.js`
+- `backend/src/repositories/activityPlan.repository.js`
+- `backend/src/repositories/dailyMealPlan.repository.js`
+- `backend/src/repositories/food.repository.js`
+- `backend/src/repositories/mealPlan.repository.js`
+- `backend/src/repositories/profile.repository.js`
+- `backend/src/repositories/user.repository.js`
+- `backend/src/repositories/weeklyPlan.repository.js`
+- `backend/src/repositories/weightLog.repository.js`
+
+**Routes:**
+- `backend/src/routes/activityPlan.routes.js`
+- `backend/src/routes/auth.routes.js`
+- `backend/src/routes/docs.routes.js`
+- `backend/src/routes/food.routes.js`
+- `backend/src/routes/profile.routes.js`
+- `backend/src/routes/progress.routes.js`
+- `backend/src/routes/weeklyPlan.routes.js`
+
+**Services:**
+- `backend/src/services/activity.service.js`
+- `backend/src/services/activityLog.service.js`
+- `backend/src/services/activityPlan.service.js`
+- `backend/src/services/food.service.js`
+- `backend/src/services/mealPlan.service.js`
+- `backend/src/services/profile.service.js`
+- `backend/src/services/weightLog.service.js`
+
+**Utils (all deleted):**
+- `backend/src/utils/dbErrors.js`
+- `backend/src/utils/errors.js`
+- `backend/src/utils/food.js`
+- `backend/src/utils/response.js`
+- `backend/src/utils/string.js`
+
+**Database SQL:**
+- `backend/db/schema.sql`
+- `backend/db/seed.sql`
+- `backend/db/drop_user_activity_log.sql`
+- `backend/db/add_activity_logs.sql`
+- `backend/db/add_activity_plans.sql`
+- `backend/db/add_daily_meal_plans.sql`
+- `backend/db/add_meal_plans.sql`
+- `backend/db/add_weight_logs.sql`
+- `backend/db/init.sql`
+- `backend/db/run_migration.js`
+
+**Tests:**
+- `backend/src/__tests__/food.utils.test.js`
+
+### Frontend source files deleted from working tree (20+ files)
+
+**App:**
+- `frontend/src/app/Providers.jsx`
+
+**Auth:**
+- `frontend/src/features/auth/hooks/useAuth.jsx`
+- `frontend/src/features/auth/api/authApi.js`
+- `frontend/src/features/auth/index.js`
+
+**Food Log:**
+- `frontend/src/features/food-log/api/foodLogApi.js`
+- `frontend/src/features/food-log/components/previewCalories.js`
+- `frontend/src/features/food-log/index.js`
+
+**Activities:**
+- `frontend/src/features/activities/api/activityPlanApi.js`
+- `frontend/src/features/activities/components/previewCalories.js`
+- `frontend/src/features/activities/index.js`
+
+**Progress:**
+- `frontend/src/features/progress/api/weightApi.js`
+- `frontend/src/features/progress/components/WeightEntryCard.jsx`
+- `frontend/src/features/progress/components/WeightHistoryTable.jsx`
+- `frontend/src/features/progress/hooks/useTrendPrediction.js`
+- `frontend/src/features/progress/index.js`
+
+**Profile:**
+- `frontend/src/features/profile/api/profileApi.js`
+- `frontend/src/features/profile/index.js`
+
+**Shared (all deleted):**
+- `frontend/src/shared/lib/http.js`
+- `frontend/src/shared/hooks/useResponsive.js`
+- `frontend/src/shared/calendar/index.js`
+- `frontend/src/shared/calendar/CalendarGrid.jsx`
+- `frontend/src/shared/calendar/CalendarPageLayout.jsx`
+- `frontend/src/shared/calendar/DayDetailPanel.jsx`
+- `frontend/src/shared/calendar/MonthNav.jsx`
+- `frontend/src/shared/calendar/calendarUtils.js`
+- `frontend/src/shared/calendar/hooks/useMonthData.js`
+- `frontend/src/shared/calendar/__tests__/*.test.jsx` (4 test files)
+
+## Incomplete Import Chains / Circular Dependencies
+
+**Issue:** Missing `jest.setup.js` — `backend/package.json` references `jest.setup.js` but the file does not exist in the repository (deleted or never created):
+```json
+"setupFiles": ["./jest.setup.js"]
+```
+
+**Files:** `backend/package.json` (line 43-45)
+
+**Impact:** Jest tests fail to run due to missing setup file.
 
 ---
 
-*Concerns audit: 2026-06-01*
+**Issue:** `dailyMealPlan.service.js` imports `fuzzyMatchFoodName` and `recalculateDayCalories` from `'./mealPlan.service.js'` which has been deleted from the working tree.
+
+**Files:** `backend/src/services/dailyMealPlan.service.js` (line 4)
+
+**Impact:** Any call to `generateDailyMealPlan` or `regenerateCategory` will fail at runtime with import error.
+
+---
+
+**Issue:** `backend/src/routes/__tests__/` test directories referenced in integration tests may reference test helpers that have been deleted.
+
+**Files:** `backend/tests/integration/remaining-endpoints.test.js` (line 25: imports `from './helpers.js'`)
+
+**Impact:** Integration tests fail to run.
+
+## Missing Configuration Files
+
+**Issue:** Database SQL migration files are deleted. The `scripts/db-init.js` script references:
+- `backend/db/schema.sql`
+- `backend/db/seed.sql`
+- `backend/db/drop_user_activity_log.sql`
+
+None of these files exist in the working tree.
+
+**Impact:** Cannot initialize or migrate the database from scratch.
+
+---
+
+**Issue:** `jest.setup.js` file missing (referenced in `backend/package.json`).
+
+**Impact:** Jest cannot run — all test suites fail immediately with setup file not found.
+
+---
+
+**Issue:** `.env` file present in working tree. The `.env.example` shows required env vars. The file contains sensitive credentials and should not be committed.
+
+**Files:** `.env`
+
+**Risk:** Credential leak if committed to git.
+
+---
+
+**Issue:** Duplicate file path in git HEAD: `backend/backend/` directory contains a second copy of many source files (created by git restore in commit `d1ce6ec`). These include:
+- `backend/backend/.env`
+- `backend/backend/src/app.js`
+- `backend/backend/src/config/passport.js`
+- `backend/backend/src/repositories/*.js`
+- `backend/backend/src/services/*.js`
+- `backend/backend/src/utils/*.js`
+- `backend/backend/src/middlewares/*.js`
+- `backend/backend/src/routes/*.js`
+- `backend/backend/src/controllers/*.js`
+
+These are in git HEAD but not in the working tree.
+
+**Impact:** Source of confusion — these duplicate files should be removed from git history.
+
+## Tech Debt
+
+### Lock Implementation Uses Busy-Waiting
+
+**Issue:** The per-user mutex for cache TOCTOU race prevention uses a spinlock with 100ms polling:
+```javascript
+while (locks.get(key)) {
+    if (Date.now() - start > timeout) throw new AppError('LockTimeout', 'Could not acquire lock', 429);
+    await new Promise(r => setTimeout(r, 100));
+}
+```
+
+**Files:** `backend/src/services/llm.service.js` (lines 54-62)
+
+**Impact:** Busy-waiting wastes CPU cycles and adds latency under contention. 100ms polling means minimum 100ms delay even if lock is released immediately.
+
+**Fix approach:** Use a proper async mutex library (e.g., `async-mutex`) or a callback-based queue.
+
+---
+
+### Excessive JSON Serialization for Deep Cloning
+
+**Issue:** `JSON.parse(JSON.stringify(obj))` is used 10+ times for object cloning instead of `structuredClone` (available in Node 17+).
+
+**Files:** `backend/src/services/llm.service.js` (lines 320, 525, 571, 577, 755, 766), `backend/src/services/dailyMealPlan.service.js` (lines 48, 217, 308)
+
+**Impact:** Performance overhead — JSON serialization is slower than `structuredClone`. Breaks on objects with `undefined`, `Date`, `Map`, `Set`, or circular references.
+
+**Fix approach:** Replace all instances with `structuredClone(obj)`.
+
+---
+
+### Global Rate Limiter Key
+
+**Issue:** The global rate limiter uses a static key `'global'` (line 69 of app.js):
+```javascript
+keyGenerator: () => 'global',
+```
+
+**Files:** `backend/src/app.js` (line 69)
+
+**Impact:** ALL requests across all users share one rate limit bucket. A single user or IP can exhaust the global limit for everyone. This is an anti-pattern for rate limiting.
+
+**Fix approach:** Remove the global limiter and rely on per-route limiters, or use a per-IP key.
+
+---
+
+### getMonday Function Logic Error
+
+**Issue:** The `getMonday` function in `activity.controller.js` has non-standard week calculation:
+```javascript
+const day = d.getUTCDay();
+const diff = day === 0 ? -6 : 1;
+d.setUTCDate(d.getUTCDate() - day + diff);
+```
+
+**Files:** `backend/src/controllers/activity.controller.js` (lines 158-165)
+
+**Impact:** When day is Monday (1): `1 - 1 + 1 = 1` — stays on Monday, correct. But when day is Sunday (0): `0 - 0 + (-6) = -6` — goes to previous Monday. The `+1` offset when day !== 0 means Tuesday (2): `2 - 2 + 1 = 1` — goes BACK to Monday. This actually works but the logic is confusing and fragile.
+
+**Fix approach:** Use standard `d.setDate(d.getDate() - ((d.getDay() + 6) % 7))` pattern.
+
+---
+
+### LLM Rate Limiting Doubled via Nested Middleware
+
+**Issue:** The `dailyMealPlan.controller.js`'s `generate` handler goes through:
+1. Global rate limiter (600 req/min global wall)
+2. `dailyMealPlanLimiter` (20 req/min per user) applied in route
+3. Inside the handler, `generateDailyMealPlan()` calls `callLlmApi()` which is itself an external API call with its own rate limits
+
+The middleware limits apply to the HTTP endpoint, but the controller can also be triggered by the `regenerateCategoryHandler` which also applies the same limiter. This means a user can be rate limited on generate but still call regenerate-category.
+
+**Files:** `backend/src/controllers/dailyMealPlan.controller.js`, `backend/src/middlewares/dailyMealPlanRateLimiter.js`
+
+**Impact:** Rate limiting architecture is confusing and may not properly protect the LLM API from excessive calls.
+
+---
+
+### Cache Invalidation Strategy Risks
+
+**Issue:** The plan cache in `llm.service.js` uses a 1-hour TTL with 1000 max keys and no explicit invalidation on plan mutation except `clearCachedPlan`. However, the `setCachedPlan` function writes to cache without verifying the caller has the latest version:
+
+```javascript
+export function setCachedPlan(userId, weekStart, plan, planType = 'activity') {
+  planCache.set(`plan_${planType}_${userId}_${weekStart}`, plan);
+}
+```
+
+**Files:** `backend/src/services/llm.service.js` (line 360-362)
+
+**Impact:** Stale cache reads possible if two concurrent requests generate a plan at the same time. The TOCTOU lock in `swapActivity` mitigates this for swaps but the basic generate path is still vulnerable.
+
+---
+
+### Profile Nested Object Access Assumption
+
+**Issue:** In `dailyMealPlan.service.js`, line 259:
+```javascript
+if (!profile || !profile.profile) {
+```
+
+This assumes the profile response has a nested `.profile` property, which suggests either a wrapped API response format or an inconsistent data shape. The `buildDailyMealPlanPrompt` at line 101 receives `profile` directly as `userProfile`:
+```javascript
+const userProfile = profile.profile;
+```
+
+**Files:** `backend/src/services/dailyMealPlan.service.js` (lines 259, 264)
+
+**Impact:** If the profile service returns the profile object directly (not wrapped), this check will always throw and fall back to a generic 2000-calorie fallback plan.
+
+---
+
+### OpenRouter API Key Check at Module Load
+
+**Issue:** The LLM service checks `OPENROUTER_API_KEY` at module import time and logs a fatally-worded error to the console:
+
+```javascript
+if (!API_KEY) {
+  console.error('FATAL: OPENROUTER_API_KEY is not set. LLM features will not work.');
+}
+```
+
+**Files:** `backend/src/services/llm.service.js` (lines 15-18)
+
+**Impact:** The "FATAL" message appears on every server start even if the user doesn't plan to use LLM features. Not actually fatal — the server still starts and non-LLM routes work fine.
+
+---
+
+### Duplicate Environment Variable Configuration
+
+**Issue:** `dotenv.config()` is called in both `server.js` (line 1-2) and `database.js` (line 7):
+
+```javascript
+// server.js
+import dotenv from 'dotenv';
+dotenv.config();
+
+// database.js
+dotenv.config({ path: resolve(__dirname, '../../.env'), override: true });
+```
+
+**Files:** `backend/src/server.js` (lines 1-2), `backend/src/config/database.js` (line 7)
+
+**Impact:** The database module loads `.env` with `override: true` which could inadvertently override environment variables already set by the runtime. The path also assumes a specific project structure.
+
+---
+
+### Error Code Conversion Logic
+
+**Issue:** The global error handler in `app.js` attempts to convert camelCase error codes to UPPER_SNAKE_CASE using regex, which may produce unexpected results for edge cases:
+
+```javascript
+const errorCode = (err.code || err.name || 'INTERNAL_ERROR')
+  .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+  .replace(/([A-Z])([A-Z][a-z])/g, '$1_$2')
+  .toUpperCase();
+```
+
+**Files:** `backend/src/app.js` (lines 202-208)
+
+**Impact:** Acronym-heavy names (e.g., "HTTPServerError" → "HTTP_SERVER_ERROR") work but "NotFoundError" becomes "NOT_FOUND_ERROR" — acceptable but inconsistent with the manual "NOT_FOUND" code used elsewhere.
+
+---
+
+### Hardcoded Activity Level Default
+
+**Issue:** The `buildSystemPrompt` function uses a hardcoded fallback for `activity_level`:
+```javascript
+activityLevel: profile.activity_level || 'sedentary',
+```
+
+But the `swapActivity` function in the same file has a different default:
+```javascript
+const activityLevel = profile?.activity_level || 'sedentary'
+```
+
+**Files:** `backend/src/services/llm.service.js` (lines 100, 696)
+
+**Impact:** Inconsistent defaults — both default to 'sedentary' but use different patterns (first uses `||` on potentially empty string, second uses nullish coalescing via `?.` and `||`).
+
+## Security Considerations
+
+### SSL Certificate Validation Disabled for Database
+
+**Issue:** The PostgreSQL database connection disables SSL certificate validation:
+
+```javascript
+ssl: { rejectUnauthorized: false },
+```
+
+**Files:** `backend/src/config/database.js` (line 24)
+
+**Risk:** Man-in-the-middle attack on database connections. An attacker on the network can intercept all traffic to/from the database, including user credentials, health data, and JWT secrets.
+
+**Recommendation:** Enable `rejectUnauthorized: true` and configure proper CA certificates. The comment in the file notes "Session mode (port 6543) works when ssl.rejectUnauthorized is disabled" — investigate proper Supabase SSL configuration instead.
+
+---
+
+### SameSite Cookie Setting Without HTTPS Check
+
+**Issue:** The auth cookie is set with `sameSite: 'none'` and `secure: true` unconditionally:
+
+```javascript
+const cookieOptions = {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'none',
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+};
+```
+
+**Files:** `backend/src/controllers/auth.controller.js` (lines 9-14)
+
+**Risk:** If the app is served over HTTP in development, cookies won't be sent because `secure: true` requires HTTPS. The `sameSite: 'none'` setting requires `secure: true` per browser spec, but in local development without HTTPS, the cookie may fail to set or the browser may reject it.
+
+---
+
+### JWT Secret Not Validated at Startup
+
+**Issue:** The `JWT_SECRET` environment variable is used directly without validation:
+```javascript
+export function generateToken(user) {
+  return jwt.sign(
+    { userId: user.id, email: user.email },
+    process.env.JWT_SECRET,
+    { algorithm: 'HS256', expiresIn: '7d' }
+  );
+}
+```
+
+**Files:** `backend/src/services/auth.service.js` (lines 145-151)
+
+**Risk:** If `JWT_SECRET` is empty or set to a weak default, all JWT tokens can be forged.
+
+---
+
+### Env File Present in Working Tree
+
+**Issue:** `.env` file exists in the working directory with actual credentials.
+
+**Files:** `.env`
+
+**Risk:** Environment credentials could be accidentally committed or leaked through the working tree.
+
+## Performance Bottlenecks
+
+### ORDER BY RAND() Query Pattern
+
+**Issue:** The comment in `app.js` line 136 mentions "ORDER BY RAND() queries" as a concern for the activity rate limiter:
+```javascript
+// Activity API routes — rate limiter for ORDER BY RAND() queries (T-05-07)
+const activityLimiter = createRateLimiter({ max: 20, message: 'Too many activity requests' });
+```
+
+**Files:** `backend/src/app.js` (lines 136-138)
+
+**Impact:** `ORDER BY RAND()` is notoriously slow on large tables because it sorts every row with a random value. If the activity repository uses this pattern, it will degrade significantly as the activity table grows.
+
+---
+
+### 200-Food Search Result Limit
+
+**Issue:** The daily meal plan controller passes `200` as the search limit when fetching all foods:
+```javascript
+getAllFoods: (id) => searchFoods(id, '', 200),
+```
+
+**Files:** `backend/src/controllers/dailyMealPlan.controller.js` (line 57)
+
+**Impact:** Fetching 200 foods on every meal plan generation request creates unnecessary database load. If the prompt building truncates to ~150 items anyway, this should be reduced.
+
+---
+
+### LLM Prompt Truncation Logic
+
+**Issue:** The `buildDailyMealPlanPrompt` function has a food text truncation mechanism that kicks in at 12000 characters. The per-category budget is calculated as `Math.ceil(150 / categories.length)` which could waste space if categories are unevenly distributed.
+
+**Files:** `backend/src/services/dailyMealPlan.service.js` (lines 81-95)
+
+**Impact:** Uneven category distribution means popular categories get underrepresented while sparse categories waste budget.
+
+## Fragile Areas
+
+### LLM Service — Critical Business Logic
+
+**Issue:** The `llm.service.js` file (782 lines) is the largest source file in the project and contains the most complex logic including:
+- The entire OpenRouter/LLM integration
+- Prompt building and caching
+- Plan validation logic (both structural and name-based)
+- Fallback plan generation
+- Activity swapping with TOCTOU lock
+- Day regeneration
+
+**Files:** `backend/src/services/llm.service.js`
+
+**Why fragile:** Every downstream feature (weekly plans, day regeneration, activity swapping) depends on this file. Any regression here breaks the app's core value proposition. The lock mechanism, retry logic, and fallback chains make the execution flow hard to trace.
+
+**Test coverage:** Unit tests exist in `backend/tests/unit/llm.service.test.js` but:
+- The test file also imports from deleted files (`activityLog.service.js`, `utils/errors.js`)
+- Tests cover isolated validation functions but not the full LLM call flow
+- No integration tests exist that validate the actual API call + response flow
+
+---
+
+### Activity Controller — Plan Sync Logic
+
+**Issue:** The `logActivity` handler in `activity.controller.js` has best-effort sync logic that silently swallows errors:
+```javascript
+try {
+  // ... complex plan sync with upsert and cache update
+} catch (err) {
+  console.error('Failed to sync activity log to weekly plan:', err.message);
+}
+```
+
+**Files:** `backend/src/controllers/activity.controller.js` (lines 68-87, 193-234)
+
+**Why fragile:** The activity log and weekly plan are two separate data stores that are manually synced. The sync is best-effort only — if it fails, the plan's `completed` flag becomes stale. The `deleteActivityLog` handler has the same pattern.
+
+---
+
+### Daily Meal Plan Service — Multiple Fallback Paths
+
+**Issue:** The `generateDailyMealPlan` function has multiple fallback paths: if the profile is missing, if the LLM call fails, if validation fails. Each path falls back to `generateFallbackDailyMealPlan(2000, dbFoods)` with a hardcoded 2000-calorie target.
+
+**Files:** `backend/src/services/dailyMealPlan.service.js` (lines 240-328)
+
+**Why fragile:** Six different error scenarios all fall through different paths. Once a fallback plan is generated and persisted with status 'fallback', subsequent requests will return the cached fallback (line 243: `if (cached && cached.status !== 'fallback')`). This means a single transient error causes stale data until the cache TTL expires (1 hour) or the user explicitly regenerates.
+
+## Test Coverage Gaps
+
+### Missing Unit Tests
+
+**Untested area:** All deleted source files (repositories, utils, services, middleware, routes, controllers) have no corresponding test files in the working tree. Their test files may have been deleted along with the source files.
+
+**Risk:** High — the core infrastructure of the app has zero test coverage.
+
+---
+
+### Missing Integration Tests for Critical Flows
+
+**Untested area:** The integration test `remaining-endpoints.test.js` only tests error paths (401, 400, 404) for daily meal plans and regenerate-day endpoints. Happy paths for LLM-based features (plan generation, activity swapping) are noted as requiring E2E tests:
+```javascript
+// NOTE: Happy path for regenerate-day requires an existing LLM-generated plan
+// and is covered by the E2E test pattern in weeklyPlan.e2e.test.js
+```
+
+But `weeklyPlan.e2e.test.js` does not exist in the working tree.
+
+**Files:** `backend/tests/integration/remaining-endpoints.test.js` (lines 245-247, 382-383)
+
+**Risk:** High — the core LLM-based features have no automated happy-path testing.
+
+---
+
+**Untested area:** Frontend has zero tests. There are no test files, no test configuration, and no testing dependencies in `frontend/package.json`.
+
+**Files:** `frontend/package.json`
+
+**Risk:** Medium — frontend bugs can only be caught through manual testing.
+
+---
+
+### Deleted Test Files
+
+**Issue:** Multiple test files have been deleted from the working tree:
+- `backend/src/__tests__/food.utils.test.js`
+- `frontend/src/__tests__/api-integration.test.js`
+- `frontend/src/shared/calendar/__tests__/CalendarGrid.test.jsx`
+- `frontend/src/shared/calendar/__tests__/CalendarPageLayout.test.jsx`
+- `frontend/src/shared/calendar/__tests__/DayDetailPanel.test.jsx`
+- `frontend/src/shared/calendar/__tests__/calendarUtils.test.js`
+- `frontend/src/shared/calendar/__tests__/useMonthData.test.js`
+- `frontend/src/features/activities/components/__tests__/ActivityHistory.test.jsx`
+- `frontend/src/features/activities/components/__tests__/ActivityLogForm.test.jsx`
+- `frontend/src/features/activities/components/__tests__/ActivitySummary.test.jsx`
+- `frontend/src/features/food-log/components/__tests__/previewCalories.test.js`
+- `frontend/src/features/progress/hooks/__tests__/useTrendPrediction.test.js`
+
+**Impact:** Existing test coverage lost. These tests need to be restored from git history.
+
+## Dependencies at Risk
+
+**Package:** `openai` v6.39.1 (backend dependency)
+
+**Risk:** The project uses OpenRouter as the LLM provider with the OpenAI-compatible SDK. OpenRouter is a third-party proxy layer — if OpenRouter changes its API or goes down, all LLM features (weekly plans, daily meal plans, activity swapping) break immediately. The `OPENROUTER_BASE_URL` environment variable allows switching to a different OpenAI-compatible provider, but this is not well-documented.
+
+**Impact:** All AI-powered features (the app's differentiator) depend on a third-party API proxy.
+
+**Migration plan:** Document the ability to switch `OPENROUTER_BASE_URL` to point directly to OpenAI, Anthropic, or any OpenAI-compatible endpoint. Add provider-specific documentation in INTEGRATIONS.md.
+
+---
+
+**Package:** `vite` v8.0.0 (frontend dependency via root package.json v6.2.3, but frontend/package.json specifies v8.0.0)
+
+**Risk:** Version mismatch between root `package.json` (`vite: ^6.2.3`) and `frontend/package.json` (`vite: ^8.0.0`). The root `package.json` also specifies older versions of `@vitejs/plugin-react` (^5.0.4) vs `frontend/package.json` (^6.0.0).
+
+**Impact:** Potential build conflicts when running `npm run build --workspace=frontend` from the root workspace.
+
+---
+
+*Concerns audit: 2026-06-02*

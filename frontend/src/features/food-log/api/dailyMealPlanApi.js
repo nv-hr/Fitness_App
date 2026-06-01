@@ -17,6 +17,6 @@ export async function toggleItemLogged(date, mealType, foodId, logged) {
   return apiPost('/api/daily-meal-plans/toggle-item', { date, mealType, foodId, logged });
 }
 
-export async function swapMealItem(date, mealType, foodId) {
-  return apiPost('/api/daily-meal-plans/swap-item', { date, mealType, foodId });
+export async function regenerateCategory(date, mealType) {
+  return apiPost('/api/daily-meal-plans/regenerate-category', { date, mealType });
 }

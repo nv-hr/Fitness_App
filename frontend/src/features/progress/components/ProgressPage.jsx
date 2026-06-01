@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import WeightEntryCard from './WeightEntryCard.jsx';
 import WeightHistoryTable from './WeightHistoryTable.jsx';
 import WeightTrendChart from './WeightTrendChart.jsx';

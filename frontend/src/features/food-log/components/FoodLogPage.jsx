@@ -1,19 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
-import { startOfMonth } from 'date-fns';
+import { useState, useEffect } from 'react';
 import { getDailySummary } from '../api/foodLogApi.js';
-import { useMonthMealData } from '../hooks/useMonthMealData.js';
 import CalorieSummary from './CalorieSummary.jsx';
 import FoodLogForm from './FoodLogForm.jsx';
 import MealCalendarSection from './MealCalendarSection.jsx';
+import { Calendar, Apple, Loader2 } from 'lucide-react';
 
 export default function FoodLogPage() {
   const [activeTab, setActiveTab] = useState('plan');
-  const [selectedDate, setSelectedDate] = useState(() => new Date());
-  const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
-
-  const { dayStatusMap, loading, error } = useMonthMealData(currentMonth);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -30,72 +26,85 @@ export default function FoodLogPage() {
       }
     }
     loadSummary();
-  }, [today]);
+  }, [today, refreshTrigger]);
 
-  const handleDaySelect = useCallback((day) => {
-    setSelectedDate(day);
-  }, []);
-
-  const handleMonthChange = useCallback((month) => {
-    setCurrentMonth(month);
+  useEffect(() => {
+    const handleUpdate = () => {
+      setRefreshTrigger((prev) => prev + 1);
+    };
+    window.addEventListener('health-system-update', handleUpdate);
+    return () => {
+      window.removeEventListener('health-system-update', handleUpdate);
+    };
   }, []);
 
   return (
-    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1rem' }}>
-      <h2>{'Log Food'}</h2>
+    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+      {/* Header section with page title */}
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div>
+          <h1 className="font-display font-extrabold text-3xl text-slate-850 tracking-tight text-slate-800">
+            Food & Diet Journal
+          </h1>
+          <p className="text-slate-500 text-sm mt-1 leading-relaxed">
+            Log your actual calorie intake or access an AI curated meal plan personalized to your biometrics.
+          </p>
+        </div>
+      </div>
 
-      {!summaryLoading && summary && (
+      {/* Embedded Summary Widget */}
+      {!summaryLoading && summary ? (
         <CalorieSummary
           totalConsumed={summary.totalConsumed}
           calorieTarget={summary.calorieTarget}
           remaining={summary.remaining}
           isExtremeDeficit={summary.isExtremeDeficit}
         />
+      ) : (
+        <div className="h-28 bg-slate-150 rounded-2xl animate-pulse bg-slate-100 flex items-center justify-center text-slate-400 text-xs">
+          <Loader2 className="w-5 h-5 animate-spin mr-2" /> Connecting daily calorie log...
+        </div>
       )}
 
-      <div style={{ display: 'flex', gap: '0', marginBottom: '1rem', borderBottom: '2px solid #e5e7eb' }}>
+      {/* Tactile Segmented Sliding Navigation Bar */}
+      <div className="bg-slate-100/80 backdrop-blur-xs p-1 rounded-2xl flex max-w-md border border-slate-200/20">
         <button
           onClick={() => setActiveTab('plan')}
-          style={{
-            flex: 1, padding: '0.75rem 1rem', cursor: 'pointer', minHeight: '44px',
-            border: 'none', background: 'none',
-            fontWeight: activeTab === 'plan' ? 700 : 400,
-            color: activeTab === 'plan' ? '#16a34a' : '#666',
-            borderBottom: activeTab === 'plan' ? '2px solid #16a34a' : '2px solid transparent',
-            marginBottom: '-2px',
-            fontSize: '1rem',
-          }}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeTab === 'plan'
+              ? 'bg-white text-emerald-600 shadow-sm'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
         >
-          {'Plan'}
+          <Calendar className="w-4 h-4" />
+          AI Planned Nutrition
         </button>
         <button
           onClick={() => setActiveTab('log')}
-          style={{
-            flex: 1, padding: '0.75rem 1rem', cursor: 'pointer', minHeight: '44px',
-            border: 'none', background: 'none',
-            fontWeight: activeTab === 'log' ? 700 : 400,
-            color: activeTab === 'log' ? '#16a34a' : '#666',
-            borderBottom: activeTab === 'log' ? '2px solid #16a34a' : '2px solid transparent',
-            marginBottom: '-2px',
-            fontSize: '1rem',
-          }}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeTab === 'log'
+              ? 'bg-white text-emerald-600 shadow-sm'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
         >
-          {'Log'}
+          <Apple className="w-4 h-4" />
+          Log Food Intakes
         </button>
       </div>
 
+      {/* Main Core Form Display Area */}
       {activeTab === 'plan' && (
-        <MealCalendarSection
-          dayStatusMap={dayStatusMap}
-          loading={loading}
-          error={error}
-          onDaySelect={handleDaySelect}
-          onMonthChange={handleMonthChange}
-        />
+        <MealCalendarSection />
       )}
 
       {activeTab === 'log' && (
-        <FoodLogForm />
+        <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/50 shadow-lux">
+          <h2 className="font-display font-bold text-lg text-slate-800 border-b border-slate-100 pb-3 mb-6 flex items-center gap-2">
+            <span className="w-1.5 h-4 bg-emerald-500 rounded-full inline-block"></span>
+            Log New Meals
+          </h2>
+          <FoodLogForm />
+        </div>
       )}
     </div>
   );

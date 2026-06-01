@@ -3,8 +3,9 @@ import rateLimit from 'express-rate-limit';
 const isTest = process.env.NODE_ENV === 'test';
 
 const weeklyPlanLimiter = rateLimit({
-  windowMs: isTest ? 1000 : 15 * 60 * 1000,
+  windowMs: isTest ? 1000 : 1 * 60 * 1000,
   max: isTest ? 1000 : 50,
+  validate: { xForwardedForHeader: false, trustProxy: false, default: true },
   keyGenerator: (req) => {
     return `user_${req.user.userId}`;
   },
@@ -33,8 +34,9 @@ const weeklyPlanLimiter = rateLimit({
 });
 
 const regenerateLimiter = rateLimit({
-  windowMs: isTest ? 1000 : 30 * 60 * 1000,
+  windowMs: isTest ? 1000 : 1 * 60 * 1000,
   max: isTest ? 1000 : 30,
+  validate: { xForwardedForHeader: false, trustProxy: false, default: true },
   keyGenerator: (req) => {
     return `user_${req.user.userId}`;
   },
@@ -63,8 +65,9 @@ const regenerateLimiter = rateLimit({
 });
 
 const swapLimiter = rateLimit({
-  windowMs: isTest ? 1000 : 5 * 60 * 1000,
+  windowMs: isTest ? 1000 : 1 * 60 * 1000,
   max: isTest ? 1000 : 10,
+  validate: { xForwardedForHeader: false, trustProxy: false, default: true },
   keyGenerator: (req) => {
     return `user_${req.user.userId}`;
   },
@@ -95,6 +98,7 @@ const swapLimiter = rateLimit({
 const toggleCompleteLimiter = rateLimit({
   windowMs: isTest ? 1000 : 1 * 60 * 1000,
   max: isTest ? 1000 : 60,
+  validate: { xForwardedForHeader: false, trustProxy: false, default: true },
   keyGenerator: (req) => {
     return `user_${req.user.userId}`;
   },

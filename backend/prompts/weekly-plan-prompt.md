@@ -82,7 +82,7 @@ For a user with 5 available days, the plan would have 5 activity days and 2 rest
 - Exactly {{availableDays}} activity days (rest_day=false) with 1-4 activities each
 - Remaining days are rest days (rest_day=true, activities=[])
 - Every day MUST include rest_day field
-- Each activity is 10-180 minutes
+- Each activity is 5-480 minutes
 - Activities MUST use exact names from the provided Available Activities list
 - 1-4 activities per activity day
 - Multiple activities per day encouraged when user profile supports it

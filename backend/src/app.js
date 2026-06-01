@@ -4,6 +4,10 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import compression from 'compression';
 import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import passport from './config/passport.js';
@@ -14,12 +18,14 @@ import foodRoutes from './routes/food.routes.js';
 import activityRoutes from './routes/activity.routes.js';
 import weeklyPlanRoutes from './routes/weeklyPlan.routes.js';
 import dailyMealPlanRoutes from './routes/dailyMealPlan.routes.js';
-import activityPlanRoutes from './routes/activityPlan.routes.js';
 import progressRoutes from './routes/progress.routes.js';
 import docsRoutes from './routes/docs.routes.js';
 import { errorResponse } from './utils/response.js';
 
 const app = express();
+
+// Trust the first proxy to enable accurate IP detection for express-rate-limit
+app.set('trust proxy', 1);
 
 // Validate and sanitize FRONTEND_URL for CORS and OAuth redirects (WR-02)
 const parseFrontendUrl = () => {
@@ -40,8 +46,8 @@ const FRONTEND_URL = parseFrontendUrl();
 // Rate limiter helper to reduce boilerplate (IN-01)
 const createRateLimiter = (options = {}) => {
   const {
-    windowMs = 15 * 60 * 1000,
-    max = 100,
+    windowMs = 1 * 60 * 1000,
+    max = 7,
     message = 'Too many requests',
     testMax = 1000,
     testWindowMs = 1000,
@@ -51,15 +57,17 @@ const createRateLimiter = (options = {}) => {
     windowMs: isTest ? testWindowMs : windowMs,
     max: isTest ? testMax : max,
     message: { success: false, error: { message, code: 'RATE_LIMITED' } },
+    validate: { xForwardedForHeader: false, trustProxy: false, default: true },
   });
 };
 
 // Global aggregate rate limiter — counts ALL requests toward one bucket, regardless of IP
 const isTestGlobal = process.env.NODE_ENV === 'test';
 const globalLimiter = rateLimit({
-  windowMs: isTestGlobal ? 1000 : 15 * 60 * 1000,
-  max: isTestGlobal ? 50000 : 10000,
+  windowMs: isTestGlobal ? 1000 : 1 * 60 * 1000,
+  max: isTestGlobal ? 3333 : 600,
   keyGenerator: () => 'global',
+  validate: { xForwardedForHeader: false, trustProxy: false, default: true },
   message: { success: false, error: { message: 'Global rate limit exceeded. Please try again later.', code: 'RATE_LIMITED' } },
 });
 app.use(globalLimiter);
@@ -93,11 +101,11 @@ app.use(cookieParser());
 app.use(passport.initialize());
 
 // 8. General rate limiter for /api/ routes
-const limiter = createRateLimiter({ max: 5000 });
+const limiter = createRateLimiter({ max: 300 });
 app.use('/api/', limiter);
 
 // 9. Stricter rate limiter for auth endpoints (T-01-06, T-01-10)
-const authLimiter = createRateLimiter({ max: 100, message: 'Too many auth attempts', testMax: 100 });
+const authLimiter = createRateLimiter({ max: 10, message: 'Too many auth attempts', testMax: 100 });
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
@@ -115,17 +123,17 @@ app.use('/api/docs', docsRoutes);
 app.use('/api/auth', authRoutes);
 
 // Profile API routes — stricter rate limiter for user data endpoints
-const profileLimiter = createRateLimiter({ max: 600, message: 'Too many profile requests' });
+const profileLimiter = createRateLimiter({ max: 60, message: 'Too many profile requests' });
 app.use('/api/profile', profileLimiter);
 app.use('/api/profile', profileRoutes);
 
 // Food API routes — higher rate limit for search-as-you-type (T-04-08)
-const foodLimiter = createRateLimiter({ max: 2000, message: 'Too many food requests' });
+const foodLimiter = createRateLimiter({ max: 60, message: 'Too many food requests' });
 app.use('/api/food', foodLimiter);
 app.use('/api/food', foodRoutes);
 
 // Activity API routes — rate limiter for ORDER BY RAND() queries (T-05-07)
-const activityLimiter = createRateLimiter({ max: 600, message: 'Too many activity requests' });
+const activityLimiter = createRateLimiter({ max: 20, message: 'Too many activity requests' });
 app.use('/api/activities', activityLimiter);
 app.use('/api/activities', activityRoutes);
 
@@ -136,7 +144,6 @@ app.use('/api/weekly-plans', weeklyPlanRoutes);
 app.use('/api/daily-meal-plans', dailyMealPlanRoutes);
 
 // Activity plan routes
-app.use('/api/activity-plans', activityPlanRoutes);
 
 // Progress routes (weight logging, goal tracking)
 app.use('/api/progress', progressRoutes);
@@ -166,21 +173,20 @@ app.get(
 
 // === Static Files & SPA Catch-all (Phase 11: Docker Restructure) ===
 
-// Serve React static build artifacts (built by Docker multi-stage, copied to ./public/)
-app.use(express.static('public'));
+// Serve React static build artifacts
+const frontendDist = path.resolve(__dirname, '../../frontend/dist');
+app.use(express.static(frontendDist));
 
-// SPA catch-all — return index.html for non-API GET requests (client-side routing)
-// Must go AFTER all /api/* routes but BEFORE the 404 handler
-// Gracefully skip if frontend hasn't been built (dev mode)
+// SPA catch-all
 app.use((req, res, next) => {
   if (req.method !== 'GET' || req.path.startsWith('/api')) {
     return next();
   }
-  const indexPath = 'public/index.html';
+  const indexPath = path.join(frontendDist, 'index.html');
   if (!fs.existsSync(indexPath)) {
     return next();
   }
-  res.sendFile('index.html', { root: 'public' });
+  res.sendFile(indexPath);
 });
 
 // === Error Handling ===

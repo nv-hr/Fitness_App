@@ -39,7 +39,7 @@ Consider the user's activity level "{{activityLevel}}" when assigning duration a
 - Must be from the Available Activities list above
 - Must align with the user's fitness goal
 - Duration and intensity should match the user's activity level
-- Duration must be 10-180 minutes
+- Duration must be 5-480 minutes
 - Valid intensity values: light, moderate, vigorous
 - Estimate `calories_burned` using the activity's typical burn rate per minute
 
@@ -49,7 +49,7 @@ Return ONLY valid JSON. No markdown, no explanation, no code fences.
 {
   "activity_id": <integer>,
   "name": "<exact name from available activities>",
-  "duration_min": <integer 10-180>,
+  "duration_min": <integer 5-480>,
   "intensity": "light|moderate|vigorous",
   "logged": false,
   "calories_burned": <integer>
