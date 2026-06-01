@@ -12,6 +12,16 @@ import {
 } from './api/activityCalendarApi.js';
 
 export default function ActivityCalendarPage() {
+  // One-time injection of swap-spin keyframe animation (CR-03: no cleanup to avoid breaking remaining rows)
+  useEffect(() => {
+    if (!document.getElementById('swap-spin-style')) {
+      const style = document.createElement('style');
+      style.id = 'swap-spin-style';
+      style.textContent = '@keyframes swap-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+      document.head.appendChild(style);
+    }
+  }, []);
+
   const [selectedDay, setSelectedDay] = useState(null);
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
   const [dayPlan, setDayPlan] = useState(null);
@@ -307,18 +317,18 @@ export default function ActivityCalendarPage() {
               <div>
                 {dayPlan.activities.map((activity, idx) => (
                   <DayActivityRow
-                    key={activity.activity_id ?? idx}
+                    key={activity.activity_id}
                     activity={activity}
-                    onSwap={isPast ? undefined : (activityId) => handleSwap(activityId, idx)}
+                    onSwap={isPast ? undefined : () => handleSwap(activity.activity_id, ((selectedDay.getDay() + 6) % 7))}
                     isSwapping={swappingActivityId === activity.activity_id}
                     swapRetryAfter={swapRetryAfter}
                     onToggle={isPast ? undefined : () => handleToggleComplete(
-                      activity.activity_id ?? idx,
-                      idx,
-                      completedActivities.has(activity.activity_id ?? idx)
+                      activity.activity_id,
+                      ((selectedDay.getDay() + 6) % 7),
+                      completedActivities.has(activity.activity_id)
                     )}
                     disabled={isPast}
-                    completed={completedActivities.has(activity.activity_id ?? idx)}
+                    completed={completedActivities.has(activity.activity_id)}
                   />
                 ))}
               </div>

@@ -92,5 +92,35 @@ const swapLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-export { weeklyPlanLimiter, regenerateLimiter, swapLimiter };
+const toggleCompleteLimiter = rateLimit({
+  windowMs: isTest ? 1000 : 1 * 60 * 1000,
+  max: isTest ? 1000 : 60,
+  keyGenerator: (req) => {
+    return `user_${req.user.userId}`;
+  },
+  handler: (req, res) => {
+    const retryAfter = Math.ceil(
+      (req.rateLimit.resetTime - Date.now()) / 1000
+    );
+
+    return res.status(429).json({
+      success: false,
+      data: {
+        plan: null,
+        fromCache: false,
+        status: 'rate_limited',
+        retryAfter: Math.max(retryAfter, 1),
+      },
+      error: {
+        message: 'Too many completion toggle requests. Please wait before toggling more activities.',
+        code: 'RATE_LIMITED',
+        retryAfter: Math.max(retryAfter, 1),
+      },
+    });
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+export { weeklyPlanLimiter, regenerateLimiter, swapLimiter, toggleCompleteLimiter };
 export default weeklyPlanLimiter;

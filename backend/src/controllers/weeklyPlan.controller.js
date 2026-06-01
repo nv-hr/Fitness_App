@@ -40,15 +40,17 @@ function inferAvailableDays(oldPlan) {
 
 function isValidDateString(str) {
   if (typeof str !== 'string') return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(str)) return false;
   const d = new Date(str + 'T00:00:00Z');
   return !isNaN(d.getTime());
 }
 
 function getMonday(date) {
   const d = new Date(date);
-  const localDay = d.getDay();
-  const diff = d.getDate() - localDay + (localDay === 0 ? -6 : 1);
-  d.setDate(diff);
+  d.setUTCHours(0, 0, 0, 0);
+  const day = d.getUTCDay();
+  const diff = day === 0 ? -6 : 1;
+  d.setUTCDate(d.getUTCDate() - day + diff);
   return d.toISOString().split('T')[0];
 }
 
@@ -386,6 +388,11 @@ async function toggleComplete(req, res, next) {
     // Validate activityId
     if (activityId === undefined || activityId === null) {
       return errorResponse(res, 'activityId is required', 400, 'VALIDATION_ERROR');
+    }
+
+    // Validate completed is boolean (WR-05)
+    if (typeof completed !== 'boolean') {
+      return errorResponse(res, 'completed must be a boolean', 400, 'VALIDATION_ERROR');
     }
 
     // Normalize weekStart

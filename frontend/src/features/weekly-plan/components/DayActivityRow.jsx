@@ -1,5 +1,3 @@
-import { useEffect } from 'react'
-
 const INTENSITY_COLORS = {
   light: '#6b7280',
   moderate: 'inherit',
@@ -7,17 +5,6 @@ const INTENSITY_COLORS = {
 }
 
 export default function DayActivityRow({ activity, onSwap, isSwapping, swapRetryAfter, onToggle, disabled = false, completed = false }) {
-  useEffect(() => {
-    if (document.getElementById('swap-spin-style')) return
-    const style = document.createElement('style')
-    style.id = 'swap-spin-style'
-    style.textContent = '@keyframes swap-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }'
-    document.head.appendChild(style)
-    return () => {
-      const el = document.getElementById('swap-spin-style')
-      if (el) el.remove()
-    }
-  }, [])
   const color = INTENSITY_COLORS[activity.intensity] || 'inherit'
   const isCountingDown = swapRetryAfter != null && swapRetryAfter > 0
   const isSwapDisabled = isSwapping || isCountingDown
@@ -56,10 +43,10 @@ export default function DayActivityRow({ activity, onSwap, isSwapping, swapRetry
           <button
             onClick={() => { if (onToggle) onToggle(); }}
             style={{
-              width: '28px',
-              height: '28px',
-              minWidth: '28px',
-              padding: '0',
+              width: '44px',
+              height: '44px',
+              minWidth: '44px',
+              padding: '8px',
               cursor: 'pointer',
               background: 'none',
               border: completed ? '2px solid #16a34a' : '2px solid #d1d5db',
@@ -108,7 +95,7 @@ export default function DayActivityRow({ activity, onSwap, isSwapping, swapRetry
             </div>
           ) : (
             <button
-              onClick={() => { if (!isSwapDisabled && onSwap) onSwap() }}
+              onClick={() => { if (!isSwapDisabled && onSwap) onSwap(activity.activity_id) }}
               disabled={isSwapDisabled}
               style={{
                 width: '56px',

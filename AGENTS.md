@@ -131,3 +131,43 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 > Profile not yet configured. Run `/gsd-profile-user` to generate your developer profile.
 > This section is managed by `generate-claude-profile` -- do not edit manually.
 <!-- GSD:profile-end -->
+
+<!-- start-dev -->
+## Development Server
+
+The project has two dev servers that must run simultaneously:
+
+| Service | Directory | Command | URL |
+|---------|-----------|---------|-----|
+| Backend (Express) | `backend/` | `npm run dev` | `http://localhost:3001` |
+| Frontend (Vite) | `frontend/` | `npm run dev` | `http://localhost:5173` |
+
+### Starting both servers
+
+From the repo root in PowerShell:
+```powershell
+.\scripts\start-dev.ps1
+```
+
+This opens the frontend in your browser automatically. Pass `-NoBrowser` to skip.
+
+### Starting manually (separate terminals)
+
+Terminal 1:
+```powershell
+cd backend
+npm run dev
+```
+
+Terminal 2:
+```powershell
+cd frontend
+npm run dev
+```
+
+### Troubleshooting
+
+- **Frontend shows blank page / can't reach localhost:5173** — The Vite dev server exits when the shell that launched it is killed. Use `.\scripts\start-dev.ps1` (PowerShell Job) or run `npm run dev` in a persistent terminal window.
+- **Backend DB connection fails** — Check `backend/.env` has valid `DATABASE_URL` and Supabase project is running.
+- **Port conflicts** — Edit `backend/src/server.js` for backend port, or `frontend/vite.config.js` for frontend port.
+<!-- end-dev -->

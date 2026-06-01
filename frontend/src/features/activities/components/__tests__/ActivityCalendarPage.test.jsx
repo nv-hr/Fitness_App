@@ -1,6 +1,6 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import ActivityCalendarPage from '../ActivityCalendarPage.jsx';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import ActivityCalendarPage from '../../ActivityCalendarPage.jsx';
 
 // Mock the API module
 vi.mock('../../api/activityCalendarApi.js', () => ({
@@ -11,7 +11,7 @@ vi.mock('../../api/activityCalendarApi.js', () => ({
 }));
 
 // Mock useMonthData
-vi.mock('../../../shared/calendar/hooks/useMonthData.js', () => ({
+vi.mock('../../../../shared/calendar/hooks/useMonthData.js', () => ({
   useMonthData: vi.fn(() => ({
     dayStatusMap: new Map(),
     loading: false,
@@ -21,7 +21,7 @@ vi.mock('../../../shared/calendar/hooks/useMonthData.js', () => ({
 }));
 
 // Mock CalendarPageLayout to accept onDaySelect and render children in day panel
-vi.mock('../../../shared/calendar/CalendarPageLayout.jsx', () => ({
+vi.mock('../../../../shared/calendar/CalendarPageLayout.jsx', () => ({
   default: function MockCalendarPageLayout({ dayStatusMap, loading, error, onMonthChange, onDaySelect, children }) {
     return (
       <div data-testid="calendar-page-layout">
@@ -43,7 +43,7 @@ vi.mock('../../../weekly-plan/components/Toast.jsx', () => ({
 }));
 
 // Mock useResponsive
-vi.mock('../../../shared/hooks/useResponsive.js', () => ({
+vi.mock('../../../../shared/hooks/useResponsive.js', () => ({
   useResponsive: () => ({ isMobile: false }),
 }));
 
@@ -69,7 +69,7 @@ vi.mock('../../../weekly-plan/components/DayActivityRow.jsx', () => ({
 }));
 
 import { getWeeklyPlan, generateWeeklyPlan } from '../../api/activityCalendarApi.js';
-import { useMonthData } from '../../../shared/calendar/hooks/useMonthData.js';
+import { useMonthData } from '../../../../shared/calendar/hooks/useMonthData.js';
 
 describe('ActivityCalendarPage', () => {
   beforeEach(() => {
@@ -110,8 +110,14 @@ describe('ActivityCalendarPage', () => {
   test('calls generateWeeklyPlan on Generate Week click', async () => {
     render(<ActivityCalendarPage />);
     await waitFor(() => {
-      const btn = screen.getByText('Generate Week');
-      expect(btn).toBeInTheDocument();
+      expect(screen.getByText('Generate Week')).toBeInTheDocument();
+    });
+    // Note: auto-generation useEffect calls generateWeeklyPlan once on mount
+    // (empty dayStatusMap means today has no status, triggering auto-gen).
+    // The click fires a second call, so we expect 2 total.
+    fireEvent.click(screen.getByText('Generate Week'));
+    await waitFor(() => {
+      expect(generateWeeklyPlan).toHaveBeenCalledTimes(2);
     });
   });
 

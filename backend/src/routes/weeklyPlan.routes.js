@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import weeklyPlanController from '../controllers/weeklyPlan.controller.js';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
-import weeklyPlanLimiter, { regenerateLimiter, swapLimiter } from '../middlewares/weeklyPlanRateLimiter.js';
+import weeklyPlanLimiter, { regenerateLimiter, swapLimiter, toggleCompleteLimiter } from '../middlewares/weeklyPlanRateLimiter.js';
 
 const router = Router();
 
@@ -11,6 +11,6 @@ router.get('/', weeklyPlanController.get);
 router.post('/generate', weeklyPlanLimiter, weeklyPlanController.generate);
 router.post('/regenerate-day', regenerateLimiter, weeklyPlanController.regenerateDay);
 router.post('/swap', swapLimiter, weeklyPlanController.swap);
-router.post('/toggle-complete', weeklyPlanController.toggleComplete);
+router.post('/toggle-complete', toggleCompleteLimiter, weeklyPlanController.toggleComplete);
 
 export default router;

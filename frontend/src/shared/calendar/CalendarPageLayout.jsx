@@ -36,16 +36,18 @@ export default function CalendarPageLayout({
     const normalized = startOfMonth(month);
     setCurrentMonth(normalized);
     setSelectedDay(null); // Reset selection on month change per spec
+    if (externalOnDaySelect) externalOnDaySelect(null); // Notify parent to clear stale selectedDay (IN-01)
     if (externalOnMonthChange) externalOnMonthChange(normalized);
-  }, [externalOnMonthChange]);
+  }, [externalOnMonthChange, externalOnDaySelect]);
 
   // Handle Today button click
   const handleTodayClick = useCallback(() => {
     const normalized = startOfMonth(new Date());
     setCurrentMonth(normalized);
     setSelectedDay(null);
+    if (externalOnDaySelect) externalOnDaySelect(null); // Notify parent to clear stale selectedDay (IN-01)
     if (externalOnMonthChange) externalOnMonthChange(normalized);
-  }, [externalOnMonthChange]);
+  }, [externalOnMonthChange, externalOnDaySelect]);
 
   // Handle day selection
   const handleDaySelect = useCallback((day) => {
