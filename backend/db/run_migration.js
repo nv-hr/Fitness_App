@@ -4,6 +4,7 @@ import { readFileSync } from 'fs';
 const migrations = [
   'add_activity_plans.sql',
   'add_daily_meal_plans.sql',
+  'add_weight_logs.sql',
 ];
 
 try {
