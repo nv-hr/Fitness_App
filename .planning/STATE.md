@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Progress Tracking
 status: planning
-last_updated: "2026-06-01T04:23:37.963Z"
+last_updated: "2026-06-01T23:30:00.000Z"
 last_activity: 2026-06-01
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,14 @@ See: .planning/PROJECT.md (updated 2026-06-01)
 
 **Core value:** Users can accurately calculate their BMI and TDEE, log daily food intake by selecting ingredients and entering weight in grams, log physical activities with intensity-based calorie tracking, and understand their calorie balance — all in one integrated, easy-to-use English-language health tool.
 
-**Current focus:** Defining next milestone
+**Current focus:** Building v1.9 Progress Tracking — weight logging, goal setting, weight trend chart, progress dashboard, trend prediction
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Not started (roadmap created)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-01 — Milestone v1.9 started
+Status: Roadmap complete — awaiting phase planning
+Last activity: 2026-06-01 — Roadmap created for v1.9, 5 phases defined (42-46)
 
 ## Performance Metrics
 
@@ -40,7 +40,20 @@ Last activity: 2026-06-01 — Milestone v1.9 started
 
 ## Accumulated Context
 
-(none — new milestone not yet defined)
+### v1.9 Progress Tracking — Roadmap
+
+**5 phases (42-46) across 27 requirements:**
+
+| Phase | Name | Reqs | Key Deliverable |
+|-------|------|------|-----------------|
+| 42 | Database Schema & Migration | DB-01–DB-04 | weight_logs table, profile goal columns, backfill, index |
+| 43 | Weight Logging & Goal Setting | WLOG-01–WLOG-07, GOAL-01–GOAL-03 | Full-stack weight logging + goal setting APIs/UI |
+| 44 | Weight Trend Chart | CHRT-01–CHRT-05 | Recharts LineChart with goal line, date filter |
+| 45 | Progress Dashboard | DASH-01–DASH-05 | /progress route with summary cards + all components |
+| 46 | Trend Prediction | TRND-01–TRND-03 | Linear regression estimated completion date |
+
+**Dependencies:** Phase 42 → 43 → 44 → 45 → 46 (strict chain)
+**New dependency:** Recharts v3.8.1 (for Phase 44 chart)
 
 ## Deferred Items
 

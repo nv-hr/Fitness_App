@@ -1,9 +1,9 @@
 # ROADMAP: Fitness_App
 
 **Created:** 2026-05-17
-**Updated:** 2026-06-01 (v1.8 in progress)
-**Phases:** 37 complete, 4 planned
-**Milestones:** 6 shipped, 1 in progress
+**Updated:** 2026-06-01 (v1.9 Progress Tracking)
+**Phases:** 41 complete, 5 planned
+**Milestones:** 7 shipped, 1 in progress
 
 ## Milestones
 
@@ -15,7 +15,8 @@
 - ✅ **v1.5 Smart Auto-Logging** — Phases 24-29 (shipped 2026-05-31)
 - ✅ **v1.6 Activity Planner Rework** — Phases 30-33 (shipped 2026-05-31)
 - ✅ **v1.7 Calendar-Based Plan UI** — Phases 34-37 (shipped 2026-06-01)
-- 🚧 **v1.8 UI Consolidation** — Phases 38-41 (in progress)
+- ✅ **v1.8 UI Consolidation** — Phases 38-41 (completed 2026-06-01)
+- 🚧 **v1.9 Progress Tracking** — Phases 42-46 (in progress)
 
 ## Phases
 
@@ -104,14 +105,20 @@
 
 </details>
 
-### 🚧 v1.8 UI Consolidation (In Progress)
+### ✅ v1.8 UI Consolidation (Completed 2026-06-01)
 
-**Milestone Goal:** Merge standalone Activity Calendar and Meal Calendar pages into their respective manual-log pages — pure UI restructuring, no new backend changes.
+- [x] **Phase 38: Route Cleanup & Calendar Infrastructure**
+- [x] **Phase 39: Food Log Page Merge**
+- [x] **Phase 40: Activity Page Merge**
+- [x] **Phase 41: Test Restructuring**
 
-- [ ] **Phase 38: Route Cleanup & Calendar Infrastructure** — Safe mechanical changes: route redirects, nav updates, component extraction, CalendarPageLayout `defaultDay` prop
-- [ ] **Phase 39: Food Log Page Merge** — Merge Meal Calendar into Food Log page with tabs, date-awareness, summary bar on both tabs (higher risk)
-- [ ] **Phase 40: Activity Page Merge** — Merge Activity Calendar into Activity page with tabs, summary bar on both tabs, dead code removal (lower risk)
-- [ ] **Phase 41: Test Restructuring** — Update/replace page-level tests, verify all 33 shared calendar tests pass, run full suite
+### 🚧 v1.9 Progress Tracking (In Progress)
+
+- [ ] **Phase 42: Database Schema & Migration**
+- [ ] **Phase 43: Weight Logging & Goal Setting**
+- [ ] **Phase 44: Weight Trend Chart**
+- [ ] **Phase 45: Progress Dashboard**
+- [ ] **Phase 46: Trend Prediction**
 
 ### Phase 30: Prompt & Validation Rework
 **Goal**: LLM generates variable-day plans with profile-driven activity selection and rest days
@@ -289,6 +296,71 @@ Plans:
   4. Full frontend + backend test suite runs with 0 failures before merge commit
 **Plans**: TBD
 
+### Phase 42: Database Schema & Migration
+**Goal**: Weight tracking and goal database schema in place with existing data backfilled
+**Depends on**: Nothing (first phase of v1.9)
+**Requirements**: DB-01, DB-02, DB-03, DB-04
+**Success Criteria** (what must be TRUE):
+  1. weight_logs table exists with columns (id, user_id, weight_kg, logged_date, source, notes, created_at) and UNIQUE(user_id, logged_date) constraint
+  2. target_weight_kg and target_date columns added to profiles table with correct data types
+  3. Existing user weights backfilled from profiles.weight_kg → weight_logs on migration — verified by row count match
+  4. B-tree index on weight_logs(user_id, logged_date DESC) exists for efficient range queries
+  5. All migrations are re-runnable (idempotent) — no errors on second apply
+**Plans**: TBD
+
+### Phase 43: Weight Logging & Goal Setting
+**Goal**: Users can log weight entries and set weight goals with target date; weight auto-logs on profile updates
+**Depends on**: Phase 42
+**Requirements**: WLOG-01, WLOG-02, WLOG-03, WLOG-04, WLOG-05, WLOG-06, WLOG-07, GOAL-01, GOAL-02, GOAL-03
+**Success Criteria** (what must be TRUE):
+  1. User can set target weight (2-300kg) and target date (>= today) in their profile form — validated server-side
+  2. Weight is auto-logged to weight_logs when user updates their profile (non-blocking — profile update succeeds even if weight log fails)
+  3. Second weight entry on the same day UPSERTs (last-write-wins) — no duplicate entries per user per day
+  4. User can manually log weight via the progress page with date and optional notes
+  5. User can view weight history list sorted by date DESC with source badges (auto/manual)
+  6. User can delete individual weight log entries from history
+  7. Weight is seeded automatically when profile is first created (initial entry)
+  8. Goal validation rejects: target_weight outside 2-300kg, target_date in the past, direction mismatch with fitness_goal
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 44: Weight Trend Chart
+**Goal**: Interactive weight trend line chart with goal reference line and date range filter
+**Depends on**: Phase 43
+**Requirements**: CHRT-01, CHRT-02, CHRT-03, CHRT-04, CHRT-05
+**Success Criteria** (what must be TRUE):
+  1. Weight trend line chart renders on the progress page using Recharts LineChart
+  2. X-axis displays dates, Y-axis displays weight with auto-scaled domain (dataMin - 2, dataMax + 2)
+  3. Dashed horizontal goal reference line (ReferenceLine) rendered at target_weight_kg when goal is set
+  4. Chart handles all states: empty (0 entries → prompt to log first weight), insufficient (1 entry → message to log more), normal (2+ entries → chart renders)
+  5. Date range filter (30/60/90 days) controls the chart's time window with selected range highlighted
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 45: Progress Dashboard
+**Goal**: Complete /progress dashboard page integrating chart, weight history, goal display, and summary stats
+**Depends on**: Phase 44
+**Requirements**: DASH-01, DASH-02, DASH-03, DASH-04, DASH-05
+**Success Criteria** (what must be TRUE):
+  1. New /progress route renders a full dashboard page with all sub-components
+  2. Summary card displays: current weight, starting weight, change (+/- kg), kg to goal, and % complete
+  3. Dashboard integrates weight trend chart, weight history table, manual weight entry form, and goal display in a single cohesive layout
+  4. All sub-components have loading skeletons, empty state placeholders, and error state with retry capability
+  5. Navigation sidebar and DashboardPlaceholder include a link to the /progress page
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 46: Trend Prediction
+**Goal**: Estimated completion date calculated from actual weight trend with direction and rate display
+**Depends on**: Phase 45
+**Requirements**: TRND-01, TRND-02, TRND-03
+**Success Criteria** (what must be TRUE):
+  1. Estimated completion date calculated from linear regression of actual weight entries (not calorie_rate)
+  2. Trend prediction displayed on dashboard when sufficient data exists (3+ entries across 2+ weeks)
+  3. Progress direction shown as rate string (e.g., "losing 0.5 kg/week" or "gaining 0.3 kg/week") with color coding (green for on-track, amber for slow, red for off-track)
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -330,12 +402,17 @@ Plans:
 | 35. Activity Calendar Page | v1.7 | 2/2 | Complete | 2026-05-31 |
 | 36. Meal Calendar Page | v1.7 | 0/0 | Complete | 2026-06-01 |
 | 37. Cleanup — Remove Old Components & Update Nav | v1.7 | 0/0 | Complete | 2026-06-01 |
-| 38. Route Cleanup & Calendar Infrastructure | v1.8 | 0/2 | Not started | - |
-| 39. Food Log Page Merge | v1.8 | 0/0 | Not started | - |
-| 40. Activity Page Merge | v1.8 | 0/0 | Not started | - |
-| 41. Test Restructuring | v1.8 | 0/0 | Not started | - |
+| 38. Route Cleanup & Calendar Infrastructure | v1.8 | 2/2 | Complete | 2026-06-01 |
+| 39. Food Log Page Merge | v1.8 | 0/0 | Complete | 2026-06-01 |
+| 40. Activity Page Merge | v1.8 | 0/0 | Complete | 2026-06-01 |
+| 41. Test Restructuring | v1.8 | 0/0 | Complete | 2026-06-01 |
+| 42. Database Schema & Migration | v1.9 | 0/0 | Not started | - |
+| 43. Weight Logging & Goal Setting | v1.9 | 0/0 | Not started | - |
+| 44. Weight Trend Chart | v1.9 | 0/0 | Not started | - |
+| 45. Progress Dashboard | v1.9 | 0/0 | Not started | - |
+| 46. Trend Prediction | v1.9 | 0/0 | Not started | - |
 
 
 ---
 *Roadmap created: 2026-05-17*
-*Last updated: 2026-06-01 (v1.8 in progress)*
+*Last updated: 2026-06-01 (v1.9 Progress Tracking)*

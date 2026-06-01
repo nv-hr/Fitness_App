@@ -79,38 +79,38 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DB-01 | — | Pending |
-| DB-02 | — | Pending |
-| DB-03 | — | Pending |
-| DB-04 | — | Pending |
-| WLOG-01 | — | Pending |
-| WLOG-02 | — | Pending |
-| WLOG-03 | — | Pending |
-| WLOG-04 | — | Pending |
-| WLOG-05 | — | Pending |
-| WLOG-06 | — | Pending |
-| WLOG-07 | — | Pending |
-| GOAL-01 | — | Pending |
-| GOAL-02 | — | Pending |
-| GOAL-03 | — | Pending |
-| CHRT-01 | — | Pending |
-| CHRT-02 | — | Pending |
-| CHRT-03 | — | Pending |
-| CHRT-04 | — | Pending |
-| CHRT-05 | — | Pending |
-| DASH-01 | — | Pending |
-| DASH-02 | — | Pending |
-| DASH-03 | — | Pending |
-| DASH-04 | — | Pending |
-| DASH-05 | — | Pending |
-| TRND-01 | — | Pending |
-| TRND-02 | — | Pending |
-| TRND-03 | — | Pending |
+| DB-01 | Phase 42 | Pending |
+| DB-02 | Phase 42 | Pending |
+| DB-03 | Phase 42 | Pending |
+| DB-04 | Phase 42 | Pending |
+| WLOG-01 | Phase 43 | Pending |
+| WLOG-02 | Phase 43 | Pending |
+| WLOG-03 | Phase 43 | Pending |
+| WLOG-04 | Phase 43 | Pending |
+| WLOG-05 | Phase 43 | Pending |
+| WLOG-06 | Phase 43 | Pending |
+| WLOG-07 | Phase 43 | Pending |
+| GOAL-01 | Phase 43 | Pending |
+| GOAL-02 | Phase 43 | Pending |
+| GOAL-03 | Phase 43 | Pending |
+| CHRT-01 | Phase 44 | Pending |
+| CHRT-02 | Phase 44 | Pending |
+| CHRT-03 | Phase 44 | Pending |
+| CHRT-04 | Phase 44 | Pending |
+| CHRT-05 | Phase 44 | Pending |
+| DASH-01 | Phase 45 | Pending |
+| DASH-02 | Phase 45 | Pending |
+| DASH-03 | Phase 45 | Pending |
+| DASH-04 | Phase 45 | Pending |
+| DASH-05 | Phase 45 | Pending |
+| TRND-01 | Phase 46 | Pending |
+| TRND-02 | Phase 46 | Pending |
+| TRND-03 | Phase 46 | Pending |
 
 **Coverage:**
 - v1 requirements: 27 total
-- Mapped to phases: 0
-- Unmapped: 27 ⚠️
+- Mapped to phases: 27
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-06-01*
