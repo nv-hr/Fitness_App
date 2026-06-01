@@ -71,15 +71,6 @@ Rate-limited requests return a 429 status with `RATE_LIMITED` error code.
 
 ---
 
-## Rate Limiting (Weekly Plans)
-
-| Group              | Limit              | Applied To                                  |
-|--------------------|--------------------|---------------------------------------------|
-| Weekly Plan        | 5 per 15 minutes   | `/api/weekly-plans/generate`                |
-| Regenerate Day     | 5 per 15 minutes   | `/api/weekly-plans/regenerate-day`          |
-
----
-
 ## Endpoints
 
 ### 1. Health
@@ -570,7 +561,7 @@ All food endpoints require authentication. Rate limit: Food (200 per 15 minutes)
 
 All activity endpoints require authentication. Rate limit: Activities (60 per 15 minutes).
 
-#### GET /api/activities/recommendations
+#### 5.1 GET /api/activities/recommendations
 
 - **Auth:** Required
 - **Rate Limit:** Activities
@@ -607,7 +598,7 @@ All activity endpoints require authentication. Rate limit: Activities (60 per 15
   ```
 - **Error Codes:** `AUTHENTICATION_ERROR` (401)
 
-#### GET /api/activities
+#### 5.2 GET /api/activities
 
 - **Auth:** Required
 - **Rate Limit:** Activities
@@ -644,39 +635,7 @@ All activity endpoints require authentication. Rate limit: Activities (60 per 15
   ```
 - **Error Codes:** `AUTHENTICATION_ERROR` (401)
 
----
-
-### 6. Documentation
-
-#### GET /api/docs
-
-- **Auth:** No
-- **Rate Limit:** None
-- **Description:** Returns the full API documentation in JSON format for programmatic consumption by tools and automation.
-- **Query Parameters:** None
-- **Response 200:**
-  ```json
-  {
-    "success": true,
-    "data": {
-      "api": {
-        "name": "Fitness App API",
-        "description": "Backend API for Fitness App — BMI, TDEE, food logging, activity recommendations, activity logging, LLM weekly plans, LLM meal recommendations",
-        "version": "1.0.0",
-        "baseUrl": "http://localhost:3001",
-        "endpoints": [ ... ]
-      }
-    }
-  }
-  ```
-
----
-
-### 7. Activity Log — `/api/activities`
-
-All activity log endpoints require authentication. Rate limit: Activities (60 per 15 minutes).
-
-#### POST /api/activities/log
+#### 5.3 POST /api/activities/log
 
 - **Auth:** Required
 - **Rate Limit:** Activities
@@ -717,7 +676,7 @@ All activity log endpoints require authentication. Rate limit: Activities (60 pe
   ```
 - **Error Codes:** `VALIDATION_ERROR` (400), `NOT_FOUND` (404), `AUTHENTICATION_ERROR` (401)
 
-#### GET /api/activities/logs
+#### 5.4 GET /api/activities/logs
 
 - **Auth:** Required
 - **Rate Limit:** Activities
@@ -744,7 +703,7 @@ All activity log endpoints require authentication. Rate limit: Activities (60 pe
   ```
 - **Error Codes:** `AUTHENTICATION_ERROR` (401)
 
-#### GET /api/activities/history
+#### 5.5 GET /api/activities/history
 
 - **Auth:** Required
 - **Rate Limit:** Activities
@@ -789,7 +748,7 @@ All activity log endpoints require authentication. Rate limit: Activities (60 pe
   ```
 - **Error Codes:** `AUTHENTICATION_ERROR` (401)
 
-#### DELETE /api/activities/log/:id
+#### 5.6 DELETE /api/activities/log/:id
 
 - **Auth:** Required
 - **Rate Limit:** Activities
@@ -805,7 +764,7 @@ All activity log endpoints require authentication. Rate limit: Activities (60 pe
   ```
 - **Error Codes:** `VALIDATION_ERROR` (400), `NOT_FOUND` (404), `AUTHENTICATION_ERROR` (401)
 
-#### GET /api/activities/summary
+#### 5.7 GET /api/activities/summary
 
 - **Auth:** Required
 - **Rate Limit:** Activities
@@ -835,7 +794,33 @@ All activity log endpoints require authentication. Rate limit: Activities (60 pe
 
 ---
 
-### 8. Weekly Plans (LLM) — `/api/weekly-plans`
+### 6. Documentation
+
+#### GET /api/docs
+
+- **Auth:** No
+- **Rate Limit:** None
+- **Description:** Returns the full API documentation in JSON format for programmatic consumption by tools and automation.
+- **Query Parameters:** None
+- **Response 200:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "api": {
+        "name": "Fitness App API",
+        "description": "Backend API for Fitness App — BMI, TDEE, food logging, activity recommendations, activity logging, LLM weekly plans, LLM meal recommendations",
+        "version": "1.0.0",
+        "baseUrl": "http://localhost:3001",
+        "endpoints": [ ... ]
+      }
+    }
+  }
+  ```
+
+---
+
+### 7. Weekly Plans (LLM) — `/api/weekly-plans`
 
 All weekly plan endpoints require authentication. Rate limit: Weekly Plan (5 per 15 minutes for generate, separate limit for regenerate-day).
 
@@ -953,7 +938,58 @@ All weekly plan endpoints require authentication. Rate limit: Weekly Plan (5 per
 
 ---
 
-### 9. Daily Meal Plans — `/api/daily-meal-plans`
+#### POST /api/weekly-plans/toggle-complete
+
+- **Auth:** Required
+- **Rate Limit:** Dedicated toggle-complete limiter
+- **Description:** Toggle the completion status of a weekly plan activity for a given day. Uses server-authoritative toggle to prevent race conditions. Returns updated plan with the toggled day's activities.
+- **Request Body:**
+  ```json
+  {
+    "weekStart": "2026-05-25",
+    "dayIndex": 2,
+    "activityName": "Brisk Walking"
+  }
+  ```
+- **Response 200:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "plan": { "days": [ ... ] }
+    }
+  }
+  ```
+- **Error Codes:** `VALIDATION_ERROR` (400), `RATE_LIMITED` (429), `AUTHENTICATION_ERROR` (401)
+
+#### POST /api/weekly-plans/swap
+
+- **Auth:** Required
+- **Rate Limit:** Dedicated swap limiter
+- **Description:** Swap a single activity in a weekly plan day with an LLM-generated replacement. Replaces only the specified activity in-place without regenerating the full day. Has independent rate limit tracking.
+- **Request Body:**
+  ```json
+  {
+    "weekStart": "2026-05-25",
+    "dayIndex": 2,
+    "oldActivityName": "Brisk Walking",
+    "intensity": "moderate"
+  }
+  ```
+- **Response 200:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "plan": { "days": [ ... ] }
+    }
+  }
+  ```
+- **Error Codes:** `VALIDATION_ERROR` (400), `RATE_LIMITED` (429), `AUTHENTICATION_ERROR` (401)
+
+---
+
+### 8. Daily Meal Plans — `/api/daily-meal-plans`
 
 All daily meal plan endpoints require authentication.
 
@@ -1063,9 +1099,58 @@ All daily meal plan endpoints require authentication.
   ```
 - **Error Codes:** `VALIDATION_ERROR` (400), `NOT_FOUND` (404), `AUTHENTICATION_ERROR` (401)
 
+#### POST /api/daily-meal-plans/toggle-item
+
+- **Auth:** Required
+- **Rate Limit:** Global
+- **Description:** Toggle the logged status of an individual meal item. When toggled from false→true, the item is logged to the food log. When toggled from true→false, the food log entry is deleted. Idempotent.
+- **Request Body:**
+  ```json
+  {
+    "date": "2026-05-31",
+    "mealType": "lunch",
+    "itemIndex": 0
+  }
+  ```
+- **Response 200:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "item": { ... },
+      "logged": true
+    }
+  }
+  ```
+- **Error Codes:** `VALIDATION_ERROR` (400), `NOT_FOUND` (404), `AUTHENTICATION_ERROR` (401)
+
+#### POST /api/daily-meal-plans/swap-item
+
+- **Auth:** Required
+- **Rate Limit:** Global
+- **Description:** Swap a single meal item in a daily plan with an LLM-generated replacement. Replaces only the specified item without regenerating the full meal or day.
+- **Request Body:**
+  ```json
+  {
+    "date": "2026-05-31",
+    "mealType": "lunch",
+    "itemIndex": 0
+  }
+  ```
+- **Response 200:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "plan": { "meals": [ ... ] }
+    }
+  }
+  ```
+- **Error Codes:** `VALIDATION_ERROR` (400), `AUTHENTICATION_ERROR` (401)
+
 ---
 
-### 10. Activity Plans — `/api/activity-plans`
+### 9. Activity Plans — `/api/activity-plans`
 
 All activity plan endpoints require authentication.
 
@@ -1143,7 +1228,7 @@ All activity plan endpoints require authentication.
   ```
 - **Error Codes:** `VALIDATION_ERROR` (400), `RATE_LIMITED` (429), `AUTHENTICATION_ERROR` (401)
 
-#### POST /api/activity-plans/log-activities
+#### POST /api/activity-plans/log
 
 - **Auth:** Required
 - **Rate Limit:** Global

@@ -11,97 +11,112 @@ A web-based health application that helps users monitor their body condition thr
 
 - **Quality**: Build it right — proper code structure, error handling, and testing over speed
 - **Styling**: Minimal — function over form, clean but not elaborate
-- **Tech stack**: React + Express + MySQL (already decided)
+- **Tech stack**: React 19 + Express 5 + Supabase PostgreSQL (already decided)
 - **Language**: English UI required
 <!-- GSD:project-end -->
 
 <!-- GSD:stack-start source:codebase/STACK.md -->
 ## Technology Stack
 
-## Overview
 ## Languages
-- **None yet** — No source code files exist in the repository.
-- Planned features are described in English in `README.md`.
+- **JavaScript (ESM)** — Both frontend and backend use ES modules
 ## Runtime / Platform
-- **Not applicable** — No runtime configuration files exist (no `package.json`, `requirements.txt`, `Cargo.toml`, `go.mod`, etc.).
-- The `README.md` mentions "Access the app on Google", suggesting a planned **web-based** deployment.
+- **Node.js 20+** — Backend runtime
+- **Browser** — Frontend SPA served by Vite dev server or Express static
 ## Frameworks
-- **None** — No framework dependencies declared.
+| Layer | Framework |
+|-------|-----------|
+| Frontend | React 19, Vite 8, React Router 7, TanStack React Query, React Hook Form, Zod |
+| Backend | Express 5 (ESM), Passport (JWT + Google OAuth), Helmet, express-rate-limit |
+| Database | Supabase PostgreSQL 17 (pg driver, no ORM) |
 ## Dependencies
-- **None** — No dependency manifest files exist.
+- **Root**: None (monorepo with separate package.json per directory)
+- **backend/**: express, passport, passport-jwt, passport-google-oauth20, bcryptjs, pg, openai, node-cache, cors, helmet, express-rate-limit, cookie-parser, zod, dotenv, date-fns
+- **frontend/**: react, react-dom, react-router-dom, @tanstack/react-query, react-hook-form, @hookform/resolvers, zod, date-fns
+## Dev Dependencies
+- **Root**: None
+- **backend/**: jest, nodemon, eslint
+- **frontend/**: vitest, @testing-library/react, @testing-library/jest-dom, jsdom, eslint, vite
 ## Configuration Files
 | File | Purpose |
 |------|---------|
-| `LICENSE` | GNU GPL v3 license |
-| `README.md` | Project description and feature list |
-## Planned Features (from README.md)
+| `backend/.env` | Environment variables (DB URL, JWT secret, OAuth keys, LLM keys) |
+| `backend/.env.example` | Template for .env |
+| `frontend/vite.config.js` | Vite config with dev proxy to backend |
+| `Dockerfile` | Multi-stage production build |
+| `docker-compose.yml` | Production container setup |
+| `supabase/config.toml` | Supabase project configuration |
 ## Build / Tooling
-- **None** — No build scripts, CI/CD configs, or tooling files present.
-## Notes
-- Repository is hosted at `https://github.com/nv-hr/Fitness_App.git`
-- 9 git commits total, all related to README updates and feature file creation
-- Last commit: `a161cdd` — "Update README.md"
+- **Vite 8** — Frontend build tool
+- **Docker** — Multi-stage production build
+- **Jest** (backend) + **Vitest** (frontend) — 141 frontend + backend tests
 <!-- GSD:stack-end -->
 
 <!-- GSD:conventions-start source:CONVENTIONS.md -->
 ## Conventions
 
-## Overview
 ## Code Style
-- **Not applicable** — No source code files to analyze.
+- React functional components with hooks, Express route-controller-service-repository pattern, ES modules throughout.
 ## Naming Conventions (observed in documentation)
 | Element | Convention | Example |
 |---------|-----------|---------|
 | Repository name | snake_case | `Fitness_App` |
-| Feature files | Title Case with spaces | `BMI Calculator`, `Workout Planner` |
-| README sections | Title Case with `##` headers | `## BMI Calculator` |
 | Git commits | Imperative mood | `Create Workout Planner`, `Update README.md` |
+| Files (backend) | camelCase | `weeklyPlan.routes.js` |
+| Files (frontend) | PascalCase | `ActivityPage.jsx`, `FoodLogPage.jsx` |
+| API routes | kebab-case | `/api/weekly-plans/toggle-complete` |
 ## Documentation Language
-- **English** — All feature descriptions and README content are written in English.
-- Example: "Calculate ideal body weight based on age and height."
+- **English** — All UI text, code comments, and documentation are in English.
 ## Error Handling
-- **Not applicable** — No code exists.
+- **Backend**: try/catch in controllers → error middleware → standard JSON `{ success, error: { message, code } }` response.
+- **Frontend**: TanStack Query error handling with toast notifications.
 ## Patterns
-- **None observed** — No code patterns to analyze.
+- Route → Controller → Service → Repository → pg Pool. Controllers handle req/res, services contain business logic, repositories run SQL queries.
 ## Git Conventions
 | Aspect | Observation |
 |--------|-------------|
 | Commit style | Simple imperative (`Create X`, `Update Y`) |
 | Branch naming | `features` (from PR #1 merge) |
 | PR style | Standard GitHub merge |
-## Recommendations for Future Implementation
 ## Notes
-- This document should be updated once source code is added to the project
+- Codebase has 450+ commits across 41 phases. See .planning/PROJECT.md for full history.
 <!-- GSD:conventions-end -->
 
 <!-- GSD:architecture-start source:ARCHITECTURE.md -->
 ## Architecture
 
-## Overview
 ## Architectural Pattern
-- **Not applicable** — No codebase to analyze for patterns.
-- Planned features suggest a **tool-based** architecture where each calculator/planner is a standalone module.
+- **Route-Controller-Service-Repository** — Layered architecture on the backend.
+- **Feature-based modules** on the frontend under `frontend/src/features/`.
 ## Layers
-| Layer | Planned Components |
-|-------|-------------------|
-| UI | 5 feature pages (BMI, KCAL, TDEE, Workout Planner, Workout Progress) |
-| Logic | Calculation engines for BMI, KCAL, TDEE formulas |
-| Data | Progress tracking storage (Workout Progress) |
+| Layer | Technology | Location |
+|-------|-----------|----------|
+| UI (React) | React 19, React Router 7 | `frontend/src/features/*/components/` |
+| State | TanStack React Query | `frontend/src/features/*/api/` |
+| API (Express) | Express 5 routes + controllers | `backend/src/routes/`, `backend/src/controllers/` |
+| Business Logic | Service layer | `backend/src/services/` |
+| Data Access | Repository pattern (pg) | `backend/src/repositories/` |
+| Database | Supabase PostgreSQL 17 | `supabase/` migrations |
 ## Data Flow
-- **Not implemented** — No data flow exists.
-- Expected flow once built:
+- Browser → (React Query) → Express API → Controller → Service → Repository → pg Pool → PostgreSQL
+- Auth: httpOnly JWT cookie set on login/register, verified by authenticateToken middleware
+- LLM: Service calls OpenRouter API, results cached with node-cache, persisted to DB
 ## Abstractions
-- **None** — No abstractions, interfaces, or base classes defined.
+- `http.js` — Shared HTTP client wrapper for frontend API calls
+- `auth.middleware.js` — JWT verification guard for protected routes
+- `error.middleware.js` — Global Express error handler
+- `database.js` — pg Pool singleton with SSL config
+- Calendar shared components — CalendarGrid, MonthNav, DayDetailPanel, CalendarPageLayout, useMonthData, calendarUtils
 ## Entry Points
-- **None** — No executable entry points (`index.html`, `main.py`, `App.tsx`, etc.).
-## Key Formulas (for future implementation)
+- `backend/src/server.js` (development: nodemon, production: node)
+- `frontend/src/main.jsx` (Vite dev server entry)
+## Key Formulas
 - **BMI**: weight(kg) / height(m)²
 - **TDEE**: BMR × Activity Multiplier
 - **BMR**: Mifflin-St Jeor or Harris-Benedict equation
 - **KCAL**: Food item calorie summation
 ## Notes
-- Project is in pre-implementation phase
-- Architecture decisions should be made during planning phase before coding begins
+- 41 phases completed across 8 milestones (v1.0 through v1.8). See .planning/ROADMAP.md for full phase breakdown.
 <!-- GSD:architecture-end -->
 
 <!-- GSD:skills-start source:skills/ -->
