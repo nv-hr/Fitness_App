@@ -86,9 +86,51 @@
 - Sessions: ~5 sessions across 4 phases
 - Notable: Phase 37 cleanup was the most satisfying — deleting 32 old tests and 5+ stale files
 
----
+## Milestone: v1.9 — Progress Tracking
 
-## Cross-Milestone Trends
+**Shipped:** 2026-06-01
+**Phases:** 5 | **Plans:** 6 | **Commits:** 29
+
+### What Was Built
+- Database schema: weight_logs table with UPSERT, profiles ALTER for goal columns, backfill migration
+- Weight logging full-stack: weight log API (CRUD, auto-log on profile update, UPSERT), goal validation (2-300kg, date >= today, direction match)
+- Frontend weight entry form, history table with delete, goal fields in profile form
+- Weight Trend Chart: Recharts LineChart with goal reference line, 30/60/90 day date range filter, all state handling
+- Progress Dashboard: /progress route with coordinated sub-components (chart, entry, history, goal, prediction)
+- Trend Prediction: OLS linear regression, 7-state TrendPredictionCard (color-coded green/amber/red), estimated completion date
+- 175 tests passing across all components
+
+### What Worked
+- **Single-day execution**: All 5 phases completed in one day — focused execution with no context switching
+- **Clean phase dependency chain**: Phase 42 (schema) → 43 (API + UI) → 44 (chart) → 45 (dashboard) → 46 (prediction)
+- **OLS regression over ML**: Simple linear algebra for trend prediction — no model dependencies, no API calls, predictable results
+- **Per-requirement SUMMARY.md tracking**: Each phase documented exactly which requirements it fulfilled, making milestone close verification straightforward
+- **Quick tasks for post-ship polish**: Date restriction (260601-dr1), plan regeneration fix, non-today indicator cleanup — all tracked as quick tasks outside phase plans
+
+### What Was Inefficient
+- **REQUIREMENTS.md traceability not updated during execution**: All 27 requirements still showed "Pending" in the source file despite being fully implemented — same recurring issue from v1.3 and v1.7
+- **Phases archived before milestone close**: Phase directories (42-46) moved to milestones/v1.9-phases via `/gsd-cleanup` before `/gsd-complete-milestone` ran, causing the SDK to report 0 phases/plans
+- **No formal UAT pass**: Trend prediction state coverage was verified by tests but not manually reviewed end-to-end
+- **DASH-02 deferred**: Summary card (current weight, starting weight, change, kg to goal, % complete) not implemented — documented in STATE.md as deferred
+
+### Patterns Established
+- **OLS regression for trend estimation**: Exported pure function `linearRegressionOLS()` for testability, wrapped in `useTrendPrediction` hook with 7-state output
+- **Color-coded status system**: Green (≥80% expected), Amber (≥40%), Red (<40% or opposite direction) — reusable for future progress metrics
+- **refreshKey coordination pattern**: Parent ProgressPage holds `refreshKey` state, passed to child components — any child can trigger coordinated refetch
+
+### Key Lessons
+1. Keep requirements traceability updated per-phase — stalled since v1.3, needs automation
+2. Run cleanup after milestone close, not before — SDK `milestone.complete` needs phase directories to calculate stats
+3. DASH-02 should have been caught at Phase 45 execution gates, not deferred at close
+4. Post-ship quick tasks work well for polish items discovered during end-of-milestone testing
+5. Phase 46 (Trend Prediction) had the most test code (15KB hooks + 11KB component) relative to implementation — good pattern for algorithmic features
+
+### Cost Observations
+- Model mix: 100% default (opencode/deepseek-v4-flash-free)
+- Sessions: ~3 sessions across 5 phases + quick tasks + milestone close
+- Notable: Fastest phase was Phase 42 (schema migration) — single plan, pure SQL, no rework
+
+---
 
 ### Process Evolution
 
@@ -99,6 +141,7 @@
 | v1.2 | 4 | 13 | Supabase PostgreSQL migration |
 | v1.3 | 5 | 9 | Activity tracking + LLM integration |
 | v1.7 | 4 | 4 | Calendar-based plan UI + cleanup |
+| v1.9 | 5 | 6 | Progress tracking + trend prediction |
 
 ### Cumulative Quality
 
@@ -109,6 +152,7 @@
 | v1.2 | 105+ | 62 | +4,419 |
 | v1.3 | 260 | 110 | +13,786 |
 | v1.7 | 141 | 161 | +1,650 |
+| v1.9 | 175 | 305 | +9,482 |
 
 ### Top Lessons (Verified Across Milestones)
 
