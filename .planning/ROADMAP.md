@@ -324,8 +324,12 @@ Plans:
   6. User can delete individual weight log entries from history
   7. Weight is seeded automatically when profile is first created (initial entry)
   8. Goal validation rejects: target_weight outside 2-300kg, target_date in the past, direction mismatch with fitness_goal
-**Plans**: TBD
+**Plans**: 2 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 43-01-PLAN.md — Backend: weight log API, profile goal fields, auto-log, seed, validation — Wave 1
+- [ ] 43-02-PLAN.md — Frontend: profile goal fields, weight entry card, weight history table — Wave 1
 
 ### Phase 44: Weight Trend Chart
 **Goal**: Interactive weight trend line chart with goal reference line and date range filter
@@ -410,7 +414,7 @@ Plans:
 | 40. Activity Page Merge | v1.8 | 0/0 | Complete | 2026-06-01 |
 | 41. Test Restructuring | v1.8 | 0/0 | Complete | 2026-06-01 |
 | 42. Database Schema & Migration | v1.9 | 0/1 | Planned | - |
-| 43. Weight Logging & Goal Setting | v1.9 | 0/0 | Not started | - |
+| 43. Weight Logging & Goal Setting | v1.9 | 0/2 | Planned | - |
 | 44. Weight Trend Chart | v1.9 | 0/0 | Not started | - |
 | 45. Progress Dashboard | v1.9 | 0/0 | Not started | - |
 | 46. Trend Prediction | v1.9 | 0/0 | Not started | - |
