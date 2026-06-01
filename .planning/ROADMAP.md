@@ -1,8 +1,8 @@
 # ROADMAP: Fitness_App
 
 **Created:** 2026-05-17
-**Updated:** 2026-06-01 (v1.7 complete)
-**Phases:** 37 complete, 0 planned
+**Updated:** 2026-06-01 (v1.8 in progress)
+**Phases:** 37 complete, 4 planned
 **Milestones:** 6 shipped, 1 in progress
 
 ## Milestones
@@ -15,6 +15,7 @@
 - ✅ **v1.5 Smart Auto-Logging** — Phases 24-29 (shipped 2026-05-31)
 - ✅ **v1.6 Activity Planner Rework** — Phases 30-33 (shipped 2026-05-31)
 - ✅ **v1.7 Calendar-Based Plan UI** — Phases 34-37 (shipped 2026-06-01)
+- 🚧 **v1.8 UI Consolidation** — Phases 38-41 (in progress)
 
 ## Phases
 
@@ -103,7 +104,14 @@
 
 </details>
 
-### Next Milestone: v1.7 Calendar-Based Plan UI
+### 🚧 v1.8 UI Consolidation (In Progress)
+
+**Milestone Goal:** Merge standalone Activity Calendar and Meal Calendar pages into their respective manual-log pages — pure UI restructuring, no new backend changes.
+
+- [ ] **Phase 38: Route Cleanup & Calendar Infrastructure** — Safe mechanical changes: route redirects, nav updates, component extraction, CalendarPageLayout `defaultDay` prop
+- [ ] **Phase 39: Food Log Page Merge** — Merge Meal Calendar into Food Log page with tabs, date-awareness, summary bar on both tabs (higher risk)
+- [ ] **Phase 40: Activity Page Merge** — Merge Activity Calendar into Activity page with tabs, summary bar on both tabs, dead code removal (lower risk)
+- [ ] **Phase 41: Test Restructuring** — Update/replace page-level tests, verify all 33 shared calendar tests pass, run full suite
 
 ### Phase 30: Prompt & Validation Rework
 **Goal**: LLM generates variable-day plans with profile-driven activity selection and rest days
@@ -221,12 +229,61 @@ Plans:
 **Depends on**: Phase 36
 **Requirements**: CAL-CLN-01, CAL-CLN-02, CAL-CLN-03, CAL-CLN-04, CAL-CLN-05, CAL-CLN-06
 **Success Criteria** (what must be TRUE):
-   1. Old ActivityPlanSection, WeeklyPlanPage, and DayCard components are removed with zero remaining import references (verified by glob search)
-   2. Old DailyMealPlanSection, MealPlanPage, and DayMealCard components are removed with zero remaining import references (verified by glob search)
-   3. Dashboard/menu navigation links point to `/activity-calendar` and `/meal-calendar` instead of old page routes
-   4. Old page-specific tests are removed; equivalent calendar tests exist matching or exceeding previous coverage
-   5. All 27 CAL requirements pass end-to-end verification — both calendar pages functional, no dead imports
+    1. Old ActivityPlanSection, WeeklyPlanPage, and DayCard components are removed with zero remaining import references (verified by glob search)
+    2. Old DailyMealPlanSection, MealPlanPage, and DayMealCard components are removed with zero remaining import references (verified by glob search)
+    3. Dashboard/menu navigation links point to `/activity-calendar` and `/meal-calendar` instead of old page routes
+    4. Old page-specific tests are removed; equivalent calendar tests exist matching or exceeding previous coverage
+    5. All 27 CAL requirements pass end-to-end verification — both calendar pages functional, no dead imports
 **Plans**: 0 plans
+
+### Phase 38: Route Cleanup & Calendar Infrastructure
+**Goal**: Safe mechanical changes and component extraction that unblock both page merges — route redirects, nav updates, CalendarPageLayout enhancement
+**Depends on**: Nothing (first phase of v1.8)
+**Requirements**: UI-ROUTE-01, UI-ROUTE-02, UI-ROUTE-03
+**Success Criteria** (what must be TRUE):
+  1. `/meal-calendar` route removed; navigating to it redirects to `/food-log` with no broken links
+  2. Navigation sidebar and DashboardPlaceholder links point to `/food-log` instead of `/meal-calendar`
+  3. PROJECT.md corrected — references `/activities` not `/activity-calendar`
+  4. `<ActivityCalendarSection>` and `<MealCalendarSection>` wrapper components extracted from their pages with self-contained state
+  5. CalendarPageLayout accepts optional `defaultDay` prop (backward-compatible, defaults to `null`)
+**Plans**: TBD
+
+### Phase 39: Food Log Page Merge (Higher Risk)
+**Goal**: Meal Calendar merged into Food Log page with tabs, date-awareness, and summary bar on both tabs
+**Depends on**: Phase 38
+**Requirements**: UI-FOOD-01, UI-FOOD-02, UI-FOOD-03, UI-FOOD-04
+**Success Criteria** (what must be TRUE):
+  1. Food Log page displays "Plan" and "Log" tabs; Plan tab shows month calendar with color-coded days, Generate Day button, per-meal-type Log buttons
+  2. Log tab shows ingredient search, weight input, manual log form with per-meal-type sections (breakfast, lunch, dinner, snack), and quick-add with last-portion pre-fill
+  3. Daily summary bar (consumed vs TDEE target with progress bar) displayed on both Plan and Log tabs
+  4. Auto-generation only fires when Plan tab is active; switching to Log tab does not re-trigger generation
+  5. FoodLogPage is date-aware: `selectedDate` state initialized to today, synced with calendar selection, drives API fetches
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 40: Activity Page Merge (Lower Risk)
+**Goal**: Activity Calendar merged into Activity page with tabs, summary bar on both tabs, and dead code removal
+**Depends on**: Phase 38
+**Requirements**: UI-ACT-01, UI-ACT-02, UI-ACT-03, UI-ACT-04
+**Success Criteria** (what must be TRUE):
+  1. Activity page displays "Plan" and "Log" tabs; Plan tab shows month calendar with color-coded days, Generate Week button, per-day swap, completion toggle
+  2. Log tab shows manual activity entry form (type + duration + intensity), activity history list, and activity summary
+  3. Daily summary bar (active minutes, calories burned, net calories) displayed on both Plan and Log tabs
+  4. Auto-generation only fires when Plan tab is active; switching tabs does not re-trigger generation
+  5. Dead `ActivitiesPage.jsx` removed after patterns extracted
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 41: Test Restructuring
+**Goal**: All page-level tests updated for merged page structures; full test suite passes with 0 failures before merge
+**Depends on**: Phase 38, Phase 39, Phase 40
+**Requirements**: UI-TEST-01, UI-TEST-02, UI-TEST-03, UI-TEST-04
+**Success Criteria** (what must be TRUE):
+  1. `MealCalendarPage.test.jsx` tests replaced with tests covering merged FoodLogPage structure (tabs, calendar, manual log, summary)
+  2. `ActivityCalendarPage.test.jsx` tests replaced with tests covering merged Activity page structure (tabs, calendar, manual entry, summary)
+  3. All 33 shared calendar component tests continue to pass unchanged
+  4. Full frontend + backend test suite runs with 0 failures before merge commit
+**Plans**: TBD
 
 ## Progress
 
@@ -269,8 +326,12 @@ Plans:
 | 35. Activity Calendar Page | v1.7 | 2/2 | Complete | 2026-05-31 |
 | 36. Meal Calendar Page | v1.7 | 0/0 | Complete | 2026-06-01 |
 | 37. Cleanup — Remove Old Components & Update Nav | v1.7 | 0/0 | Complete | 2026-06-01 |
+| 38. Route Cleanup & Calendar Infrastructure | v1.8 | 0/0 | Not started | - |
+| 39. Food Log Page Merge | v1.8 | 0/0 | Not started | - |
+| 40. Activity Page Merge | v1.8 | 0/0 | Not started | - |
+| 41. Test Restructuring | v1.8 | 0/0 | Not started | - |
 
 
 ---
 *Roadmap created: 2026-05-17*
-*Last updated: 2026-06-01 (v1.7 complete)*
+*Last updated: 2026-06-01 (v1.8 in progress)*
