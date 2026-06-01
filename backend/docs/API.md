@@ -53,8 +53,13 @@ The API uses httpOnly JWT cookie authentication (per D-01).
 | Profile   | 15 per 15 minutes  | All `/api/profile` routes           |
 | Food      | 200 per 15 minutes | All `/api/food` routes              |
 | Activities| 60 per 15 minutes  | All `/api/activities` routes        |
-| Daily Meal Plans| 5 per 15 minutes | POST /api/daily-meal-plans/generate|
-| Activity Plans  | 5 per 15 minutes | POST /api/activity-plans/generate  |
+| Progress  | 50 per 15 minutes  | All `/api/progress/` routes         |
+| Weekly Plans Generate | 50 per 15 minutes | POST /api/weekly-plans/generate|
+| Weekly Plans Regenerate-Day | 30 per 30 minutes | POST /api/weekly-plans/regenerate-day|
+| Weekly Plans Swap | 10 per 5 minutes | POST /api/weekly-plans/swap|
+| Weekly Plans Toggle-Complete | 60 per 1 minute | POST /api/weekly-plans/toggle-complete|
+| Daily Meal Plans| 50 per 15 minutes | POST /api/daily-meal-plans/generate|
+| Activity Plans Generate | 50 per 15 minutes | POST /api/activity-plans/generate|
 
 Rate-limited requests return a 429 status with `RATE_LIMITED` error code.
 
@@ -822,12 +827,12 @@ All activity endpoints require authentication. Rate limit: Activities (60 per 15
 
 ### 7. Weekly Plans (LLM) — `/api/weekly-plans`
 
-All weekly plan endpoints require authentication. Rate limit: Weekly Plan (5 per 15 minutes for generate, separate limit for regenerate-day).
+All weekly plan endpoints require authentication. Rate limit: Weekly Plans Generate (50 per 15 minutes), Regenerate-Day (30 per 30 minutes), Swap (10 per 5 minutes), Toggle-Complete (60 per 1 minute).
 
 #### POST /api/weekly-plans/generate
 
 - **Auth:** Required
-- **Rate Limit:** Weekly Plan (5 per 15 minutes)
+- **Rate Limit:** Weekly Plans Generate (50 per 15 minutes)
 - **Description:** Generate a 7-day weekly activity plan using LLM (OpenRouter). The plan is personalized based on the user's profile, fitness goal, activity history (past 30 days), and available activities. Results are cached in-memory and persisted to the database.
 - **Request Body:**
   ```json
@@ -911,7 +916,7 @@ All weekly plan endpoints require authentication. Rate limit: Weekly Plan (5 per
 #### POST /api/weekly-plans/regenerate-day
 
 - **Auth:** Required
-- **Rate Limit:** Regenerate Day (5 per 15 minutes)
+- **Rate Limit:** Weekly Plans Regenerate-Day (30 per 30 minutes)
 - **Description:** Regenerate a single day within an existing weekly plan. The LLM generates a full new plan but only the specified day is merged into the cached plan; other days remain unchanged. Tracks per-day retry timestamps for independent rate limit display.
 - **Request Body:**
   ```json
@@ -997,7 +1002,7 @@ All daily meal plan endpoints require authentication.
 
 | Group              | Limit              | Applied To                              |
 |--------------------|--------------------|-----------------------------------------|
-| Daily Meal Generate | 5 per 15 minutes  | `POST /api/daily-meal-plans/generate`  |
+| Daily Meal Generate | 50 per 15 minutes | `POST /api/daily-meal-plans/generate`  |
 
 #### GET /api/daily-meal-plans
 
@@ -1047,7 +1052,7 @@ All daily meal plan endpoints require authentication.
 #### POST /api/daily-meal-plans/generate
 
 - **Auth:** Required
-- **Rate Limit:** Daily Meal Generate (5 per 15 minutes)
+- **Rate Limit:** Daily Meal Generate (50 per 15 minutes)
 - **Description:** Generate a 1-day meal plan using LLM (OpenRouter). Contains 4 meals (breakfast, lunch, dinner, snack) with items selected from the existing food database. Portions auto-calculated to meet the user's calorie target.
 - **Request Body:**
   ```json
@@ -1201,7 +1206,7 @@ All activity plan endpoints require authentication.
 #### POST /api/activity-plans/generate
 
 - **Auth:** Required
-- **Rate Limit:** Global
+- **Rate Limit:** Activity Plans Generate (50 per 15 minutes)
 - **Description:** Generate an activity plan for a given date using LLM (OpenRouter). Plan is personalized based on user profile, fitness goal, and activity history.
 - **Request Body:**
   ```json
@@ -1250,3 +1255,54 @@ All activity plan endpoints require authentication.
   }
   ```
 - **Error Codes:** `VALIDATION_ERROR` (400), `AUTHENTICATION_ERROR` (401)
+
+---
+
+### 10. Progress — `/api/progress`
+
+All progress endpoints require authentication. Rate limit: Progress (50 per 15 minutes).
+
+#### POST /api/progress/weight
+
+- **Auth:** Required
+- **Rate Limit:** Progress
+- **Description:** Log or update a weight entry for a specific date. Uses upsert — if a weight log already exists for the given date, it is updated. Also syncs the weight to the user's profile.
+- **Constraints:**
+  - weightKg: Required, number between 2-300.
+  - loggedDate: Required, format YYYY-MM-DD.
+  - notes: Optional string.
+- **Request Body:**
+  ```json
+  { "weightKg": 70.5, "loggedDate": "2026-05-28", "notes": "Morning weigh-in" }
+  ```
+- **Response 201:**
+  ```json
+  { "success": true, "data": { "entry": { "id": "uuid", "user_id": "uuid", "weight_kg": 70.5, "logged_date": "2026-05-28", "source": "manual", "notes": "Morning weigh-in" } } }
+  ```
+- **Error Codes:** VALIDATION_ERROR (400), AUTHENTICATION_ERROR (401)
+
+#### GET /api/progress/weight
+
+- **Auth:** Required
+- **Rate Limit:** Progress
+- **Description:** Retrieve weight history entries sorted by date descending.
+- **Query Parameters:**
+  - limit (optional): Maximum entries to return. Defaults to 50.
+- **Response 200:**
+  ```json
+  { "success": true, "data": { "entries": [ { "id": "uuid", "user_id": "uuid", "weight_kg": 70.5, "logged_date": "2026-05-28", "source": "manual", "notes": "Morning weigh-in" } ] } }
+  ```
+- **Error Codes:** AUTHENTICATION_ERROR (401)
+
+#### DELETE /api/progress/weight/:id
+
+- **Auth:** Required
+- **Rate Limit:** Progress
+- **Description:** Delete a specific weight log entry. Only the owning user can delete their own logs.
+- **Path Parameters:**
+  - id: UUID of the weight log entry.
+- **Response 200:**
+  ```json
+  { "success": true, "data": { "deleted": true } }
+  ```
+- **Error Codes:** VALIDATION_ERROR (400) — invalid id, NOT_FOUND (404), AUTHENTICATION_ERROR (401)
