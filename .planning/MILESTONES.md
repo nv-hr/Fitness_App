@@ -1,20 +1,11 @@
 # Milestones
 
-## v1.5 Smart Auto-Logging (Shipped: 2026-05-31)
-
-**Phases completed:** 1 phases, 2 plans, 0 tasks
-
-**Key accomplishments:**
-
-- (none recorded)
-
----
-
 ## v1.9 Progress Tracking (Shipped: 2026-06-01)
 
 **Phases completed:** 5 phases (42-46), 6 plans
 
 **Key accomplishments:**
+
 - Database schema: `weight_logs` table with UNIQUE(user_id, logged_date), target_weight_kg/target_date on profiles, backfill migration
 - Weight logging API with CRUD, auto-log on profile update (UPSERT), goal validation (2-300kg, date >= today, direction match)
 - Frontend: weight entry form, history table with delete, goal fields in profile form
@@ -23,6 +14,8 @@
 - Trend Prediction: OLS linear regression hook, TrendPredictionCard with 7 states (loading/error/empty/insufficient/no-goal/normal/stable), color-coded status (green/amber/red)
 
 **Test results:** 171/175 frontend tests passing (4 pre-existing integration test failures — profile 500 errors and calorieTarget type issues)
+
+**Known deferred items at close:** 37 (see STATE.md Deferred Items)
 
 ---
 
@@ -77,6 +70,7 @@
 **Phases completed:** 4 phases (38-41)
 
 **Key accomplishments:**
+
 - Route cleanup — `/meal-calendar` redirect, nav updates, CalendarPageLayout `defaultDay` prop
 - Food Log page merge — Meal Calendar integrated with tabs (Plan/Log), date-awareness, summary bar on both tabs
 - Activity page merge — Activity Calendar integrated with tabs (Plan/Log), summary bar on both tabs, dead code removal

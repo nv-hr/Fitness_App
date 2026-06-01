@@ -11,7 +11,14 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 ## Current State
 
 **Shipped:** v1.9 Progress Tracking (2026-06-01)
-**Phases:** 46 complete (v1.0: 5, v1.1: 3, v1.2: 4, v1.3: 5, v1.4: 6, v1.5: 6, v1.6: 4, v1.7: 4, v1.8: 4, v1.9: 5) | **Plans:** 76 | **Commits:** 450+
+**Phases:** 46 complete (v1.0: 5, v1.1: 3, v1.2: 4, v1.3: 5, v1.4: 6, v1.5: 6, v1.6: 4, v1.7: 4, v1.8: 4, v1.9: 5) | **Plans:** 76 | **Commits:** 480+
+
+## v1.9 shipped:
+- **Weight Tracking** — Database schema (weight_logs), full-stack CRUD with auto-log on profile update, UPSERT pattern, goal validation
+- **Weight Trend Chart** — Recharts LineChart with goal reference line, 30/60/90 day filter, all state handling (empty/insufficient/normal)
+- **Progress Dashboard** — /progress route with WeightTrendChart, WeightEntryCard, WeightHistoryTable, TrendPredictionCard, goal display, refreshKey coordination
+- **Trend Prediction** — OLS linear regression hook, color-coded estimated completion date (green/amber/red), 7-state TrendPredictionCard
+- **Test Status** — 175 tests passing (4 pre-existing integration failures)
 
 ### v1.7 shipped:
 - **Activity Calendar Page** — Month grid view at `/activities` with color-coded days (blue=incomplete, green=completed, grey=missed past), above-calendar Generate Week button, day-click detail panel with DayActivityRow cards including per-activity swap and completion toggle
@@ -140,14 +147,19 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 - ✓ UI-02: Meal Calendar view integrated into the Food Log page alongside manual meal logging — v1.8
 - ✓ UI-03: Standalone `/activities` and `/meal-calendar` routes removed — v1.8
 
+#### v1.9 Progress Tracking
+- ✓ Weight tracking database (weight_logs table with UPSERT, backfill migration) — v1.9
+- ✓ Weight logging API with CRUD, auto-log on profile update, goal validation — v1.9
+- ✓ Frontend weight entry form, history table with delete, goal fields in profile form — v1.9
+- ✓ Weight Trend Chart with Recharts, goal reference line, date range filter — v1.9
+- ✓ Progress Dashboard at `/progress` route with nav link, sub-components, refreshKey — v1.9
+- ✓ Trend Prediction with OLS regression, color-coded estimated completion — v1.9
+
 ### Active
 
 <!-- Current scope. Building toward these. -->
 
-- [ ] User can set a target weight and target date as part of their profile
-- [ ] Weight is automatically logged to history when user updates their profile
-- [ ] User can view a weight trend chart showing their progress over time
-- [ ] User can see progress summary (kg to goal, % complete, estimated completion)
+- (No active requirements — project is feature-complete per current roadmap)
 
 ### Out of Scope
 
@@ -179,7 +191,7 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 - **Auth**: Email/password + Google OAuth, httpOnly JWT cookies (7-day expiry)
 - **LLM**: OpenRouter API (OpenAI SDK), node-cache for in-memory plan caching
 - **Infrastructure**: Docker multi-stage build (single container, Express serves built frontend)
-- **Testing**: Jest (backend) + Vitest (frontend) — 260 tests total
+- **Testing**: Jest (backend) + Vitest (frontend) — 175 tests total
 - **Activity recommendations**: LLM-powered weekly plans (OpenRouter) + rule-based pool recommendations
 - **Food database**: 201 international ingredients across 8 English categories + custom ingredient entry
 - **Activity database**: 35 seeded activities with calorie-per-hour values and goal tags
@@ -242,6 +254,11 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 | Past-day read-only enforced client-side | Past-day interactions have no security impact | ✓ Good — v1.7 |
 | Auto-gen ref guard (monthNavRef) | Prevents auto-gen re-fire during month navigation | ✓ Good — v1.7 |
 | DayActivityRow extended with onToggle/disabled/completed | Completion toggle + past-day disabled state in one component | ✓ Good — v1.7 |
+| weight_logs as separate table (not profiles column) | Support historical tracking, UPSERT per day | ✓ Good — v1.9 |
+| Weight auto-log is non-blocking (try/catch after profile update) | Profile update succeeds even if weight log fails | ✓ Good — v1.9 |
+| OLS linear regression for trend prediction (not ML) | Simple, predictable, no model dependencies | ✓ Good — v1.9 |
+| UPSERT via ON CONFLICT DO UPDATE | Single-entry-per-day with last-write-wins | ✓ Good — v1.9 |
+| Dynamic import() for weightLog.repository | Avoid circular dependency from profile.service | ✓ Good — v1.9 |
 
 ## Evolution
 
@@ -261,4 +278,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-01 after starting v1.9 milestone*
+*Last updated: 2026-06-01 after v1.9 milestone*

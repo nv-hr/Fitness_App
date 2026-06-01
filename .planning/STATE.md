@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Progress Tracking
-status: shipped
-stopped_at: All v1.9 phases (42-46) complete
-last_updated: "2026-06-01T16:10:00.000Z"
-last_activity: 2026-06-01 — Restrict all logging/toggling to today only (quick task 260601-dr1)
+status: Awaiting next milestone
+stopped_at: v1.9 shipped — all milestones complete
+last_updated: "2026-06-01T09:53:55.933Z"
+last_activity: 2026-06-01 — Milestone v1.9 completed and archived
 progress:
   total_phases: 46
   completed_phases: 46
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-06-01)
 
 ## Current Position
 
-Phase: Complete
+Phase: Milestone v1.9 complete
 Plan: —
-Status: All 8 milestones shipped — project feature-complete
-Last activity: 2026-06-01 — v1.9 Progress Tracking shipped
+Status: Awaiting next milestone
+Last activity: 2026-06-01 — Milestone v1.9 completed and archived
 
 ## Performance Metrics
 
@@ -55,6 +55,50 @@ Last activity: 2026-06-01 — v1.9 Progress Tracking shipped
 
 ## Deferred Items
 
+Items acknowledged at v1.9 milestone close on 2026-06-01:
+
+| Category | Item | Status |
+|----------|------|--------|
+| quick_task | 260525-p4c-what-front-end-do-i-need-to-create-just- | missing |
+| quick_task | 260527-0844-revert-to-before-phase-9 | missing |
+| quick_task | 260527-c04-revert-to-changes-before-phase-9-and-cle | missing |
+| quick_task | 260527-cn0-test-all-backend-endpoint-and-its-integr | missing |
+| quick_task | 260527-e4n-create-docker-compose-for-running-backed | missing |
+| quick_task | 260527-hno-revert-to-state-before-phase-9 | missing |
+| quick_task | 260527-l8m-test-the-supabase-connection | missing |
+| quick_task | 260528-3eg-add-unfullfilled-spec-as-a-new-milestone | missing |
+| quick_task | 260528-849-spa-catchall-enoent | missing |
+| quick_task | 260528-k79-fix-json-parse-error-when-saving-profile | missing |
+| quick_task | 260528-kj4-fix-calorie-history-date-returning-nan-a | missing |
+| quick_task | 260528-ksa-convert-log-date-to-local-timezone-date- | missing |
+| quick_task | 260528-l3x-delete-supabase-folder-from-root | missing |
+| quick_task | 260528-l8c-update-backend-env-example-with-missing- | missing |
+| quick_task | 260528-lyd-create-an-api-enpoint-that-return-a-docu | missing |
+| quick_task | 260528-m7t-update-readme | missing |
+| quick_task | 260529-oc5-will-it-run-fine-on-manual-testing | missing |
+| quick_task | 260531-0ea-fix-preexisting-fail-on-api-integration- | missing |
+| quick_task | 260531-107-run-all-test-and-report-the-result | missing |
+| quick_task | 260531-252-remove-weekly-plan-route | missing |
+| quick_task | 260531-7g2-fix-google-oauth-callback | missing |
+| quick_task | 260531-aow-activity-plan-copy-owl-alpha | missing |
+| quick_task | 260531-baw-open-router-api-is-set-can-you-test-the- | missing |
+| quick_task | 260531-bhb-try-testing-the-recommendation-feature-w | missing |
+| quick_task | 260531-ej7-update-documentation | missing |
+| quick_task | 260531-g2i-run-the-project-i-want-to-test-it-manual | missing |
+| quick_task | 260531-hqs-improve-llm-prompts | missing |
+| quick_task | 260531-jng-update-all-documentation | missing |
+| quick_task | 260531-mmv-try-testing-the-llm-and-its-output-retor | missing |
+| quick_task | 260531-ms6-test-the-llm-with-real-promt-and-connect | missing |
+| quick_task | 260531-q7x-remove-copy-button | missing |
+| quick_task | 260531-sgr-test-all-endpoint | missing |
+| quick_task | 260601-237-disable-logged-meals | missing |
+| quick_task | 260601-601-sync-weight-to-profile | missing |
+| quick_task | 260601-f5g-unused-file-code-route-folder-cleanup | missing |
+| quick_task | 260601-fhd-update-documentation | missing |
+| quick_task | 260601-m13-fix-the-activity-callender-after-check-c | missing |
+
+### Pre-existing Deferred Items
+
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
 | Dashboard | DASH-02 — Summary card (current weight, starting weight, change, kg to goal, % complete) | Not implemented | 2026-06-01 |
@@ -78,3 +122,7 @@ Last session: 2026-06-01T16:10:00.000Z
 Stopped at: v1.9 shipped — all milestones complete
 Last activity: 2026-06-01 — Restrict all logging/toggling to today only (quick task 260601-dr1)
 Resume file: (none — all milestones complete)
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
