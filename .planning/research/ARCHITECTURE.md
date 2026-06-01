@@ -1,698 +1,487 @@
-# Architecture Research
-
-**Domain:** Calendar-Based Plan UI for Fitness Tracking App
-**Researched:** 2026-05-31
-**Confidence:** HIGH
-
-## Standard Architecture
-
-### System Overview
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                    ROUTER (app/Router.jsx)                        │
-│  /activity-calendar  /meal-calendar  /profile  /food-log ...     │
-└────────────────────────┬─────────────────────────────────────────┘
-                         │
-┌────────────────────────┴─────────────────────────────────────────┐
-│                    FEATURE PAGE LAYERS                             │
-│                                                                   │
-│  ┌──────────────────┐   ┌──────────────────┐                    │
-│  │ Activity Calendar │   │  Meal Calendar   │  (NEW v1.7)       │
-│  │ Page             │   │  Page            │                    │
-│  └────────┬─────────┘   └────────┬─────────┘                    │
-│           │                      │                               │
-│  ┌────────┴──────────────────────┴─────────┐                     │
-│  │        SHARED CALENDAR LAYER             │  (NEW)             │
-│  │  CalendarGrid  DayCell  MonthNav         │                     │
-│  │  CalendarPageLayout  useMonthRange       │                     │
-│  └────────┬──────────────────────┬─────────┘                     │
-│           │                      │                               │
-│  ┌────────┴─────────┐  ┌────────┴─────────┐                     │
-│  │ ActivityDayDetail│  │  MealDayDetail   │  (NEW)              │
-│  │ Panel            │  │  Panel           │                     │
-│  └────────┬─────────┘  └────────┬─────────┘                     │
-│           │                      │                               │
-│  ┌────────┴──────────────────────┴─────────┐                     │
-│  │      EXISTING COMPONENT REUSE LAYER      │                     │
-│  │  DayActivityRow  MealRow  FallbackBanner │                     │
-│  │  Toast  RateLimitedButton               │                     │
-│  └──────────────────────────────────────────┘                     │
-└──────────────────────────────────────────────────────────────────┘
-                         │
-┌────────────────────────┴─────────────────────────────────────────┐
-│                      API CLIENT LAYER                              │
-│  shared/lib/http.js (apiGet/apiPost)                              │
-│  features/*/api/*.js (weeklyPlanApi, mealPlanApi, foodLogApi...)  │
-└────────────────────────┬─────────────────────────────────────────┘
-                         │
-┌────────────────────────┴─────────────────────────────────────────┐
-│                    BACKEND API LAYER                               │
-│  Express 5 ESM routes → controllers → services → repositories     │
-│  GET/POST /api/weekly-plans                                       │
-│  GET/POST /api/meal-plans                                         │
-│  GET /api/food/history, GET /api/activities/history               │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-### Component Responsibilities
-
-| Component | Responsibility | Typical Implementation |
-|-----------|----------------|------------------------|
-| **CalendarGrid** | Renders month grid: 7-column layout, weeks as rows, day cells. Handles prev/next month navigation. | Shared `features/calendar/` — pure presentational, receives `year`, `month`, `days[]`, `onDayClick` |
-| **DayCell** | Single day in grid. Color-coded background (blue/green/grey/white). Past days non-interactive. | Shared `features/calendar/` — receives `dayStatus` enum, `date`, `onClick` |
-| **CalendarPageLayout** | Layout shell: title row + generate button + calendar grid + day detail panel. Manages selected-day state. | Base wrapper for both calendar pages |
-| **DayDetailPanel** | Container that shows day's content when a day is clicked. Renders a title bar (date + status) and a scrollable content area. | Shared — renders different children based on page type |
-| **ActivityCalendarPage** | Full page replacing ActivitiesPage. Loads weekly plans for month range, computes per-day status, renders CalendarPageLayout with ActivityDayDetail. | New feature page |
-| **MealCalendarPage** | Full page replacing FoodLogPage. Loads weekly meal plans for month range, computes per-day status, renders CalendarPageLayout with MealDayDetail. | New feature page |
-| **ActivityDayDetail** | Detail panel content for activity days. Renders DayActivityRow per activity, completion toggle, swap button. Past days are read-only. | Renders existing DayActivityRow |
-| **MealDayDetail** | Detail panel content for meal days. Renders MealRow per meal item per meal type, log-to-diary button. Past days read-only. | Renders existing MealRow |
-
-## Recommended Project Structure
-
-```
-frontend/src/
-├── features/
-│   ├── activities/                  # EXISTING — activity logging, pool, history
-│   │   └── components/
-│   │       ├── ActivitiesPage.jsx   # KEPT — still has ActivityLogForm, History, Pool
-│   │       ├── ActivityCard.jsx     # KEPT — used in ActivityPool
-│   │       ├── ActivityLogForm.jsx  # KEPT
-│   │       ├── ActivityHistory.jsx  # KEPT
-│   │       ├── ActivityPlanSection.jsx  # REMOVED — replaced by ActivityCalendarPage
-│   │       └── ...
-│   │
-│   ├── food-log/                    # EXISTING — food search, manual logging
-│   │   └── components/
-│   │       ├── FoodLogPage.jsx      # KEPT — manual food logging still needed
-│   │       ├── DailyMealPlanSection.jsx  # REMOVED — replaced by MealCalendarPage
-│   │       ├── FoodSearch.jsx       # KEPT
-│   │       ├── FoodLogTable.jsx     # KEPT
-│   │       ├── CalorieSummary.jsx   # KEPT
-│   │       └── ...
-│   │
-│   ├── weekly-plan/                 # EXISTING — WILL BE REMOVED after migration
-│   │   └── components/
-│   │       ├── WeeklyPlanPage.jsx   # REMOVED — replaced by ActivityCalendarPage
-│   │       ├── DayCard.jsx          # REMOVED — replaced by CalendarGrid + DayDetailPanel
-│   │       ├── DayActivityRow.jsx   # KEPT — reused in ActivityDayDetail
-│   │       ├── RateLimitedButton.jsx # KEPT — reused for generate action
-│   │       ├── FallbackBanner.jsx   # KEPT — reused for LLM fallback state
-│   │       ├── Toast.jsx            # KEPT — reused for rate-limit toasts
-│   │       └── EmptyStatePlan.jsx   # REMOVED
-│   │
-│   ├── meal-plan/                   # EXISTING — WILL BE REMOVED after migration
-│   │   └── components/
-│   │       ├── MealPlanPage.jsx     # REMOVED — replaced by MealCalendarPage
-│   │       ├── DayMealCard.jsx      # REMOVED — replaced by CalendarGrid + MealDayDetail
-│   │       ├── MealRow.jsx          # KEPT — reused in MealDayDetail
-│   │       └── ...
-│   │
-│   ├── calendar/                    # NEW — shared calendar components
-│   │   ├── components/
-│   │   │   ├── CalendarGrid.jsx     # NEW — month grid layout
-│   │   │   ├── DayCell.jsx          # NEW — individual day cell
-│   │   │   ├── CalendarPageLayout.jsx  # NEW — layout shell
-│   │   │   ├── DayDetailPanel.jsx   # NEW — detail panel container
-│   │   │   └── MonthNav.jsx         # NEW — prev/next month controls
-│   │   ├── hooks/
-│   │   │   └── useMonthRange.js     # NEW — month date math + week boundary calc
-│   │   ├── utils/
-│   │   │   └── calendarUtils.js     # NEW — date grid building, day status compute
-│   │   ├── api/
-│   │   │   └── calendarApi.js       # NEW — month-range data fetch composition
-│   │   └── index.js
-│   │
-│   ├── activity-calendar/           # NEW — activity calendar page
-│   │   ├── components/
-│   │   │   ├── ActivityCalendarPage.jsx  # NEW — replaces ActivitiesPage + WeeklyPlanPage
-│   │   │   └── ActivityDayDetail.jsx     # NEW — detail panel for activity days
-│   │   ├── hooks/
-│   │   │   └── useActivityMonthData.js   # NEW — fetches monthly plan + computes status
-│   │   ├── api/
-│   │   │   └── activityCalendarApi.js    # NEW — compositions on weeklyPlanApi
-│   │   └── index.js
-│   │
-│   ├── meal-calendar/               # NEW — meal calendar page
-│   │   ├── components/
-│   │   │   ├── MealCalendarPage.jsx     # NEW — replaces FoodLogPage + MealPlanPage
-│   │   │   └── MealDayDetail.jsx        # NEW — detail panel for meal days
-│   │   ├── hooks/
-│   │   │   └── useMealMonthData.js      # NEW — fetches monthly meals + computes status
-│   │   ├── api/
-│   │   │   └── mealCalendarApi.js       # NEW — compositions on mealPlanApi + foodLogApi
-│   │   └── index.js
-│   │
-│   └── ... (auth, profile remain unchanged)
-│
-├── shared/
-│   ├── hooks/
-│   │   └── useResponsive.js         # EXISTING
-│   └── lib/
-│       └── http.js                  # EXISTING
-│
-├── app/
-│   ├── App.jsx                      # UPDATE routes
-│   ├── Providers.jsx                # EXISTING
-│   └── Router.jsx                   # UPDATE — add /activity-calendar, /meal-calendar routes
-│
-└── main.jsx
-```
-
-### Structure Rationale
-
-- **`features/calendar/`:** Shared components for both calendar types. Avoids duplicating month grid logic. The CalendarGrid is purely presentational — it doesn't know about activities or meals, only receives status enums.
-- **`features/activity-calendar/` and `features/meal-calendar/`:** Separate page directories following the existing `features/<name>/` pattern. Each owns its data-fetching hook and detail panel. This keeps concerns separated — activity-specific swap/logic doesn't leak into meal-land.
-- **Existing components stay in place, not duplicated:** `DayActivityRow`, `MealRow`, `FallbackBanner`, `Toast` remain in their original feature directories. The new calendar pages import them directly. This avoids code duplication and keeps maintenance centralized. When the old `weekly-plan/` and `meal-plan/` features are eventually removed, these surviving components can be promoted to `shared/` at that time.
-- **Hooks for data composition:** `useActivityMonthData` and `useMealMonthData` encapsulate the multi-week data fetch logic. They determine which weekStarts to fetch based on the viewed month, aggregate the results, and compute per-day status. Keeping this in hooks (not components) keeps detail panels clean and testable.
-
-## Architectural Patterns
-
-### Pattern 1: Calendar Data Composition from Existing Weekly Endpoints
-
-**What:** The month view needs data for a calendar-month range (28-31 days), but existing endpoints return weekly data (7 days at a time). The strategy is to determine which weeks overlap with the viewed month, fetch each week's plan, and aggregate the days.
-
-**When to use:** When integrating a calendar UI with an existing week-oriented data model. No backend changes needed.
-
-**Trade-offs:**
-- Pro: Zero backend changes — works with existing `GET /api/weekly-plans` and `GET /api/meal-plans`
-- Pro: Frontend-only change, deployable independently
-- Con: Up to 5-6 parallel API calls per month render (acceptable — same data flow as loading 5 weekly plans)
-- Con: Week boundaries don't align with month boundaries, so we fetch partial edge weeks
-
-**Example — Month data composition:**
-
-```javascript
-// features/calendar/utils/calendarUtils.js
-
-/**
- * Given a year/month, return the weekStarts (Mondays) that overlap with this month.
- * e.g., June 2026 → ['2026-05-25', '2026-06-01', '2026-06-08', '2026-06-15', '2026-06-22', '2026-06-29']
- */
-export function getWeekStartsForMonth(year, month) {
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  
-  // First Monday on or before the 1st of the month
-  const firstMonday = new Date(firstDay);
-  const dayOfWeek = firstMonday.getDay(); // 0=Sun, 1=Mon, ...
-  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  firstMonday.setDate(firstMonday.getDate() + diff);
-  
-  // Generate weekStarts until we pass the last day of month
-  const weekStarts = [];
-  const cursor = new Date(firstMonday);
-  while (cursor <= lastDay || weekStarts.length === 0) {
-    weekStarts.push(cursor.toISOString().split('T')[0]);
-    cursor.setDate(cursor.getDate() + 7);
-  }
-  return weekStarts; // typically 5-6 entries
-}
-
-/**
- * Build a grid of days for display: 6 rows × 7 columns.
- * Each cell has: { date: '2026-06-01', dayOfMonth: 1, isCurrentMonth: true }
- */
-export function buildMonthGrid(year, month) {
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const startPad = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1; // Days before 1st
-  
-  const grid = [];
-  const startDate = new Date(firstDay);
-  startDate.setDate(startDate.getDate() - startPad);
-  
-  for (let row = 0; row < 6; row++) {
-    const week = [];
-    for (let col = 0; col < 7; col++) {
-      const d = new Date(startDate);
-      d.setDate(d.getDate() + row * 7 + col);
-      const dateStr = d.toISOString().split('T')[0];
-      week.push({
-        date: dateStr,
-        dayOfMonth: d.getDate(),
-        isCurrentMonth: d.getMonth() === month,
-      });
-    }
-    grid.push(week);
-  }
-  return grid;
-}
-```
-
-### Pattern 2: Per-Day Status Computation
-
-**What:** Each day in the calendar gets a color-coded status. The status is computed from multiple data sources (plan data + logged activity/food data). The computation is a pure function.
-
-**When to use:** When you need to merge plan generation status with actual logging status to show progress.
-
-**Trade-offs:**
-- Pro: Pure function — easy to test
-- Pro: Computed client-side from existing data — no new backend fields
-- Con: Must keep status computation in sync with plan data format changes
-
-**Status enum:**
-
-```javascript
-// features/calendar/utils/calendarUtils.js
-
-export const DAY_STATUS = {
-  EMPTY_FUTURE: 'empty_future',     // No plan, future date — no color
-  HAS_PLAN_INCOMPLETE: 'incomplete', // Plan exists, not all logged — BLUE
-  HAS_PLAN_COMPLETED: 'completed',   // All activities/meals logged — GREEN
-  MISSED_PAST: 'missed',            // Past date, nothing logged — GREY
-  REST_DAY: 'rest_day',             // Rest day in plan — GREEN (completed)
-  TODAY_INCOMPLETE: 'today_incomplete', // Today, not done — BLUE
-  TODAY_COMPLETED: 'today_completed',   // Today, done — GREEN
-  READ_ONLY_PAST: 'read_only_past', // Past day with logged data (viewable) — GREY
-  FUTURE: 'future',                 // Future day, no plan — no fill
-};
-
-/**
- * @param {string} dateStr - 'YYYY-MM-DD'
- * @param {object|null} planDay - Day data from weekly plan (activities[], rest_day, etc.)
- * @param {array} loggedEntries - Activities/food logged for this day
- * @param {boolean} isPast - Whether this day is in the past
- * @returns {string} DAY_STATUS key
- */
-export function computeDayStatus(dateStr, planDay, loggedEntries, isPast) {
-  const today = new Date().toISOString().split('T')[0];
-  const isToday = dateStr === today;
-  
-  if (planDay?.rest_day) return DAY_STATUS.REST_DAY;
-  
-  if (planDay?.activities?.length > 0 || planDay?.meals?.length > 0) {
-    const allLogged = planDay.activities
-      ? planDay.activities.every(a => a.logged)
-      : planDay.meals.every(m => (m.items || []).every(i => i.logged));
-    
-    if (allLogged) return isToday ? DAY_STATUS.TODAY_COMPLETED : DAY_STATUS.HAS_PLAN_COMPLETED;
-    return isToday ? DAY_STATUS.TODAY_INCOMPLETE : DAY_STATUS.HAS_PLAN_INCOMPLETE;
-  }
-  
-  // No plan exists for this day
-  if (isPast) return loggedEntries.length > 0 ? DAY_STATUS.READ_ONLY_PAST : DAY_STATUS.MISSED_PAST;
-  return DAY_STATUS.FUTURE;
-}
-```
-
-**Color mapping (to apply as cell background):**
-
-| Status | Background Color | Hex |
-|--------|-----------------|-----|
-| incomplete / today_incomplete | Blue (incomplete tasks) | `#dbeafe` |
-| completed / today_completed / rest_day | Green (all done) | `#dcfce7` |
-| missed / read_only_past | Grey (can't interact) | `#f3f4f6` |
-| empty_future / future | White/transparent | `#ffffff` |
-
-### Pattern 3: Two-Phase Data Loading (Status First, Detail on Demand)
-
-**What:** The calendar renders the month grid with color-coded status ASAP. Detailed day content (activity cards, meal rows) loads only when a user clicks a day. Status data is computed from lightweight plan headers; detail data may come from the same API response (already cached).
-
-**When to use:** When the detail for a single day could be content-heavy and most days won't be clicked.
-
-**Trade-offs:**
-- Pro: Month grid renders immediately from plan data — no second round-trip
-- Pro: Detail panel data is already in memory from the weekly-plan fetch
-- Con: Full plan data for all 5 weeks is loaded upfront (acceptable — same data already loaded for status)
-- Con: If plans are very large, could be wasteful (mitigated: existing plans are small, < 50KB for a week)
-
-**Data flow:**
-
-```
-User navigates to ActivityCalendarPage
-    ↓
-useActivityMonthData(year, month)
-    ↓
-getWeekStartsForMonth(year, month) → ['2026-06-01', '2026-06-08', ...]
-    ↓
-Promise.all(weekStarts.map(ws => getWeeklyPlan(ws)))
-    ↓
-Aggregate: { [dateString]: planDayData }
-Compute: { [dateString]: status }
-    ↓
-Render CalendarGrid with status map
-    ↓
-User clicks a day
-    ↓
-Look up planDayData[dateStr] (already in memory from fetch)
-    ↓
-Render ActivityDayDetail with planDayData
-```
-
-### Pattern 4: Existing Component Reuse Strategy
-
-**What:** The new calendar pages reuse existing components (`DayActivityRow`, `MealRow`, `FallbackBanner`, `Toast`, `RateLimitedButton`) by importing them directly. No duplication — the old pages and new calendar pages coexist during migration.
-
-**When to use:** When incrementally replacing pages — new UI reuses existing leaf components.
-
-**Import map:**
-
-| Calendar Component | Imports From |
-|-------------------|--------------|
-| ActivityDayDetail | `DayActivityRow` from `features/weekly-plan/components/DayActivityRow.jsx` |
-| | `FallbackBanner` from `features/weekly-plan/components/FallbackBanner.jsx` |
-| MealDayDetail | `MealRow` from `features/meal-plan/components/MealRow.jsx` |
-| ActivityCalendarPage | `RateLimitedButton` from `features/weekly-plan/components/RateLimitedButton.jsx` |
-| | `Toast` from `features/weekly-plan/components/Toast.jsx` |
-| ActivitySwap (inlined) | Reuses swap API from `features/weekly-plan/api/weeklyPlanApi.js` |
-
-**Refactoring needed for DayActivityRow:**
-
-The existing `DayActivityRow` accepts `{ activity, onSwap, isSwapping, swapRetryAfter }`. In the calendar day detail panel, it also needs:
-- A completion toggle (mark activity as logged) — new prop `onToggleLog`
-- A `logged` display state (show checkmark vs toggle button)
-The component needs a minor extension: accept an `onToggleLog` callback and render a log button/checkmark, similar to what `ActivityPlanSection` renders inline today.
-
-## Data Flow
-
-### Activity Calendar — Month Data Load
-
-```
-[ActivityCalendarPage mounts]
-    |
-    v
-useActivityMonthData(currentYear, currentMonth)
-    |
-    ├── getWeekStartsForMonth(2026, 5) → ['2026-05-25', '2026-06-01', '2026-06-08', '2026-06-15', '2026-06-22', '2026-06-29']
-    |
-    ├── fetchAll parallel:
-    |   Promise.all([
-    |     getWeeklyPlan('2026-05-25'),   // partial (Mon-Sun)
-    |     getWeeklyPlan('2026-06-01'),   // full week
-    |     getWeeklyPlan('2026-06-08'),   // full week
-    |     getWeeklyPlan('2026-06-15'),   // full week
-    |     getWeeklyPlan('2026-06-22'),   // full week
-    |     getWeeklyPlan('2026-06-29'),   // partial (Mon-Sun, into July)
-    |   ])
-    |
-    v
-Aggregate weekly plans into flat map:
-{
-  '2026-06-01': { activities: [...], rest_day: false },
-  '2026-06-02': { activities: [...], rest_day: false },
-  ...
-}
-    |
-    ├── Also fetch activity history for the month range
-    |   GET /api/activities/history?days=62  (over-fetch to cover month ± edge weeks)
-    |
-    v
-Compute day status for each cell in month grid
-    |
-    v
-Render: CalendarGrid with status color-coded DayCells
-```
-
-### Meal Calendar — Month Data Load
-
-```
-[MealCalendarPage mounts]
-    |
-    v
-useMealMonthData(currentYear, currentMonth)
-    |
-    ├── getWeekStartsForMonth(2026, 5) → same weekStart array
-    |
-    ├── fetch weekly meal plans (not daily — too many calls)
-    |   Promise.all([
-    |     getMealPlan('2026-05-25'),
-    |     getMealPlan('2026-06-01'),
-    |     getMealPlan('2026-06-08'),
-    |     getMealPlan('2026-06-15'),
-    |     getMealPlan('2026-06-22'),
-    |     getMealPlan('2026-06-29'),
-    |   ])
-    |
-    ├── Also fetch food log history
-    |   GET /api/food/history?days=62
-    |
-    v
-Aggregate + compute status
-    |
-    v
-Render: CalendarGrid with status color-coded DayCells
-```
-
-### Day Click — Detail Panel
-
-```
-[User clicks DayCell at 2026-06-15]
-    |
-    v
-CalendarPageLayout receives selectedDay = '2026-06-15'
-    |
-    v
-Looks up planDayData['2026-06-15'] from in-memory map
-    |
-    ├── If no data for this day → show "No plan for this day" empty state
-    |
-    ├── If activity calendar:
-    |   Renders ActivityDayDetail
-    |     ├── If rest_day → show rest day message (green background)
-    |     ├── For each activity → DayActivityRow with swap + log toggle
-    |     └── Past day → all buttons disabled, grey overlay
-    |
-    └── If meal calendar:
-        Renders MealDayDetail
-          ├── For each meal_type → meal header + MealRow per item
-          ├── Log button per meal (or one-click log all)
-          └── Past day → all buttons disabled, grey overlay
-```
-
-### State Management
-
-The calendar pages use **local React state** (useState + useEffect), consistent with the existing pattern in the codebase. TanStack React Query is available but all existing pages (ActivitiesPage, WeeklyPlanPage, MealPlanPage, FoodLogPage) use local state + manual fetch. The calendar pages follow the same convention for consistency.
-
-```
-CalendarPageLayout:
-  state = {
-    selectedDay: string | null,       // 'YYYY-MM-DD' of clicked day
-    currentYear: number,
-    currentMonth: number,             // 0-indexed
-  }
-
-useActivityMonthData hook:
-  state = {
-    planDays: Map<string, object>,    // date → day data from weekly plans
-    dayStatuses: Map<string, string>, // date → DAY_STATUS key
-    activityHistory: Array,            // logged activities for the month
-    loading: boolean,
-    error: string | null,
-  }
-
-useMealMonthData hook:
-  state = {
-    planDays: Map<string, object>,    // date → day data from meal plans
-    dayStatuses: Map<string, string>,
-    foodHistory: Array,
-    loading: boolean,
-    error: string | null,
-  }
-```
-
-### Key Data Flows
-
-1. **Month range computation:** `getWeekStartsForMonth()` determines which weeks to fetch — 5-6 weekStarts that span the calendar grid (Mon-Sun weeks may start in previous month and end in next). This is pure date math — no API calls.
-
-2. **Multi-week data fetch:** `Promise.all()` fetches all weekly plans in parallel. Each response contains a `days[]` array. The aggregator builds a flat `date → dayData` map from all weekly plans combined.
-
-3. **Day status computation:** `computeDayStatus()` runs for each day in the month grid. It takes the aggregated plan day data (or null if no plan), the logged activity/food history for that date, and a boolean for whether it's past. Returns a `DAY_STATUS` key that maps to a color.
-
-4. **Generate action:** The generate button above the calendar triggers `generateWeeklyPlan(nearestWeekStart)` for activities, or `generateDailyMealPlan(date)` / `generateMealPlan(weekStart)` for meals. After generation, the full data reloads to update the status map.
-
-5. **Swap action (activity):** When user clicks Swap on a DayActivityRow inside the detail panel, the existing swap flow runs (same endpoint + rate limiting as today). The in-memory `planDays` map updates optimistically with the new activity from the response.
-
-6. **Log action (activity):** When user toggles an activity as logged, the existing `/api/activity-plans/log` endpoint is called. The local `planDays[date].activities[i].logged` flag updates, and `dayStatuses[date]` recomputes.
-
-7. **Log action (meal):** When user clicks "Log This Day" or per-meal log, the existing `/api/meal-plans/log-day` endpoint is called. Same local state update pattern.
-
-## Auto-Generate Trigger
-
-When the calendar page opens to the current month and the user's "today" has no plan:
-- **Activity calendar:** Auto-triggers `generateWeeklyPlan(mondayOfCurrentWeek)` — same behavior as existing `WeeklyPlanPage` auto-generation.
-- **Meal calendar:** Auto-triggers `generateMealPlan(mondayOfCurrentWeek)` — same behavior as existing `MealPlanPage`.
-
-The auto-generation guard (`useRef` flag) from the existing pages is carried over to prevent double-generation on re-render.
-
-## Build Order
-
-### Phase 1: Foundation — Calendar Shared Components
-**Dependencies:** None (pure presentational, no API calls)
-**Files to create:**
-- `features/calendar/utils/calendarUtils.js` — `getWeekStartsForMonth()`, `buildMonthGrid()`, `computeDayStatus()`, `DAY_STATUS` enum
-- `features/calendar/components/DayCell.jsx` — Single cell with color coding
-- `features/calendar/components/MonthNav.jsx` — Prev/next month navigation
-- `features/calendar/components/CalendarGrid.jsx` — Grid using DayCell + MonthNav
-- `features/calendar/components/DayDetailPanel.jsx` — Generic detail panel shell
-- `features/calendar/components/CalendarPageLayout.jsx` — Layout combining grid + generate button + detail panel
-- `features/calendar/hooks/useMonthRange.js` — `useMonthRange()` hook for year/month state + navigation
-
-**Tests:**
-- `CalendarGrid` renders correct number of cells for any month
-- `DayCell` applies correct color for each status
-- `DayCell` calls onDayClick with correct date
-- `computeDayStatus()` returns correct status for each combination
-- `getWeekStartsForMonth()` returns correct week starts
-- `buildMonthGrid()` returns 6×7 grid
-
-### Phase 2: Activity Calendar Page
-**Dependencies:** Phase 1 (CalendarGrid, DayCell, CalendarPageLayout)
-**Files to create:**
-- `features/activity-calendar/hooks/useActivityMonthData.js` — Fetch + aggregate activity plans
-- `features/activity-calendar/api/activityCalendarApi.js` — Month-range composition
-- `features/activity-calendar/components/ActivityDayDetail.jsx` — Detail panel using DayActivityRow
-- `features/activity-calendar/components/ActivityCalendarPage.jsx` — Page assembly
-- `features/activity-calendar/index.js` — Export
-
-**Files to modify:**
-- `features/weekly-plan/components/DayActivityRow.jsx` — Add `onToggleLog` prop + logged display
-- `features/activities/api/activityPlanApi.js` — No changes needed (existing endpoints suffice)
-- `app/Router.jsx` — Add `/activity-calendar` route
-
-**Tests:**
-- `useActivityMonthData` aggregates weekly plans correctly
-- `ActivityDayDetail` renders DayActivityRow for each activity
-- `ActivityDayDetail` shows read-only state for past days
-- `ActivityDayDetail` handles empty day (no plan)
-- Full page integration test with mocked weekly plan API
-
-### Phase 3: Meal Calendar Page
-**Dependencies:** Phase 1 (CalendarGrid, DayCell, CalendarPageLayout)
-**Files to create:**
-- `features/meal-calendar/hooks/useMealMonthData.js` — Fetch + aggregate meal plans
-- `features/meal-calendar/api/mealCalendarApi.js` — Month-range composition
-- `features/meal-calendar/components/MealDayDetail.jsx` — Detail panel using MealRow
-- `features/meal-calendar/components/MealCalendarPage.jsx` — Page assembly
-- `features/meal-calendar/index.js` — Export
-
-**Files to modify:**
-- `features/meal-plan/components/MealRow.jsx` — Potentially add `onLogClick` prop (depends on detail panel interaction design)
-- `app/Router.jsx` — Add `/meal-calendar` route
-
-**Tests:**
-- `useMealMonthData` aggregates weekly meal plans correctly
-- `MealDayDetail` renders MealRow for each meal item
-- `MealDayDetail` shows read-only state for past days
-- Log interaction works end-to-end
-
-### Phase 4: Cleanup — Remove Replaced Components
-**Dependencies:** Phase 2 + 3 deployed and verified
-**Files to remove:**
-- `features/activities/components/ActivityPlanSection.jsx`
-- `features/weekly-plan/components/WeeklyPlanPage.jsx`
-- `features/weekly-plan/components/DayCard.jsx`
-- `features/weekly-plan/components/EmptyStatePlan.jsx`
-- `features/meal-plan/components/MealPlanPage.jsx`
-- `features/meal-plan/components/DayMealCard.jsx`
-- `features/meal-plan/components/EmptyStateMealPlan.jsx`
-- `features/food-log/components/DailyMealPlanSection.jsx`
-
-**Tests to remove/update:**
-- Remove tests for removed components
-- Update `Router.test.jsx` (if exists) to reflect new routes
-
-## Scaling Considerations
-
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| 0-1k users | Current approach works — 5-6 parallel API calls per month view, local state management sufficient |
-| 1k-100k users | Add a batch month-range endpoint (`GET /api/activity-plans/month?year=2026&month=5`) to reduce client-side aggregation complexity |
-| 100k+ users | Consider server-side day status computation endpoint to avoid client-side aggregation entirely. Cache weekly plans aggressively. |
-
-### Scaling Priorities
-
-1. **First bottleneck:** 5-6 weekly plan API calls per month view. Each call fetches data for 7 days, but we only use 1-2 days from edge weeks (end of prev month, start of next month). **Mitigation:** Add `GET /api/weekly-plans/month?year=2026&month=5` that returns all plan days for the month in a single response. **Deferred:** v1.8 or when users report slow page loads.
-
-2. **Second bottleneck:** Client-side aggregation of 5-6 plan responses into a date-keyed map. **Mitigation:** If needed, move aggregation to a backend batch endpoint. **Deferred:** Not needed until users with years of history load the calendar.
-
-## Anti-Patterns
-
-### Anti-Pattern 1: Monthly View from Daily Endpoints
-
-**What people do:** Call a daily endpoint (`GET /api/daily-meal-plans?date=X`) 28-31 times to populate a month grid.
-
-**Why it's wrong:** 28-31 sequential or parallel API calls is wasteful. It creates unnecessary server load, increases page load time, and makes the UI feel sluggish. It's a classic N+1 query problem translated to the API layer.
-
-**Do this instead:** Use the existing weekly endpoints (which batch 7 days per call) to reduce to 5-6 calls. Or add a dedicated month-range endpoint. The weekly approach requires zero backend changes and keeps requests at a manageable count.
-
-### Anti-Pattern 2: Making CalendarGrid Know About Domain Logic
-
-**What people do:** Pass activity/meal data directly to CalendarGrid and let it compute statuses internally.
-
-**Why it's wrong:** CalendarGrid becomes coupled to the domain model. If activities change their logged field name, both ActivityCalendarPage and CalendarGrid need updating. CalendarGrid can't be reused for meal calendar without conditionals.
-
-**Do this instead:** CalendarGrid receives a precomputed `dayStatus` value for each cell. Status computation happens upstream in `useActivityMonthData` / `useMealMonthData`. CalendarGrid only maps status → color + renders. This keeps the grid pure and reusable.
-
-### Anti-Pattern 3: Deeply Nesting Calendar Page with Detail Panel Inside CalendarGrid
-
-**What people do:** Put the detail panel as a child of CalendarGrid, making the grid responsible for layout that includes the detail panel.
-
-**Why it's wrong:** The grid shouldn't know about the detail panel. This couples grid layout to page layout. If you want to show the detail panel as a sidebar on desktop and below on mobile, you'd need to modify the grid.
-
-**Do this instead:** `CalendarPageLayout` manages the top-level layout split (calendar area + detail panel area). It renders `CalendarGrid` in the top portion and `DayDetailPanel` in the bottom. The grid just renders cells; the layout handles positioning. This follows the existing `ResponsiveLayout` pattern in the app.
-
-### Anti-Pattern 4: Over-Fetching All Month Data on Every Navigation
-
-**What people do:** Re-fetch all weekly plans every time the user clicks prev/next month.
-
-**Why it's wrong:** Fetching 5-6 API calls per month navigation creates unnecessary latency. The user might flip between June and July quickly.
-
-**Do this instead:** Keep a simple LRU cache (or just a `Map<yearMonth, planData[]>` ) keyed by `"2026-05"` style keys. Check the cache before fetching. Clear the cache on page reload or explicit refresh. The existing `node-cache` pattern in the backend already handles server-side caching — a lightweight client-side cache prevents redundant fetches during month navigation.
-
-## Integration Points
-
-### Component Reuse Summary
-
-| Existing Component | Used By | Changes Needed |
-|-------------------|---------|----------------|
-| `DayActivityRow` | `ActivityDayDetail` | Add `onToggleLog` prop + completed state rendering |
-| `MealRow` | `MealDayDetail` | None — already renders logged state via `item.logged` |
-| `FallbackBanner` | Both calendar pages | None — already generic |
-| `Toast` | Both calendar pages | None |
-| `RateLimitedButton` | Activity calendar generate button | None — could be inlined for the "Generate Week" button |
-| `ActivityCard` | NOT reused — detail panel uses DayActivityRow instead | N/A — ActivityCard is for the Pool page |
-| `FoodSearch` / `FoodLogTable` | NOT moved to meal calendar | Stays in FoodLogPage (manual logging still separate) |
-| `CalorieSummary` / `CalorieHistory` | NOT moved to meal calendar | Stays in FoodLogPage |
-
-### Backend API Surface (No Changes)
-
-| Endpoint | Used By Calendar | Data Consumed |
-|----------|-----------------|---------------|
-| `GET /api/weekly-plans?weekStart=X` | ActivityCalendar | `days[].activities[].logged`, `days[].rest_day`, `days[].date` |
-| `POST /api/weekly-plans/generate` | ActivityCalendar | Week generation trigger |
-| `POST /api/weekly-plans/swap` | ActivityDayDetail | Per-activity swap |
-| `GET /api/meal-plans?weekStart=X` | MealCalendar | `days[].meals[].items[].logged`, `days[].date` |
-| `POST /api/meal-plans/generate` | MealCalendar | Week generation trigger |
-| `POST /api/meal-plans/log-day` | MealDayDetail | Log all day's meals to food diary |
-| `GET /api/activities/history?days=N` | ActivityCalendar | Audit completion for days with logged activities but no plan |
-| `GET /api/food/history?days=N` | MealCalendar | Audit completion for days with logged food but no meal plan |
-| `GET /api/activity-plans?date=X` | NOT needed | Existing endpoint returns single day — weekly endpoint is more efficient |
-
-### Router Integration
-
-```javascript
-// New routes in app/Router.jsx
-// These REPLACE the old activity and food-log routes after migration
-// During transition, both old and new routes coexist
-
-<Route path="/activity-calendar" element={<ActivityCalendarPage />} />
-<Route path="/meal-calendar" element={<MealCalendarPage />} />
-
-// OLD routes still active during transition:
-<Route path="/activities" element={<ActivitiesPage />} />       // REMOVE after v1.7
-<Route path="/food-log" element={<FoodLogPage />} />             // KEEP (manual log still needed)
-<Route path="/weekly-plan" element={<WeeklyPlanPage />} />       // REMOVE after v1.7
-<Route path="/meal-plan" element={<MealPlanPage />} />           // REMOVE after v1.7
-```
-
-## Sources
-
-- Codebase analysis: `frontend/src/features/` directory structure, component composition, API patterns
-- Existing patterns: Local state management (useState + useEffect), feature-based directory structure, API composition in feature `api/` directories
-- The current `WeeklyPlanPage` and `MealPlanPage` served as reference implementations for data loading and state management patterns
-- `DayCard.jsx` and `DayMealCard.jsx` showed the expandable card pattern that the day detail panel replaces
+# Architecture Research: v1.8 UI Consolidation — Merging Calendar Pages into Manual-Log Pages
+
+**Researched:** 2026-06-01
+**Mode:** Ecosystem (focus on existing codebase patterns)
+**Confidence:** HIGH — all findings verified against actual source code
 
 ---
-*Architecture research for: Calendar-Based Plan UI*
-*Researched: 2026-05-31*
+
+## 1. Current State Map
+
+Before proposing changes, here is the exact current architecture as verified from source:
+
+### Routes (Router.jsx)
+
+| Route | Component | Purpose |
+|-------|-----------|---------|
+| `/activities` | `ActivityCalendarPage` | Calendar grid + weekly plan detail per day |
+| `/food-log` | `FoodLogPage` | Manual food log + DailyMealPlanSection (today only) |
+| `/meal-calendar` | `MealCalendarPage` | Calendar grid + daily meal plan detail per day |
+| `/` | `DashboardPlaceholder` | Nav links to all pages including `/meal-calendar` |
+
+### Component Ownership
+
+| Component | Location | Role |
+|-----------|----------|------|
+| `CalendarPageLayout` | `shared/calendar/` | **Owns** `currentMonth` + `selectedDay` state internally. Fires `onDaySelect`/`onMonthChange` callbacks. Contains `MonthNav` + `CalendarGrid` + `DayDetailPanel` slot. |
+| `CalendarGrid` | `shared/calendar/` | Pure presentational. Wraps `react-day-picker`. |
+| `DayDetailPanel` | `shared/calendar/` | Pure presentational. Slot-based children renderer. |
+| `useMonthData(date, fetchWeekFn)` | `shared/calendar/hooks/` | Generic hook — 5-6 parallel weekly plan fetches, returns `dayStatusMap` |
+| `useMonthMealData(date)` | `features/food-log/hooks/` | Meal-specific variant — 28-31 daily fetches, returns `dayStatusMap` |
+| `ActivityCalendarPage` | `features/activities/` | Wraps `CalendarPageLayout`. Manages: dayPlan fetching, generate/swap/toggle state. |
+| `MealCalendarPage` | `features/food-log/` | Wraps `CalendarPageLayout`. Manages: dayPlan fetching, generate/log state. |
+| `FoodLogPage` | `features/food-log/` | Today-only manual log. Fetches summary + logs + history + recent foods. Embedded `DailyMealPlanSection`. |
+| `ActivitiesPage.jsx` | `features/activities/components/` | **Dead code** — not imported/exported anywhere (v1.7 cleanup carried over). Contains ActivityLogForm, ActivityPool, ActivityHistory, etc. |
+| `DailyMealPlanSection` | `features/food-log/components/` | Today-only inline plan display. Separate from `MealCalendarPage` — different data flow. |
+| `ActivityPlanSection` | `features/activities/components/` | Today-only inline plan display. Separate from `ActivityCalendarPage`. |
+
+### Data Fetching Patterns
+
+| Page | Mount Fetch | Day-Select Fetch | Calendar Color Logic |
+|------|-------------|------------------|---------------------|
+| `ActivityCalendarPage` | Auto-gen if today has no plan | `getWeeklyPlan(weekStart)` → find day | `useMonthData` → 5-6 weekly calls |
+| `MealCalendarPage` | Auto-gen if today has no plan | `getDailyMealPlan(dateStr)` | `useMonthMealData` → 28-31 daily calls |
+| `FoodLogPage` | `Promise.all([summary, logs, history, recent])` for today | N/A (today only) | N/A |
+
+### Key Architectural Fact: CalendarPageLayout is NOT Controlled
+
+This is the single most important finding:
+
+```jsx
+// CalendarPageLayout manages its OWN selectedDay + currentMonth state
+export default function CalendarPageLayout({ dayStatusMap, loading, error, onMonthChange, onDaySelect, children }) {
+  const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
+  const [selectedDay, setSelectedDay] = useState(null);
+  
+  // External handlers are called AFTER internal state updates
+  const handleDaySelect = useCallback((day) => {
+    setSelectedDay(day);              // internal first
+    if (externalOnDaySelect) externalOnDaySelect(day);  // then notify
+  }, [externalOnDaySelect]);
+```
+
+This means:
+- The parent (calendar page) cannot control `selectedDay` — it can only **react** via `onDaySelect`
+- The parent receives the selected day as a notification, not as a prop
+- This is fine for the current pattern (calendar page renders detail panel children) but limits what the parent can do
+
+---
+
+## 2. Merge Strategies Evaluated
+
+### Strategy A: Tab-Based Toggle ("Log View" / "Calendar View")
+
+The merged page uses a segmented control to switch between manual log and calendar view.
+
+```
+┌─────────────────────────┐
+│  [ Log ] [ Calendar ]   │  ← tabs switch between two render branches
+├─────────────────────────┤
+│  ... manual log OR      │
+│  ... calendar grid      │  ← mutually exclusive
+└─────────────────────────┘
+```
+
+**Verdict: NOT RECOMMENDED.** This is a UX regression — the current standalone pages already have separate routes. Puting them behind tabs on a single route is the same UX as having two separate routes but worse (no deep-linking to calendar view, sharing doesn't work).
+
+### Strategy B: Vertical Stack (Scroll-Based)
+
+Stack both views vertically, one after the other.
+
+```
+┌─────────────────────────┐
+│  Manual Log Section     │
+│  (search, portion, etc.) │
+├─────────────────────────┤
+│  Calendar Grid          │
+├─────────────────────────┤
+│  Day Detail Panel       │
+└─────────────────────────┘
+```
+
+**Verdict: NOT RECOMMENDED.** Two problems:
+1. **Layout collision.** CalendarPageLayout has its own max-width 600px wrapper. Nesting this inside a page that already has a max-width wrapper creates visual inconsistencies.
+2. **Scroll length.** On mobile (which this app targets with `isMobile` responsive behavior), a calendar grid + day detail panel is already ~800px tall. Adding manual log forms above makes for a very long, unfocused scroll.
+
+### Strategy C: Calendar Detail Panel Enhancement (RECOMMENDED)
+
+Keep the calendar as the primary navigational structure. Enhance the `DayDetailPanel` slot (already exists as `children`) to include manual log features for the selected day.
+
+```
+┌──────────────────────────────┐
+│  Today's Summary Banner      │  ← always visible at top (compact)
+├──────────────────────────────┤
+│  Month Navigation             │
+├──────────────────────────────┤
+│  Calendar Grid                │
+├──────────────────────────────┤
+│  Day Detail Panel             │  ← slot-based children:
+│  ├─ [selected date header]    │     shows when day clicked
+│  ├─ Plan data (existing)      │
+│  ├─ Manual Log Form           │  ← NEW: compact form for the selected day
+│  └─ History snippet           │  ← NEW: quick reference
+└──────────────────────────────┘
+```
+
+**Verdict: RECOMMENDED.** Reasons:
+- Reuses the existing `DayDetailPanel` slot perfectly — no structural changes to `CalendarPageLayout` needed
+- The calendar already handles navigation and data status (loading, error, dayStatusMap)
+- Manual log features become "what you do when looking at a day" — natural UX
+- No tab juggling, no scroll bloat, no layout conflicts
+- The existing calendar pages already fetch day-specific data in useEffect on `selectedDay` change — manual log APIs that accept a date parameter can piggyback on the same effect
+
+### Strategy D: CalendarPageLayout as Controlled Component
+
+Refactor `CalendarPageLayout` to accept `currentMonth` and `selectedDay` as props instead of managing them internally. The parent becomes the source of truth.
+
+**Verdict: HIGH EFFORT, LOW VALUE.** This would:
+- Require changing `CalendarPageLayout`'s internal state management
+- Break all existing tests
+- Make the component more complex without solving the actual problem
+- The callback pattern already works — `onDaySelect` already fires and parents already react
+
+---
+
+## 3. Recommended Approach Per Page
+
+### 3.1 Food Log Merge (FoodLogPage + MealCalendarPage)
+
+**Core Tension:** FoodLogPage is today-only. MealCalendarPage is any-day. These are fundamentally different orientations.
+
+**Resolution:** Make FoodLogPage date-aware, but keep a "today focus" as the default entry point. The calendar becomes a navigation tool to browse other days.
+
+**Component Structure (new):**
+
+```
+FoodLogPage (wrapper, renamed or extended)
+│
+├── [Top Banner: Today's Summary]
+│   ├── CalorieSummary (shown only when selectedDate === today)
+│   └── Or: "Viewing <date>" indicator when browsing other days
+│
+├── CalendarPageLayout (embedded, manages month/day internally)
+│   ├── MonthNav
+│   ├── CalendarGrid
+│   └── DayDetailPanel (slot)
+│       ├── Selected date: "Friday, June 5, 2026"
+│       ├── Meal Plan data (reuse MealCalendarPage's renderDayContent logic)
+│       ├── Manual Log Section (compact food search + portion entry)
+│       └── Quick-add recent foods list
+│
+└── CalorieHistory (7-day history, always from today — not date-specific)
+```
+
+**Data Flow (new):**
+
+```
+selectedDate (derived from CalendarPageLayout's onDaySelect)
+    │
+    ├──→ Calendar hooks (unchanged):
+    │     useMonthMealData(currentMonth) → dayStatusMap
+    │     getDailyMealPlan(selectedDate) → plan data → renderDayContent
+    │
+    └──→ Manual log APIs (same functions, different parameter):
+          getDailySummary(selectedDate)    // was: getDailySummary(today)
+          getDailyLogs(selectedDate)       // was: getDailyLogs(today)
+          logFood({...logDate: selectedDate})  // was: logDate: today
+```
+
+**What changes:**
+- `FoodLogPage` adds `selectedDate` state, initialized to today
+- `onDaySelect` callback updates `selectedDate`
+- Manual log API calls use `selectedDate` instead of hardcoded `today`
+- `CalendarPageLayout` is embedded, replacing the current static content area
+- `CalorieHistory` stays on "last 7 days from today" (not the selected date)
+- `DailyMealPlanSection` (today's auto-generated plan) — **keep it at the top as today banner**, since it's a quick-reference for today's plan. The calendar detail panel shows the plan for whatever day is selected.
+
+**What stays the same:**
+- `CalendarPageLayout` — no changes (internal state management stays)
+- `CalendarGrid`, `MonthNav`, `DayDetailPanel` — no changes
+- `useMonthMealData` — no changes
+- `getDailyMealPlan` API — no changes
+- `searchFoods`, `logFood`, `createCustomFood` APIs — no changes (they already accept dates)
+- `CalorieSummary`, `FoodSearch`, `CustomFoodForm`, `FoodLogTable` — no changes (they receive props)
+
+### 3.2 Activity Merge (ActivityCalendarPage + manual activity log)
+
+**Core Challenge:** The old `ActivitiesPage.jsx` is dead code (not imported/exported). The current `ActivityCalendarPage` at `/activities` has the calendar but no manual logging. Manual logging was in the dead `ActivitiesPage` which used `ActivityLogForm`, `ActivityHistory`, `ActivitySummary`, etc.
+
+**Resolution:** The current `ActivityCalendarPage` is already the right starting point — it has the calendar, day selection, plan display. Manual logging needs to be added to the DayDetailPanel slot.
+
+**Component Structure (new):**
+
+```
+ActivityCalendarPage (extended, kept at /activities route)
+│
+├── [Top: Today's Activity Summary]
+│   ├── Active minutes, calories burned (today)
+│   └── Quick "Log Activity" button (compact, inline)
+│
+├── CalendarPageLayout (already embedded)
+│   ├── MonthNav
+│   ├── CalendarGrid
+│   └── DayDetailPanel (slot — already used for plan display)
+│       ├── Selected date header
+│       ├── Planned activities (existing: DayActivityRow with swap/toggle)
+│       ├── ─── divider ───
+│       ├── Manual Activity Log (NEW: compact ActivityLogForm)
+│       │   → Activity select + duration + intensity → Log button
+│       └── Activity Recommendations for this day (small pool, inline)
+│
+└── Activity History (last 7 days, from today — reference)
+```
+
+**Data Flow (new):**
+```
+selectedDate (from onDaySelect)
+    │
+    ├──→ Calendar hooks (unchanged):
+    │     useMonthData(currentMonth, fetchWeekFn) → dayStatusMap
+    │     getWeeklyPlan(weekStart) → day plan → DayActivityRow
+    │
+    └──→ Manual log APIs (reuse from dead ActivitiesPage):
+          getActivitySummary(selectedDate)  // new per selectedDate
+          getActivityLogs(selectedDate)     // new per selectedDate
+          logActivity({...date: selectedDate})
+```
+
+**What changes:**
+- `ActivityCalendarPage` adds: summary state, activity log form state, history fetch
+- `onDaySelect` triggers: fetch day plan (already does this) + fetch activity summary for that day (new)
+- `DayDetailPanel` children enhanced to include: activity log form, suggestions
+- `ActivityLogForm` component (exists in dead code) resurrected and made date-aware
+- `ActivityHistory` component resurrected and placed at bottom
+
+**What stays the same:**
+- Calendar rendering, day status map, plan generation — unchanged
+- Swap, toggle-complete logic — unchanged
+- Toast, countdown timers — unchanged
+- `activityApi.js` functions — already accept date parameters
+
+---
+
+## 4. Route Consolidation Plan
+
+### Current vs Target Routes
+
+| Current Route | Target Route | Action |
+|---------------|--------------|--------|
+| `/activities` | `/activities` | Enhance page content (add manual log) |
+| `/food-log` | `/food-log` | Enhance page content (add calendar) |
+| `/meal-calendar` | **REMOVED** | Delete route and add redirect |
+
+### Redirect Strategy
+
+For `/meal-calendar`:
+```jsx
+// In Router.jsx — add redirect
+<Route path="/meal-calendar" element={<Navigate to="/food-log" replace />} />
+```
+
+This provides backward compatibility for bookmarks. The `replace` prop prevents the redirect from polluting browser history.
+
+### Navigation Updates
+
+In `DashboardPlaceholder` (or wherever nav links live), update:
+- `/meal-calendar` link → `/food-log`
+- `/activity-calendar` link → `/activities` (already done if it existed)
+
+### Dead Route Removal
+
+```
+Router.jsx changes:
+- Remove: import { MealCalendarPage } from '...'
+- Remove: <Route path="/meal-calendar" .../>
+- Add:    <Route path="/meal-calendar" element={<Navigate to="/food-log" replace />} />
+```
+
+---
+
+## 5. State Management Architecture
+
+### State Ownership After Merge
+
+| State | Owned By | Why |
+|-------|----------|-----|
+| `currentMonth`, `selectedDay` | `CalendarPageLayout` (internal) | No change — component already manages this via callbacks |
+| `selectedDate` (derived day for APIs) | Parent page (FoodLogPage, ActivityCalendarPage) | Derived from `onDaySelect`. Defaults to today on mount. |
+| Manual log form state | Parent page (component state) | No change — form state is page-local |
+| `dayStatusMap` | `useMonthData` / `useMonthMealData` hooks | No change — queries are independent of selectedDay |
+
+### Data Dependency Graph
+
+```
+useMonthMealData(currentMonth)  ← independent, fetches ALL days
+                                    ↓
+                               dayStatusMap → CalendarGrid colors
+
+onDaySelect(day) → selectedDate
+                      ↓
+            ├── getDailyMealPlan(selectedDate)  ← explicit fetch in useEffect
+            ├── getDailySummary(selectedDate)    ← NEW fetch in useEffect
+            └── getDailyLogs(selectedDate)       ← NEW fetch in useEffect
+```
+
+### Key Consideration: Separate Data Sources
+
+The calendar color (`dayStatusMap`) and the manual log data (`summary`, `logs`) come from **different API endpoints**. They don't share state. This is correct — they should remain independent:
+- Calendar data: `useMonthMealData` / `useMonthData` (TanStack Query, cached, staleTime: 5min)
+- Manual log data: direct `useEffect` + fetch (not cached via TanStack, refetched on selectedDate change)
+
+---
+
+## 6. Integration Points (What Touches What)
+
+### Files That MUST Change
+
+| File | Change Type | What To Do |
+|------|-------------|------------|
+| `features/food-log/components/FoodLogPage.jsx` | **MODIFY** | Add selectedDate state, embed CalendarPageLayout, generalize API calls |
+| `features/activities/ActivityCalendarPage.jsx` | **MODIFY** | Add manual log section to DayDetailPanel, add summary/history fetch |
+| `app/Router.jsx` | **MODIFY** | Remove MealCalendarPage import, add /meal-calendar redirect, remove route |
+| `features/food-log/index.js` | **MODIFY** | Remove `MealCalendarPage` export (no longer needed at route level) |
+
+### Files That Should Be DELETED
+
+| File | Reason |
+|------|--------|
+| `features/food-log/components/MealCalendarPage.jsx` | Logic merged into FoodLogPage. Component becomes internal or deleted. |
+| Note: `ActivitiesPage.jsx` is already dead code — if not removed in v1.7, remove now. |
+
+### Files That MIGHT Change (optional)
+
+| File | Change | Reason |
+|------|--------|--------|
+| `shared/calendar/CalendarPageLayout.jsx` | Minor | If we want to support an "initially selected day = today" default (currently starts null). Could add `defaultSelectedDay` prop. |
+| `features/food-log/hooks/useMonthMealData.js` | None needed | Already independent. |
+| `features/activities/components/ActivitiesPage.jsx` | **Reference, don't modify** | Extract patterns/components from this dead code, then delete. |
+
+### Files That Must NOT Change
+
+| File | Reason |
+|------|--------|
+| `shared/calendar/CalendarGrid.jsx` | Pure presentational, tested. No reason to change. |
+| `shared/calendar/MonthNav.jsx` | Pure presentational. |
+| `shared/calendar/DayDetailPanel.jsx` | Slot-based, works as-is. |
+| `shared/calendar/calendarUtils.js` | Pure utilities. |
+| `shared/calendar/hooks/useMonthData.js` | Generic hook, works as-is. |
+| `features/food-log/hooks/useMonthMealData.js` | Meal-specific hook, works as-is. |
+| All backend code | Milestone explicitly says "no backend changes." |
+
+---
+
+## 7. Build Order (Dependency-Aware)
+
+### Phase 1: Food Log Merge (higher priority)
+
+**Rationale:** The food log merge has more structural changes (date-awareness, CalendarPageLayout embedding) and is riskier. Starting here surfaces issues early.
+
+| Step | What | Depends On | Risk |
+|------|------|------------|------|
+| 1.1 | Add `selectedDate` state to FoodLogPage, init to today | Nothing | Low |
+| 1.2 | Add `handleDaySelect` callback that sets `selectedDate` | 1.1 | Low |
+| 1.3 | Replace static content area with `CalendarPageLayout` embedding | 1.1, 1.2 | **Medium** — layout restructuring, need to keep CalorieSummary/FoodSearch visible |
+| 1.4 | Wire DayDetailPanel slot: meal plan data + compact manual log form | 1.3 | Medium — slot children customization |
+| 1.5 | Generalize API calls: `getDailySummary(selectedDate)` instead of `getDailySummary(today)` | 1.2 | Low — APIs already accept date param |
+| 1.6 | Keep CalorieHistory date-agnostic (still from today) | 1.1 | Low |
+| 1.7 | Remove `/meal-calendar` route, add redirect | 1.4 | Low |
+| 1.8 | Update navigation links in DashboardPlaceholder | 1.7 | Low |
+| 1.9 | Delete `MealCalendarPage.jsx` | 1.4 | Low — verify nothing else imports it |
+| 1.10 | Update tests for new FoodLogPage + delete MealCalendarPage tests | 1.9 | **Medium** — test structure changes |
+
+### Phase 2: Activity Merge (lower priority)
+
+**Rationale:** The activity calendar already mostly works. Adding manual logging to the DayDetailPanel slot is additive, not structural.
+
+| Step | What | Depends On | Risk |
+|------|------|------------|------|
+| 2.1 | Resurrect `ActivityLogForm` component from dead code, make date-aware | Nothing | Low |
+| 2.2 | Add summary/history state to ActivityCalendarPage | Nothing | Low |
+| 2.3 | Add summary fetch to the onDaySelect effect | 2.2 | Low |
+| 2.4 | Enhance DayDetailPanel slot: add ActivityLogForm + recommendations | 2.1, 2.3 | Low — additive change |
+| 2.5 | Add compact "Today's Activity Summary" banner above calendar | 2.2 | Low |
+| 2.6 | Add ActivityHistory at bottom of page | 2.2 | Low |
+| 2.7 | Delete dead `ActivitiesPage.jsx` (if not already removed in v1.7) | 2.1 | Low |
+| 2.8 | Update tests | 2.4, 2.6 | Medium |
+
+### Phase Order Rationale
+
+1. **Food log first** because it has the most architectural risk (date-awareness generalization, CalendarPageLayout embedding in a non-calendar page)
+2. **Activity second** because it's purely additive — the calendar structure is already in place, manual log components just need to be dropped into the DayDetailPanel slot
+
+---
+
+## 8. Risk Assessment
+
+| Risk | Severity | Likelihood | Mitigation |
+|------|----------|------------|------------|
+| CalendarPageLayout embedding breaks FoodLogPage layout | High | Medium | Keep Today's Summary above the calendar, test on mobile |
+| selectedDate ≠ today causes stale/empty manual log data | Medium | Low | Default to today, lazy-load on day select |
+| `onDaySelect` not firing on initial render (no day selected) | Medium | High | `CalendarPageLayout` initializes with `selectedDay = null` — need to auto-select today or show empty state for the detail panel |
+| Manual log form in DayDetailPanel is too cramped on mobile | Medium | Medium | Use a compact inline form (no full-page modal), stack fields vertically |
+| Meal calendar tests need restructuring | Low | High | Acceptable — tests must adapt to new component boundaries |
+| Dead code (ActivitiesPage.jsx) accidentally resurrected | Low | Low | Audit imports before modifying |
+
+### Critical Finding: CalendarPageLayout Starts With No Day Selected
+
+```jsx
+const [selectedDay, setSelectedDay] = useState(null);
+```
+
+This means on initial page load, `onDaySelect` fires with `null`. The DayDetailPanel shows "Select a day to view details." For the merged pages, this means:
+- **Food log:** initially shows the "Select a day" placeholder. User must click today to see today's data.
+- **Activity:** same behavior — no day selected means no detail panel content.
+
+**Options:**
+1. **Accept it** — user must click today on first visit. Simple, existing pattern.
+2. **Auto-select today** — add a `defaultDay` prop to CalendarPageLayout. On mount, if `defaultDay` is provided, set it as selectedDay. This requires a minimal CalendarPageLayout change.
+3. **External initial selection** — parent component detects `selectedDay === null` and auto-triggers `onDaySelect(today)` in a useEffect after first render.
+
+**Recommendation: Option 2 (add `defaultDay` prop to CalendarPageLayout).** It's a small, backward-compatible change (defaults to `null` = existing behavior) and makes the UX much smoother for the merged pages.
+
+```jsx
+// CalendarPageLayout.jsx — proposed addition
+export default function CalendarPageLayout({
+  dayStatusMap, loading, error, 
+  onMonthChange, onDaySelect, 
+  defaultDay = null,  // NEW: optional default selected day
+  children,
+}) {
+  const [selectedDay, setSelectedDay] = useState(defaultDay);
+  // ... rest unchanged
+```
+
+---
+
+## 9. Test Strategy Implications
+
+### Existing Test Coverage
+
+| Test File | Tests | Relevance After Merge |
+|-----------|-------|----------------------|
+| `MealCalendarPage.test.jsx` | 8 tests | **DELETE** — component merged into FoodLogPage |
+| `ActivityCalendarPage.test.jsx` | 8 tests | **UPDATE** — component gets new manual log features |
+| `FoodLogPage` (no test file found) | 0 tests | **CREATE** — new tests for merged page |
+| Calendar shared components | 33 tests | **NO CHANGE** — components not modified |
+
+### Testing Considerations for Merged Pages
+
+1. **Mock CalendarPageLayout** — the existing pages already mock it. The merged pages should too. The mock isolates tests from calendar rendering complexity.
+2. **Test selectedDate changes** — verify that clicking a calendar day triggers the correct API calls with the right date parameter.
+3. **Test today vs non-today behavior** — two key scenarios: viewing today (shows full summary + calendar) and viewing a past day (shows limited/read-only data).
+4. **Test empty states** — no plan, no manual logs for the selected day.
+5. **Test date transitions** — clicking different days should update manual log data correctly.
+
+---
+
+## 10. Summary of Recommendations
+
+| Decision | Recommendation | Confidence |
+|----------|---------------|------------|
+| Merge strategy | **Calendar Detail Panel Enhancement (Strategy C)** — calendar stays primary nav, manual log features go in the day detail panel slot | HIGH |
+| CalendarPageLayout changes | **Minimal** — add optional `defaultDay` prop for auto-selecting today. No internal state restructuring. | HIGH |
+| FoodLogPage generalization | **Make date-aware** — `selectedDate` state replaces hardcoded `today`. APIs already accept dates. | HIGH |
+| MealCalendarPage fate | **Delete** — logic absorbed into FoodLogPage's DayDetailPanel slot | HIGH |
+| ActivitiesPage.jsx fate | **Delete dead code** — patterns reused in ActivityCalendarPage enhancements | HIGH |
+| Route redirects | **Add `<Navigate>` redirect** for `/meal-calendar` → `/food-log`. Backward compatible. | HIGH |
+| Build order | **Food log first** (structural risk), **activity second** (additive risk) | HIGH |

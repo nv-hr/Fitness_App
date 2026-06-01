@@ -1,225 +1,363 @@
-# Stack Research: Calendar-Based Plan UI (v1.7)
+# Research: UI Consolidation Patterns for Calendar + Data-Entry Page Merge
 
-**Domain:** React month-grid calendar with color-coded day status + detail panel
-**Researched:** 2026-05-31
-**Confidence:** HIGH
-
-## Recommended Stack
-
-### Core Addition
-
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| date-fns | ^3.6.0 | Date manipulation (month grid calc, day status comparison, formatting) | Only date utility library that matches project constraints: tree-shakeable (import only needed functions), zero dependencies, immutable, native Date objects, TypeScript-first. Replaces raw `new Date()` calls like `today.toISOString().split('T')[0]` scattered across components. v3.6.0 confirmed via Context7 CDN references. |
-
-### Supporting Libraries
-
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| clsx | ^2.1.1 | Conditional className string construction for day cell styling | **Optional** — 239B gzipped, zero dependencies. Useful for constructing day cell class strings with color status. Only needed if calendar uses CSS classes (not inline styles). Can skip if staying purely inline-style. |
-
-### Development / Testing
-
-| Tool | Version | Purpose | Notes |
-|------|---------|---------|-------|
-| (none needed) | — | — | date-fns functions are plain JS with no DOM dependency — work in jsdom (Vitest) without additional setup. |
-
-## Installation
-
-```bash
-# Essential — only one new dependency
-npm install date-fns@^3.6.0
-
-# Optional — only if using class-based day cell styling
-npm install clsx@^2.1.1
-```
-
-## What Calendar Libraries Were Considered and Rejected
-
-### Rejected: Full Calendar Libraries
-
-| Library | Bundle | Reason Rejected |
-|---------|--------|-----------------|
-| react-big-calendar | ~90kb | Event/scheduling API designed for time-bound events (start/end dates, overlapping, drag-to-resize). No concept of "day status" — would need to map status indicators to dummy events. Requires moment.js or date-fns adapter anyway. 4 views (month/week/day/agenda) when we only need month. |
-| @mantine/dates | ~30kb + Mantine deps | Pulls in entire Mantine UI dependency tree (theme provider, hooks, etc.) when project uses inline styles. Architectural mismatch. |
-| antd Calendar | ~50kb + antd deps | Same problem — entire Ant Design dependency tree for one component. Overkill. |
-| trud-calendar | ~95kb | Built for Google Calendar-grade scheduling (drag-drop, RRULE, timezones, 5 views). We need: month grid, click day, color cell. Its slots API (custom `dayCell` component) would work, but 95kb for features we don't use. |
-| schedultron | ~40kb | Event management + drag-drop + glassmorphism themes. Requires Moment.js. Wrong paradigm. |
-| @sajankumarv88/react-calendar | ~30kb | Event-based with categories, bookable flags, user profiles. Wrong abstraction for day status. |
-| svar-widgets/react-calendar | ~40kb | Event calendar with drag-drop, filtering, resource views. Overengineered for status dots. |
-| Zesor/calendarkit-pro | ~50kb | Professional scheduler with recurring events, ICS import/export. Not a status tracker. |
-| Schedulely | ~5kb gzip | Closest contender — lightweight, CSS-grid based, customizable. But it's been unmaintained since 2022 and the "custom components" pattern adds complexity over a direct implementation. |
-
-**Core reason:** All these libraries model **events** (something that happens at a time). The calendar in this project models **day status** (a day's completion state). These are fundamentally different data models. Mapping status to events means:
-- Creating dummy event objects for every day with activity/meal data
-- Overriding cell rendering to show status colors instead of events
-- Fighting the library's built-in event interactions
-- Using 5-20% of the library's features while paying 100% of the bundle cost
-
-### Rejected: clsx Alternatives
-
-| Library | Reason Rejected |
-|---------|-----------------|
-| classnames | 489B vs clsx's 239B. Slower in benchmarks. No advantage for new work. |
-| tailwind-merge | Solves Tailwind CSS utility conflicts. Project has no Tailwind, so this is 100% unused. |
-
-## Recommended Approach: Custom Month-Grid Calendar with date-fns
-
-### Architecture Overview
-
-```
-┌──────────────────────────────────────────────┐
-│  MonthCalendar (shared component)             │
-│  ┌─────────────────────────────────────────┐  │
-│  │  CalendarHeader                         │  │
-│  │  ◀ January 2026 ▶                      │  │
-│  └─────────────────────────────────────────┘  │
-│  ┌─────────────────────────────────────────┐  │
-│  │  S   M   T   W   T   F   S             │  │
-│  ├─────────────────────────────────────────┤  │
-│  │      1   2   3   4   5   6   7          │  │
-│  │  8   9  10  11  12  13  14             │  │
-│  │ 15  16  17  18  19  20  21             │  │
-│  │ 22  23  24  25  26  27  28             │  │
-│  │ 29  30  31                              │  │
-│  └─────────────────────────────────────────┘  │
-│                                               │
-│  Colors: blue (incomplete)                    │
-│          green (completed)                    │
-│          grey (past missed)                   │
-│          white/default (future/no plan)       │
-└──────────────────────────────────────────────┘
-```
-
-**Component breakdown:**
-
-1. **`MonthCalendar`** — Props: `{ currentMonth, onMonthChange, selectedDay, onDaySelect, dayStatusMap, weekStartsOn }`
-   - `dayStatusMap`: `Map<string, 'completed' | 'incomplete' | 'missed'>` — keyed by `YYYY-MM-DD`
-   - Pure presentational. No data fetching.
-
-2. **`DayDetailPanel`** — Sidebar/overlay panel shown when a day is selected.
-   - Receives `selectedDay`, fetches/renders activity cards or meal log for that date.
-
-3. **Per-feature page wrappers** (`ActivityCalendarPage`, `MealCalendarPage`):
-   - Fetch plan data via existing TanStack Query hooks
-   - Build `dayStatusMap` from plan data
-   - Render `MonthCalendar` + `DayDetailPanel`
-   - Handle generate button, auto-generate logic
-
-### date-fns Functions Required
-
-```js
-import {
-  startOfMonth,        // First day of displayed month
-  endOfMonth,          // Last day of displayed month
-  startOfWeek,         // Align to Sunday/Monday for grid start
-  endOfWeek,           // Align to Sunday/Monday for grid end
-  eachDayOfInterval,   // Generate all days in [startOfWeek, endOfWeek]
-  format,              // "yyyy-MM-dd" key, "MMMM yyyy" header, "EEE" weekdays
-  isSameDay,           // Highlight selected day
-  isSameMonth,         // Dim days from adjacent months
-  isToday,             // Highlight today's cell
-  isBefore,            // Check if day is in the past (for grey-out)
-  isAfter,             // Check if day is in the future
-  addMonths,           // Navigate next month
-  subMonths,           // Navigate previous month
-  getDay,              // Determine column offset for first day
-} from 'date-fns';
-```
-
-**Total bundle impact:** Each function is individually importable. Combined gzip size for the above 12 functions: approximately **1-2KB**. No runtime overhead from unused features.
-
-### CSS Grid Layout (inline styles or minimal CSS)
-
-```css
-/* Calendar grid — add as inline <style> in component or first .css import */
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
-}
-.day-cell {
-  aspect-ratio: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  border-radius: 4px;
-  font-size: 0.875rem;
-}
-/* Status colors applied via inline style.backgroundColor */
-```
-
-### State Management
-
-No global state additions needed. Uses local React state consistent with existing patterns:
-
-| State | Type | Location | Purpose |
-|-------|------|----------|---------|
-| `currentMonth` | `Date` | Each calendar page | Which month is displayed |
-| `selectedDay` | `Date \| null` | Each calendar page | Which day is clicked for detail panel |
-
-This mirrors existing patterns (`ActivitiesPage.jsx` uses local `useState` for recommendations, history, summary, etc.; `FoodLogPage.jsx` uses local `useState` for summary, logs, selection, etc.).
-
-### Integration with Existing TanStack React Query
-
-Existing pattern is direct API calls in `useEffect` (see `ActivitiesPage.jsx`, `FoodLogPage.jsx`). The calendar pages should:
-
-1. Create dedicated React Query hooks for the calendar data:
-   ```js
-   // Feature: activities/api/useActivityPlan.js
-   export function useActivityPlan(date) {
-     return useQuery({
-       queryKey: ['activityPlan', date],
-       queryFn: () => getActivityPlan(date),
-       staleTime: 5 * 60 * 1000,
-     });
-   }
-   ```
-2. Derive `dayStatusMap` from query data:
-   ```js
-   const { data: plan } = useActivityPlan(today);
-   const dayStatusMap = useMemo(() => {
-     if (!plan?.data?.plan?.days) return new Map();
-     return new Map(
-       plan.data.plan.days.map(day => [
-         day.date,          // 'YYYY-MM-DD'
-         day.completed ? 'completed' : 'incomplete'
-       ])
-     );
-   }, [plan]);
-   ```
-3. Pass to `MonthCalendar` as a prop — calendar component stays pure and testable.
-
-## What NOT to Use
-
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| react-big-calendar | Event model doesn't fit day-status paradigm. 90kb for unused features. | Custom CSS Grid + date-fns |
-| @mantine/dates | Pulls Mantine UI dependency tree into a project using inline styles. | date-fns only |
-| antd Calendar | 50kb+ Ant Design dependency tree. | date-fns only |
-| Moment.js | Immutable, larger bundle, no tree-shaking. Deprecated in favor of date-fns. | date-fns |
-| dayjs | Smaller than moment but less ecosystem support, no tree-shaking. date-fns is the standard. | date-fns |
-| Redux / Zustand | Overkill for selected-day state. Local useState is sufficient and matches existing patterns. | useState |
-| tailwind-merge | Zero Tailwind usage in project. | n/a — not needed |
-| FullCalendar | 200kb+, commercial license for some features. | Custom CSS Grid + date-fns |
-
-## Version Compatibility
-
-| Package | Compatible With | Notes |
-|---------|-----------------|-------|
-| date-fns@^3.6.0 | React 19.2+ | Pure JS, no React dependency. Works in any JS runtime. |
-| date-fns@^3.6.0 | Vite 8+ | Tree-shaking via ES module imports works out of the box with Vite. |
-| date-fns@^3.6.0 | Vitest 4+ / jsdom | Functions are pure JS — no DOM dependency. Tests work without setup. |
-
-## Sources
-
-- **Context7** `/date-fns/date-fns` — Verified v3.6.0 CDN references, function signatures (eachDayOfInterval, startOfMonth, endOfMonth, addMonths, format, etc.), tree-shaking docs
-- **WebSearch** — Multiple tutorials confirmed custom CSS Grid + date-fns pattern is standard for status-based calendars (habits tracker, activity tracking, attendance)
-- **WebSearch** — trud-calendar, react-big-calendar, mantine/dates, antd Calendar evaluated and rejected per bundle/paradigm mismatch
-- **WebSearch** — lukeed/clsx verified at v2.1.1 (April 2024), 239B gzip, zero dependencies
+**Project:** Fitness_App v1.8
+**Focus:** Merging standalone Activity Calendar into Activity page, Meal Calendar into Food Log page
+**Stack:** React 19 + Vite 8 + TanStack React Query + date-fns + react-day-picker v9 + CSS Grid (inline styles)
+**Date:** 2026-06-01
+**Mode:** Ecosystem
 
 ---
 
-*Stack research for: v1.7 Calendar-Based Plan UI*
-*Researched: 2026-05-31*
+## 1. The Core Question
+
+How do you combine a calendar view with a data-entry view on the same page, given that:
+
+- Both views are already built and tested (Shared calendar: 896 LOC, 33 tests; Feature pages: ~550 LOC each)
+- The calendar uses `CalendarPageLayout` which manages its own `currentMonth` / `selectedDay` state internally
+- The data-entry view has its own independent state (selected food, portion, meal type, history, etc.)
+- The goal is pure UI restructuring — no new features, no backend changes
+- Styling constraint: minimal, function over form
+
+---
+
+## 2. Evaluated Layout Patterns
+
+### 2.1 Vertical Scroll Sections (Rejected)
+
+Both views stacked vertically, user scrolls between them.
+
+- **Pros:** No state management needed, no tab switching, everything visible
+- **Cons:** Information overload. The existing pages are already long (Activity page: ~192 lines of content, Food Log: ~244 lines, plus calendar with 28-31 day detail rows). Combining them vertically creates a single very long page with poor navigation. On mobile (the primary responsive target at 768px), this is particularly bad.
+- **Verdict:** Reject — violates "function over form" by burying content under scroll.
+
+### 2.2 Split Pane / Side-by-Side (Rejected)
+
+Calendar on one side, data entry on the other.
+
+- **Pros:** Both views visible simultaneously
+- **Cons:** At 600px max-width (the existing container), there's no room for a split pane. At desktop widths, the app is already constrained to 600px. A split would force both panes under 300px — too narrow for either view. Would require breaking the existing max-width constraint.
+- **Verdict:** Reject — incompatible with existing layout constraints.
+
+### 2.3 Accordion / Collapsible Sections (Rejected)
+
+Both views available, collapsed by default, user expands one at a time.
+
+- **Pros:** Space-efficient, user controls visibility
+- **Cons:** Hides content behind an extra click. The two views (manual log, calendar) are peers with equal priority, not supplementary sections. An accordion implies one is primary and the other is auxiliary. Both are primary features.
+- **Verdict:** Reject — wrong semantic for peer views.
+
+### 2.4 Modal / Overlay Calendar (Rejected)
+
+Data-entry page stays primary; calendar opens as a modal/overlay on button click.
+
+- **Pros:** Data entry uninterrupted
+- **Cons:** Calendar feels like a secondary popup, not a core view. Hides calendar context. Extra interaction to open/close. Poor for frequent switching.
+- **Verdict:** Reject — diminishes the calendar's role as a first-class feature.
+
+### 2.5 Tabs (Selected) ✅
+
+Two tabs at the top: "Manual Log" and "Calendar". Only one view visible at a time. Tab state managed via `useState` with string identifier.
+
+- **Pros:**
+  - Clean separation of concerns — each view gets full width
+  - Works perfectly at 600px max-width and mobile
+  - No new dependencies needed
+  - Familiar UX pattern (every web app has tabs)
+  - Each view keeps its independent state naturally
+  - Easy to implement — `useState` + conditional render
+- **Cons:**
+  - Calendar state (`currentMonth`, `selectedDay`) is lost on tab switch if using conditional unmounting (mitigable)
+  - One extra click to switch between views
+- **Verdict:** Best fit for the use case.
+
+---
+
+## 3. Tab Implementation Options
+
+### 3.1 Simple `useState` + Conditional Render (Recommended)
+
+```jsx
+const [activeTab, setActiveTab] = useState('log');
+
+// In JSX:
+<button onClick={() => setActiveTab('log')}>Manual Log</button>
+<button onClick={() => setActiveTab('calendar')}>Calendar</button>
+
+{activeTab === 'log' && <ManualLogSection />}
+{activeTab === 'calendar' && <CalendarSection />}
+```
+
+- **Zero new dependencies.** Works with React 19 out of the box.
+- Matches the existing code style (inline styles, simple hooks, no abstraction layers).
+- Tab buttons styled like the existing inline buttons (minHeight 44px for mobile, border, borderRadius, etc.)
+- **Risk:** Conditional rendering unmounts the CalendarSection on tab switch, resetting `currentMonth` and `selectedDay` in `CalendarPageLayout`.
+
+### 3.2 `useState` + CSS Visibility (Preserves Calendar State)
+
+```jsx
+<div style={{ display: activeTab === 'log' ? 'block' : 'none' }}>
+  <ManualLogSection />
+</div>
+<div style={{ display: activeTab === 'calendar' ? 'block' : 'none' }}>
+  <CalendarSection />
+</div>
+```
+
+- Preserves all internal state in both views across tab switches
+- TanStack React Query won't re-fetch cached data within staleTime (5 min)
+- Calendar auto-generation effects run on mount — need to guard against running when hidden
+- **Risk:** Both views mount on initial page load, doubling initial API calls. Mitigation: wrap in `useEffect` that only fires when tab activates, or use `Activity` component.
+
+### 3.3 React 19 `<Activity>` Component (Ideal — If Available)
+
+```jsx
+import { Activity, useState } from 'react';
+
+<Activity mode={activeTab === 'log' ? 'visible' : 'hidden'}>
+  <ManualLogSection />
+</Activity>
+<Activity mode={activeTab === 'calendar' ? 'visible' : 'hidden'}>
+  <CalendarSection />
+</Activity>
+```
+
+- React 19 feature (formerly `<Offscreen>` in experimental builds)
+- Keeps inactive components mounted but stops their rendering work
+- Best of both worlds — state preserved, no unnecessary renders
+- **CONFIDENCE: LOW** — This feature was experimental in React 18 and may have been renamed or not yet stable in React 19. The project uses React 19 (`"react": "^19.0.0"` from v1.7 data). **Must verify** that `<Activity>` is available in the project's React version before relying on it.
+
+### Recommendation: Start with Option 3.2 (CSS display)
+
+| Criterion | 3.1 Conditional | 3.2 CSS display | 3.3 Activity |
+|-----------|-----------------|-----------------|--------------|
+| Complexity | Simplest | Simple | Requires check |
+| State preservation | No | Yes | Yes |
+| Library needed | None | None | None (built-in) |
+| Initial render cost | Only active tab | Both tabs | Both tabs (no render) |
+| Auto-gen side effects | Clean | Needs guard | Needs guard |
+
+**Start with CSS display approach (3.2).** It requires no new patterns, preserves calendar state, and the auto-generation guard is already handled in the standalone pages via `monthNavRef` — just extend the same pattern to guard against running when hidden.
+
+---
+
+## 4. Integration with Existing Shared Calendar Components
+
+The shared calendar components are already designed for re-use:
+
+### `CalendarPageLayout` (shared/calendar/CalendarPageLayout.jsx)
+
+```jsx
+<CalendarPageLayout
+  dayStatusMap={dayStatusMap}
+  loading={loading}
+  error={error}
+  onMonthChange={handleMonthChange}
+  onDaySelect={handleDaySelect}
+>
+  {/* Day detail panel content — rendered inside DayDetailPanel */}
+</CalendarPageLayout>
+```
+
+- **Manages its own internal state** for `currentMonth` and `selectedDay` via `useState`
+- Exposes `onMonthChange` / `onDaySelect` as external notification callbacks
+- Accepts `children` which renders in the `DayDetailPanel` slot
+- Has internal `isMobile` via `useResponsive()`
+
+**Integration pattern for merged page:**
+
+```jsx
+function CalendarSection() {
+  // Same logic as the existing standalone calendar page
+  const [selectedDay, setSelectedDay] = useState(null);
+  const dayStatusMap = /* useMonthData or useMonthMealData */;
+  
+  return (
+    <CalendarPageLayout
+      dayStatusMap={dayStatusMap}
+      onDaySelect={setSelectedDay}
+      ...
+    >
+      {selectedDay && <DayDetailContent />}
+    </CalendarPageLayout>
+  );
+}
+```
+
+The `CalendarSection` component wraps the existing standalone page logic as a self-contained child. This keeps the merge minimal — the parent page only needs tab state + conditional rendering.
+
+### `useMonthData` and `useMonthMealData` Hooks
+
+- **Do NOT share state** between the manual log view and the calendar view
+- They use independent `useQueries` with different query keys (`['calendarMonthData', weekStart]` vs `['monthMealData', dateStr]`)
+- **No cache conflict** — both hooks can coexist on the same page without interfering
+- When the calendar tab is hidden via CSS display, TanStack React Query will still cache the data; switching back shows cached data (within 5-min staleTime)
+
+### `DayDetailPanel` Slot Pattern
+
+The existing `CalendarPageLayout` uses a `children` slot for DayDetailPanel content. This slot pattern is already designed for embedding — no changes needed.
+
+---
+
+## 5. State Management Analysis
+
+### Tab State (New)
+
+```jsx
+const [activeTab, setActiveTab] = useState('log');
+// or: const [activeTab, setActiveTab] = useState('calendar');
+```
+
+- Component-level `useState` is sufficient
+- No URL query params needed (milestone says "no new features" — URL persistence is a future enhancement)
+- No context/provider needed — tab state is local to the merged page
+
+### Calendar State (Existing — Internal to CalendarPageLayout)
+
+- `currentMonth` (Date) — managed inside `CalendarPageLayout`
+- `selectedDay` (Date|null) — managed inside `CalendarPageLayout`
+- These reset only if the component unmounts
+- CSS display approach preserves them across tab switches
+
+### Manual Log State (Existing — in ActivitiesPage / FoodLogPage)
+
+- Independent of calendar state
+- No cross-contamination with calendar views
+- Must remain mounted to preserve form state (selected food, portion, etc.)
+
+### Calendar Data (TanStack React Query)
+
+- `dayStatusMap` is computed from `useQueries` results
+- React Query handles caching automatically
+- Switching tabs does not invalidate the query cache
+
+---
+
+## 6. Auto-Generation Behavior
+
+The standalone calendar pages have auto-generation effects:
+
+**ActivityCalendarPage (lines 97-139):**
+```jsx
+useEffect(() => {
+  if (monthNavRef.current) { monthNavRef.current = false; return; }
+  // ... auto-gen if viewing today's month
+}, [currentMonth]);
+```
+
+**MealCalendarPage (lines 62-93):**
+```jsx
+useEffect(() => {
+  if (monthNavRef.current) { monthNavRef.current = false; return; }
+  // ... auto-gen if viewing today's month
+}, [currentMonth]);
+```
+
+**Integration concern:** When the page initially loads with `activeTab === 'log'`, the calendar section shouldn't auto-generate. Solutions:
+1. **Guard with tab state:** Add `if (activeTab !== 'calendar') return;` in the auto-gen effect
+2. **Defer mounting:** Only render calendar section when tab is active (Option 3.1 approach)
+3. **CSS display:** Auto-gen fires on mount regardless of visibility
+
+**Recommendation:** Pass `isActive` prop to CalendarSection. The auto-gen effect checks `isActive` before firing. This wraps the existing auto-gen guard with an additional tab-visibility guard.
+
+---
+
+## 7. Tab Button Styling
+
+Existing button style (from MonthNav, ActivityCalendarPage, etc.):
+
+```js
+const tabButtonStyle = {
+  padding: '0.75rem 1rem',
+  minHeight: '44px',
+  cursor: 'pointer',
+  border: '1px solid #ccc',
+  borderRadius: '4px',
+  background: 'white',
+  fontSize: '1rem',
+};
+
+const activeTabButtonStyle = {
+  ...tabButtonStyle,
+  background: '#16a34a',  // green accent (matches existing button colors)
+  color: '#fff',
+  borderColor: '#16a34a',
+};
+```
+
+No tab library needed — simple buttons with active/inactive styles match the existing aesthetic.
+
+---
+
+## 8. Sufficiency of Existing Stack
+
+| Need | How It's Handled | Status |
+|------|-----------------|--------|
+| Tab state | `useState` from React 19 | Built-in |
+| Tab switching | Conditional rendering or CSS display | Built-in |
+| Layout (600px max-width) | Existing inline `maxWidth: 600px` + `margin: 0 auto` | Reuse as-is |
+| Responsive / mobile | Existing `useResponsive()` hook | Reuse as-is |
+| Calendar grid | `CalendarPageLayout` + `CalendarGrid` + `MonthNav` | Reuse as-is |
+| Calendar data fetching | `useMonthData` / `useMonthMealData` via TanStack Query | Reuse as-is |
+| Calendar day detail | `DayDetailPanel` slot with `children` | Reuse as-is |
+| Inline styles | Existing pattern | Reuse as-is |
+| Tab button styling | Inline styles (same as existing buttons) | No new CSS |
+
+**No new dependencies are needed.** The existing React 19 + CSS Grid + inline styles + TanStack React Query + date-fns stack fully covers the UI consolidation.
+
+---
+
+## 9. What Would Not Be Used
+
+The existing stack includes React Hook Form and Zod. These are **not relevant** to the UI consolidation — they're used for the profile form and BMI/TDEE calculators. The tab UI doesn't need form validation.
+
+---
+
+## 10. Confidence Assessment
+
+| Claim | Confidence | Source |
+|-------|-----------|--------|
+| Tabs are the best layout pattern for this merge | HIGH | Codebase analysis, UX pattern evaluation |
+| `useState` is sufficient for tab state | HIGH | React 19 documentation |
+| CSS display approach preserves calendar state | HIGH | Standard React behavior |
+| No new dependencies needed | HIGH | Full dependency audit of existing codebase |
+| `CalendarPageLayout` slots fit the embedded pattern | HIGH | Existing CalendarPageLayout implementation |
+| React 19 `<Activity>` is available for hidden-mode rendering | LOW | Not verified in project's React version |
+| TanStack Query cache prevents re-fetch on tab switch | HIGH | Existing staleTime: 5min configuration |
+
+---
+
+## 11. Summary & Recommendation
+
+**Pattern:** Tabs with `useState('log')` state, CSS `display: none` for inactive tab content to preserve calendar state.
+
+**Tab labels:** "Manual Log" / "Calendar" (or "Log" / "Calendar" for brevity).
+
+**Component structure for each merged page:**
+
+```
+MergedPage (ActivitiesPage / FoodLogPage)
+├── h2 title (existing)
+├── [error/success messages] (existing)
+├── Tab buttons: [Manual Log] [Calendar]
+│
+├── ManualLogSection (existing content, display:block when active)
+│   ├── CalorieSummary / ActivitySummary (existing)
+│   ├── FoodSearch / ActivityRecommendations (existing)
+│   └── FoodLogTable / ActivityHistory (existing)
+│
+└── CalendarSection (new wrapper, display:block when active)
+    ├── Generate button row (from standalone page)
+    ├── CalendarPageLayout
+    │   ├── MonthNav
+    │   ├── CalendarGrid (react-day-picker)
+    │   └── DayDetailPanel (children slot)
+    └── day detail content (from standalone page)
+```
+
+**No new libraries.** No new build tooling. Pure React `useState` + existing shared components.
+
+**Key integration points to handle:**
+1. Calendar auto-generation must be gated by tab visibility
+2. Both views' state remains independent (no cross-contamination)
+3. TanStack Query cache serves calendar data when tab becomes visible again
+4. Route removal of `/activity-calendar` and `/meal-calendar` in Router.jsx
