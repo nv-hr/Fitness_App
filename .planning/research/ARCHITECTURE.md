@@ -1,755 +1,808 @@
-# Architecture Research: Supabase Migration & Single-Container Deployment
+# Architecture Research: Progress Tracking — Weight Logging, Goal Setting, Weight Chart, Dashboard
 
-**Domain:** Full-stack Express + React monorepo migration (MySQL → Supabase PostgreSQL, dual-container → single-container)
-**Researched:** 2026-05-27
-**Confidence:** HIGH
-
-## Current Architecture
-
-### System Overview (v1.1 — As-Is)
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Docker Host                              │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌─────────┐    │
-│  │  MySQL   │  │  Adminer │  │ Backend  │  │ Frontend│    │
-│  │  8.4     │  │ (admin)  │  │ Express  │  │  Vite   │    │
-│  │ :3306    │  │ :8080    │  │ :3001    │  │ :5173   │    │
-│  └────┬─────┘  └──────────┘  └────┬─────┘  └────┬─────┘   │
-│       │                           │              │          │
-│       └───────────────────────────┼──────────────┘          │
-│                                   │  API calls              │
-│                                   │  (JSON, httpOnly JWT)   │
-│                              ┌────┴─────┐                   │
-│                              │   Vite   │                   │
-│                              │  Proxy   │                   │
-│                              │ /api →    │                  │
-│                              │ :3001     │                  │
-│                              └──────────┘                   │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Current Stack (Layer by Layer)
-
-| Layer | Technology | Details |
-|-------|-----------|---------|
-| **Database** | MySQL 8.4 | Docker container with `init.sql` schema + seed data |
-| **Backend** | Express 5 + ESM | `mysql2/promise` Pool, repository pattern, 4 repositories |
-| **Frontend** | React 19 + Vite 8 | TanStack Query, Vite proxy for `/api`, dev server |
-| **Auth** | JWT (httpOnly cookies) | Passport.js + Google OAuth2, bcrypt for passwords |
-| **Infrastructure** | Docker Compose | 4 services on shared `fitness_net` bridge network |
-| **Deployment** | Cloudflare Tunnel | Exposes `localhost:3001` (backend) and `localhost:5173` (frontend) |
-
-### Current Data Flow (Request Lifecycle)
-
-```
-Browser ──GET /api/food/search?q=chicken──→ Vite Proxy ──→ Express
-                                                              │
-                                              auth.middleware ←── httpOnly cookie JWT
-                                                              │
-                                                    food.controller.js
-                                                              │
-                                                    food.service.js
-                                                              │
-                                                    food.repository.js
-                                                              │
-                                              pool.query('SELECT ... LIKE ?', [query])
-                                                              │
-                                                         MySQL 8.4
-                                                              │
-                                              result rows ──→ controller ──→ response JSON
-```
-
-### Repository Pattern (Current)
-
-Each repository file:
-1. Imports `pool` from `../config/database.js` (mysql2/promise Pool singleton)
-2. Exports async functions that call `pool.query(sql, params)`
-3. Destructures result as `const [rows] = await pool.query(...)`
-4. Uses `?` positional placeholders
-5. Returns `rows[0]` for single-row queries, `rows` for multi-row
-6. Handles MySQL-specific errors like `ER_DUP_ENTRY`
-7. Uses MySQL functions: `LAST_INSERT_ID()`, `NOW()`, `CURDATE()`, `DATE_SUB()`, `JSON_OVERLAPS()`
-
-### Current Docker Configuration
-
-- **Backend Dockerfile**: Single-stage, `node:20-alpine`, runs `npm run dev` (nodemon)
-- **Frontend Dockerfile**: Single-stage, `node:20-alpine`, runs `npm run dev` (Vite dev server)
-- **docker-compose.yml**: 4 services, 1 named volume (`mysql_data`), 1 bridge network
+**Domain:** Fitness App — Weight & Progress Tracking  
+**Researched:** 2026-06-01  
+**Mode:** Ecosystem (focus on existing codebase patterns)  
+**Confidence:** HIGH — all findings verified against actual source code  
 
 ---
 
-## Target Architecture (v1.2 — To-Be)
+## 1. Current State Audit
 
-### System Overview
+Before proposing changes, here is the exact current state relevant to progress tracking (verified from source).
+
+### Current Profile Architecture (Single-Row, No History)
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                      Docker Host                              │
-│  ┌─────────────────────────────────────────────┐             │
-│  │         Single Container (full-stack)         │             │
-│  │  ┌───────────────────────────────────────┐   │             │
-│  │  │       Express (port 3001)              │   │             │
-│  │  │  ┌─────────────────────────────────┐   │   │             │
-│  │  │  │  API Routes (/api/*)             │   │   │             │
-│  │  │  │  ┌──────────┐ ┌──────────┐      │   │   │             │
-│  │  │  │  │  Auth    │ │  Food    │      │   │   │             │
-│  │  │  │  │  routes  │ │  routes  │      │   │   │             │
-│  │  │  │  └──────────┘ └──────────┘      │   │   │             │
-│  │  │  │  ┌──────────┐ ┌──────────┐      │   │   │             │
-│  │  │  │  │ Activity │ │ Profile  │      │   │   │             │
-│  │  │  │  │ routes   │ │ routes   │      │   │   │             │
-│  │  │  │  └──────────┘ └──────────┘      │   │   │             │
-│  │  │  └─────────────────────────────────┘   │   │             │
-│  │  │  ┌─────────────────────────────────┐   │   │             │
-│  │  │  │  Static File Serving            │   │   │             │
-│  │  │  │  express.static('dist')          │   │   │             │
-│  │  │  │  (React build output from        │   │   │             │
-│  │  │  │   ./frontend/dist)               │   │   │             │
-│  │  │  └─────────────────────────────────┘   │   │             │
-│  │  └───────────────────────────────────────┘   │             │
-│  └─────────────────────────────────────────────┘             │
-│                                                              │
-│       ┌──────────────────┐    ┌──────────────────┐           │
-│       │   Supabase        │    │   Supavisor      │           │
-│       │   PostgreSQL      │◄───│   Pooler          │           │
-│       │   (managed)       │    │   port 6543       │           │
-│       │   db.xxxx.supabase│    │   (transaction    │           │
-│       │   .co:5432        │    │    mode)          │           │
-│       └──────────────────┘    └──────────────────┘           │
-│                                                              │
-│       ════════════════════════════════════════════════════    │
-│       NOT in Docker — managed by Supabase cloud               │
-│       ════════════════════════════════════════════════════    │
-└──────────────────────────────────────────────────────────────┘
+profiles table (1 row per user):
+┌─────────────┬──────────┬───────────┬─────┬────────┬──────────────┬────────────────┬──────────────┐
+│ user_id PK  │ weight_kg│ height_cm │ age │ gender │ fitness_goal │ activity_level │ calorie_rate │
+├─────────────┼──────────┼───────────┼─────┼────────┼──────────────┼────────────────┼──────────────┤
+│ 42          │ 75.0     │ 175.0     │ 30  │ male   │ lose_weight  │ moderate       │ medium       │
+└─────────────┴──────────┴───────────┴─────┴────────┴──────────────┴────────────────┴──────────────┘
 ```
 
-### Key Architectural Decisions
+**Key fact:** Weight is **overwritten** on every `PUT /api/profile`. No historical weight data exists.
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| **DB Driver** | `pg` (node-postgres) | Same Pool-based API as mysql2/promise; minimal refactor; widely adopted; high-quality TypeScript support optional |
-| **Supabase connection** | Supavisor pooler (port 6543) | Transaction-mode pooling handles Express long-running connections efficiently; SSL enforced |
-| **Application pool size** | `max: 5` | Free tier Supavisor limit is 15 pooled connections; one Express instance needs very few |
-| **Static file serving** | Express `express.static()` | Adequate for low-traffic health app; avoids nginx complexity; no extra process to manage |
-| **Single container** | Multi-stage Docker build | Stage 1: build React in node:20-alpine; Stage 2: copy build output into Express image |
-| **Schema migration** | Supabase SQL Editor + manual migration | Direct SQL via Supabase dashboard; one-time migration script mapping MySQL→PG types |
-| **No ORM** | Keep raw SQL / repository pattern | Avoid Prisma/Drizzle overhead; migration cost of rewriting 4 simple repository files is low |
+### Existing Profile Data Flow
+
+```
+Frontend: ProfileForm.jsx
+  PUT /api/profile { weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate }
+    → profileController.updateProfile(req, res)
+      → profileService.updateProfile(userId, data)
+        → validates input (weight: 2-300kg, height: 50-250cm, age: 5-120, etc.)
+        → profileRepository.updateByUserId(userId, data)
+          → UPDATE profiles SET weight_kg=$1, ..., updated_at=NOW()
+      → profileService.getProfile(userId)  // re-read to return computed values
+        → profileRepository.findByUserId(userId)
+        → calculateBmi(), calculateBmr(), calculateTdee(), getBmiCategory(), getCalorieTarget()
+    → returns { profile, bmi, bmiCategory, tdee, tdeeRange, calorieTarget }
+```
+
+### Existing Database Tables
+
+| Table | Purpose | Key Columns | Has History? |
+|-------|---------|-------------|--------------|
+| `profiles` | User body metrics | weight_kg, height_cm, age, gender, fitness_goal, activity_level, calorie_rate | **NO** — overwritten |
+| `food_logs` | Daily food intake | calories, portion_grams, log_date, meal_type | YES — insert-only |
+| `activity_logs` | Activity tracking | duration_min, intensity, calories_burned, logged_date | YES — insert-only |
+
+### Existing Frontend Feature Module Pattern
+
+```
+frontend/src/features/{feature-name}/
+├── api/{name}Api.js         # API call functions (exported functions)
+├── components/               # React components (exported)
+│   ├── ComponentA.jsx
+│   └── ComponentB.jsx
+├── hooks/                    # hooks (optional subdir)
+│   └── useData.jsx
+├── index.js                  # Barrel exports
+```
+
+### Existing Backend Pattern (Route → Controller → Service → Repository)
+
+| Layer | Location | Responsibility |
+|-------|----------|----------------|
+| Route | `backend/src/routes/{domain}.routes.js` | Define endpoints, mount auth middleware |
+| Controller | `backend/src/controllers/{domain}.controller.js` | Extract req params, call service, format response |
+| Service | `backend/src/services/{domain}.service.js` | Business logic, validation, computation |
+| Repository | `backend/src/repositories/{domain}.repository.js` | Raw SQL queries via `pg` pool |
+| Config | `backend/src/config/database.js` | pg Pool singleton |
 
 ---
 
-## Component Changes
+## 2. Recommended Architecture for Progress Tracking
 
-### New Components
+### 2.1 Database Layer
 
-| Component | Location | Purpose | Implementation |
-|-----------|----------|---------|----------------|
-| `src/config/database.pg.js` | `/backend/src/config/` | pg Pool wrapper for Supabase | Replaces `database.js`; same singleton export pattern; SSL enabled |
-| `backend/migrations/supabase.sql` | `/backend/migrations/` | PostgreSQL schema + seed data | Translated from `init.sql`; MySQL→PG type mapping |
-
-### Modified Components
-
-| Component | Change Type | What Changes |
-|-----------|-------------|--------------|
-| `src/config/database.js` | **REPLACED** | Removed; replaced by `database.pg.js` (or renamed in-place) |
-| `src/repositories/*.js` (4 files) | Moderate rewrite | Placeholder syntax (`?` → `$1`), result destructuring (`[rows]` → `result.rows`), MySQL functions → PG equivalents |
-| `src/server.js` | Minor change | Pool query check uses `SELECT 1` (same SQL, different driver) |
-| `docker-compose.yml` | Major restructure | Remove `mysql`, `adminer`, `frontend` services; single `app` service; add `SUPABASE_URL` env vars |
-| `backend/Dockerfile` | Major rewrite | Multi-stage build including frontend compilation |
-| `Backend .env` | Minor change | Replace `DB_HOST/USER/PASSWORD/NAME` with `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` (optional) |
-| `frontend/vite.config.js` | Minor change | Remove Vite proxy; API calls go directly to same origin in production |
-| `frontend/src/shared/lib/http.js` | Minor change | `VITE_API_URL` becomes empty string (same origin) or base path |
-
-### Removed Components
-
-| Component | Reason |
-|-----------|--------|
-| `mysql` service (docker-compose) | Supabase is managed, not local |
-| `adminer` service | Database managed via Supabase dashboard |
-| `frontend` service (docker-compose) | Frontend built into backend image |
-| `backend/db/init.sql` | Replaced by `backend/migrations/supabase.sql` |
-| `mysql_data` volume | No local MySQL data |
-| `fitness_net` network | Single container doesn't need inter-service networking |
-
----
-
-## Data Flow (Target)
-
-### Request Lifecycle (After Migration)
-
-```
-Browser ──── GET /api/food/search?q=chicken ────→ Express (same origin)
-                                                    │
-                                    auth.middleware ←── httpOnly cookie JWT
-                                                    │
-                                          food.controller.js
-                                                    │
-                                          food.service.js
-                                                    │
-                                          food.repository.js
-                                                    │
-                        pool.query('SELECT ... LIKE $1', [query])
-                                                    │
-                          ┌─────────────────────────┘
-                          │  SSL/TLS (Supavisor port 6543)
-                          ▼
-                    Supavisor Pooler
-                          │
-                          ▼
-                    Supabase PostgreSQL
-                          │
-                    result.rows ──→ response JSON
-```
-
-### Static File Serving Flow
-
-```
-Browser ──── GET / ────────→ Express
-                                │
-              express.static('./dist')
-                                │
-                    ┌───────────┴───────────┐
-                    ▼                       ▼
-              index.html              /assets/*.js
-              (SPA entry)             (React build)
-                    │                       │
-              React Router            Long-term cache
-              handles /profile,       (Cache-Control:
-              /food-log, etc.         public, immutable)
-```
-
-### Database Connection Flow
-
-```
-Server Start
-    ↓
-pg Pool created:
-  new Pool({
-    connectionString: DATABASE_URL,  // Supavisor pooled:6543
-    ssl: { rejectUnauthorized: false },
-    max: 5,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
-  })
-    ↓
-await pool.query('SELECT 1')  // health check on startup
-    ↓
-  On each request:
-    pool.query(sql, params)
-      → acquires connection from pool
-      → executes via Supavisor
-      → connection returned to pool
-    ↓
-  On shutdown:
-    await pool.end()
-```
-
----
-
-## MySQL → PostgreSQL Query Translation
-
-### Placeholder Syntax
-
-```javascript
-// MySQL (mysql2) — BEFORE
-await pool.query('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
-
-// PostgreSQL (pg) — AFTER
-await pool.query('SELECT * FROM users WHERE email = $1 LIMIT 1', [email]);
-```
-
-### Result Destructuring
-
-```javascript
-// MySQL — BEFORE
-const [rows] = await pool.query('SELECT * FROM users WHERE id = ?', [id]);
-return rows[0] || null;
-
-// PostgreSQL — AFTER
-const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
-return result.rows[0] || null;
-```
-
-### Last Insert ID
-
-```javascript
-// MySQL — BEFORE (two queries)
-await pool.query('INSERT INTO users (email) VALUES (?)', [email]);
-const [rows] = await pool.query('SELECT * FROM users WHERE id = LAST_INSERT_ID()');
-return rows[0] || null;
-
-// PostgreSQL — AFTER (single query with RETURNING)
-const result = await pool.query(
-  'INSERT INTO users (email) VALUES ($1) RETURNING *',
-  [email]
-);
-return result.rows[0] || null;
-```
-
-### Boolean Handling
-
-```javascript
-// MySQL — BEFORE (TINYINT(1) → 0/1)
-await pool.query(
-  'INSERT INTO users (email, pdp_consent) VALUES (?, ?)',
-  [email, pdpConsent ? 1 : 0]
-);
-
-// PostgreSQL — AFTER (BOOLEAN → true/false)
-await pool.query(
-  'INSERT INTO users (email, pdp_consent) VALUES ($1, $2)',
-  [email, pdpConsent]  // true/false directly
-);
-```
-
-### Date Functions
+#### New Table: `weight_logs`
 
 ```sql
--- MySQL
-DATE_SUB(CURDATE(), INTERVAL ? DAY)
-NOW()
-
--- PostgreSQL
-CURRENT_DATE - INTERVAL '$1 days'  -- Note: interval value with $ placeholder
--- or more safely:
-CURRENT_DATE - ($1 || ' days')::INTERVAL
-NOW()  -- same!
-```
-
-### JSON Operations
-
-```sql
--- MySQL: JSON_OVERLAPS for array intersection
-SELECT * FROM activities WHERE JSON_OVERLAPS(goal_tags, CAST(? AS JSON))
-
--- PostgreSQL: JSONB overlap operator
-SELECT * FROM activities WHERE goal_tags::jsonb ?| ARRAY[$1, $2]
--- OR simpler: use text array column instead of JSON
-SELECT * FROM activities WHERE goal_tags && ARRAY[$1, $2]
-```
-
----
-
-## Schema Migration: MySQL → PostgreSQL
-
-### Type Mapping
-
-| MySQL Type | PostgreSQL Type | Notes |
-|-----------|----------------|-------|
-| `INT AUTO_INCREMENT` | `SERIAL` or `INT GENERATED BY DEFAULT AS IDENTITY` | Serial is simpler for migration |
-| `TINYINT(1)` | `BOOLEAN` | Direct mapping |
-| `DECIMAL(5,2)` | `DECIMAL(5,2)` or `NUMERIC(5,2)` | Compatible |
-| `ENUM('a','b','c')` | `VARCHAR(20) CHECK (...)` or `CREATE TYPE ... AS ENUM` | CHECK constraint is simpler; avoids dependency on custom type |
-| `JSON` | `JSONB` | Binary JSON, more efficient |
-| `TIMESTAMP DEFAULT CURRENT_TIMESTAMP` | `TIMESTAMPTZ DEFAULT NOW()` | Same behavior |
-| `DATETIME` | `TIMESTAMP` or `TIMESTAMPTZ` | MySQL DATETIME → PG TIMESTAMP |
-| `VARCHAR(255)` | `VARCHAR(255)` | Compatible |
-| `TEXT` | `TEXT` | Compatible |
-
-### Migration SQL Strategy
-
-Instead of a single `init.sql`, split into:
-
-1. **`migrations/001_schema.sql`** — CREATE TABLE statements (PostgreSQL syntax)
-2. **`migrations/002_seed_foods.sql`** — INSERT seed data for foods
-3. **`migrations/003_seed_activities.sql`** — INSERT seed data for activities
-
-This separation mirrors the existing structure and makes it easier to run via Supabase SQL Editor (which has a 1MB size limit per query).
-
-### Key Schema Changes
-
-```sql
--- PostgreSQL equivalent of MySQL schema
-
-CREATE TABLE IF NOT EXISTS users (
-  id SERIAL PRIMARY KEY,
-  email VARCHAR(255) UNIQUE,
-  password_hash VARCHAR(255),
-  google_id VARCHAR(255) UNIQUE,
-  pdp_consent BOOLEAN DEFAULT FALSE,
-  pdp_consent_date TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS weight_logs (
+    id INT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    user_id INT NOT NULL,
+    weight_kg DECIMAL(5,2) NOT NULL CHECK (weight_kg > 0 AND weight_kg < 500),
+    logged_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    source VARCHAR(20) NOT NULL DEFAULT 'profile_update',  -- 'profile_update' | 'manual_entry'
+    notes TEXT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(user_id, logged_date)  -- one weight per day per user
 );
 
-CREATE TABLE IF NOT EXISTS profiles (
-  id SERIAL PRIMARY KEY,
-  user_id INT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-  weight_kg DECIMAL(5,2) NOT NULL,
-  height_cm DECIMAL(5,2) NOT NULL,
-  age INT NOT NULL,
-  gender VARCHAR(10) NOT NULL CHECK (gender IN ('male', 'female', 'other')),
-  fitness_goal VARCHAR(20) NOT NULL CHECK (fitness_goal IN ('lose_weight', 'maintain', 'gain_weight')),
-  activity_level VARCHAR(10) CHECK (activity_level IN ('low', 'medium', 'high')),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Trigger to auto-update updated_at (PG equivalent of MySQL's ON UPDATE CURRENT_TIMESTAMP)
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER update_users_updated_at
-  BEFORE UPDATE ON users
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_profiles_updated_at
-  BEFORE UPDATE ON profiles
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE INDEX IF NOT EXISTS idx_weight_logs_user_date ON weight_logs(user_id, logged_date DESC);
 ```
 
-### FOOD ENUM → CHECK Constraint
+**Design Rationale:**
+- `UNIQUE(user_id, logged_date)` — prevents duplicate daily entries. If a user updates their profile twice in one day, the weight log UPSERTs (updates the existing row). This matches the app's expected usage (day-level granularity is sufficient).
+- `source` — distinguishes auto-logged (profile update) vs manual (extra weight entry). Enables UI filtering.
+- `notes` — optional user context ("after morning run", "post-workout"). Low priority but no-cost to include.
+
+#### Modified Table: `profiles` — Add Goal Columns
 
 ```sql
--- Instead of ENUM, use VARCHAR with CHECK:
-category VARCHAR(20) NOT NULL CHECK (
-  category IN ('proteins', 'carbs', 'vegetables', 'fruits', 'dairy', 'fats', 'drinks', 'other')
-)
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS target_weight_kg DECIMAL(5,2) NULL;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS target_date DATE NULL;
 ```
 
-### GOAL_TAGS JSON → TEXT Array (Alternative)
+**Why columns, not a separate table:**
+- One active goal per user (1:1 with profile). A separate table would always have 0-1 rows per user — overkill.
+- No history needed for goals (users set a target, update it occasionally). If multi-goal history is needed later, we can migrate.
+- Keeps queries simple: `SELECT target_weight_kg, target_date FROM profiles WHERE user_id = $1` — no JOIN.
+- Matches existing pattern (fitness_goal is already a profile column).
 
-```sql
--- Option A: Keep as JSONB (fewer code changes to activity.repository.js)
-goal_tags JSONB NOT NULL
+**Decision: No weight trend column.** The trend is computed from `weight_logs` on read (last 7 vs last 30 entries). Storing computed trends violates single source of truth.
 
--- Option B: TEXT[] (more PostgreSQL idiomatic, simpler operators)
--- Query becomes: SELECT * FROM activities WHERE goal_tags && ARRAY['lose_weight'];
--- But requires changing repository.js to use array syntax
-goal_tags TEXT[] NOT NULL DEFAULT '{}'
+### 2.2 Backend Layer — New Module: `progress`
 
--- Recommendation: Use TEXT[] for simplicity with PostgreSQL operators
--- $1 placeholder replaces JSON.stringify(goalTags)
+New route-controller-service-repository chain (standard existing pattern):
+
+#### Routes
+```
+backend/src/routes/progress.routes.js
+├── router.use(authenticateToken)
+├── GET    /api/progress/weight          — Weight history (query: ?days=90)
+├── POST   /api/progress/weight          — Manual weight entry (source='manual_entry')
+├── DELETE /api/progress/weight/:id      — Delete a weight log entry
+├── GET    /api/progress/goals           — Get goal settings + progress toward them
+├── PUT    /api/progress/goals           — Update target_weight_kg and target_date
+└── GET    /api/progress/dashboard       — Aggregated dashboard data
 ```
 
----
-
-## Docker Multi-Stage Build
-
-### Strategy: Build Frontend, Serve All via Express
-
+#### Controllers
 ```
-┌──────────────────────────────────────────────────────────┐
-│                   Multi-Stage Dockerfile                   │
-├──────────────────────────────────────────────────────────┤
-│                                                           │
-│  Stage 1: node:20-alpine (build)                          │
-│  ┌────────────────────────────────────────────────────┐   │
-│  │  COPY frontend/package*.json ./frontend/            │   │
-│  │  RUN cd frontend && npm ci                          │   │
-│  │  COPY frontend/ ./frontend/                         │   │
-│  │  RUN cd frontend && npm run build                   │   │
-│  │  # Output: ./frontend/dist/                         │   │
-│  └────────────────────────────────────────────────────┘   │
-│                                                           │
-│  Stage 2: node:20-alpine (runtime)                        │
-│  ┌────────────────────────────────────────────────────┐   │
-│  │  COPY backend/package*.json ./                      │   │
-│  │  RUN npm ci --omit=dev                              │   │
-│  │  COPY backend/src/ ./src/                           │   │
-│  │  COPY --from=builder /app/frontend/dist ./dist      │   │
-│  │  EXPOSE 3001                                        │   │
-│  │  CMD ["npm", "start"]  # production mode            │   │
-│  └────────────────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────┘
+backend/src/controllers/progress.controller.js
+├── getWeightHistory(req, res)     — Weight logs for date range
+├── logWeightManually(req, res)    — Single manual weight entry
+├── deleteWeightEntry(req, res)    — Delete weight log by id
+├── getGoals(req, res)             — Current goal + progress calculation
+├── updateGoals(req, res)          — Update target_weight_kg + target_date in profiles
+└── getDashboard(req, res)         — Composite: current weight, goal, trend, stats
 ```
 
-### Express Static File Serving Configuration
+#### Services
+```
+backend/src/services/progress.service.js
+├── getWeightHistory(userId, days)      — Fetch + format weight logs
+├── logWeight(userId, weightKg, date, source, notes) — Create weight_log row
+├── deleteWeightEntry(userId, entryId)  — Remove weight log (scoped)
+├── getGoals(userId)                    — Read profile goal columns
+├── updateGoals(userId, targetWeightKg, targetDate) — Update profile goal columns
+├── calculateWeightChange(userId, days) — Rate of change over period
+└── getDashboard(userId)                — Assemble all dashboard data
+```
+
+#### Repositories
+```
+backend/src/repositories/weightLog.repository.js
+├── create(userId, weightKg, loggedDate, source, notes) — INSERT with ON CONFLICT UPSERT
+├── findByUserIdAndRange(userId, startDate, endDate)    — SELECT ordered by date DESC
+├── findLatest(userId)                                   — Single most recent entry
+├── deleteByIdAndUserId(entryId, userId)                 — DELETE scoped by user
+├── getWeightTrend(userId, days)                         — Min/max/first/last over period
+└── getWeightChangeRate(userId, days)                    — Linear rate calculation
+```
+
+### 2.3 Backend Integration Point: Profile Update → Auto-Log Weight
+
+**Critical integration:** `PUT /api/profile` must automatically create a weight_log entry. This is the single most important integration point.
+
+```
+profileController.updateProfile (MODIFIED)
+├── Extracts weightKg from req.body
+├── Calls profileService.updateProfile(userId, data)     ← unchanged
+│   └── profileRepository.updateByUserId(userId, data)   ← unchanged
+├── Calls weightLogService.logWeight(                    ← NEW: auto-log
+│     userId,
+│     data.weightKg,
+│     today,
+│     source='profile_update'
+│   )
+└── Returns { profile, bmi, tdee, ..., weightLogged: true }
+```
+
+**Implementation detail:** The auto-log should be **best-effort** — if the weight_log insert fails, the profile update should still succeed. Wrap it in a try/catch with a warning log. This avoids coupling profile updates to weight logging.
 
 ```javascript
-// In app.js — add AFTER API routes, BEFORE 404 handler
-import path from 'path';
-import { fileURLToPath } from 'url';
+// In profileController.updateProfile — after successful profile update
+try {
+  const today = new Date().toISOString().split('T')[0];
+  await logWeight(userId, weightKg, today, 'profile_update');
+} catch (logErr) {
+  console.warn(`[profile] Failed to auto-log weight: ${logErr.message}`);
+}
+```
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const distPath = path.join(__dirname, '../../dist');
+### 2.4 Frontend Layer — New Feature Module: `progress`
 
-// Serve static files in production only
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(distPath));
+```
+frontend/src/features/progress/
+├── api/progressApi.js              # API calls: getWeightHistory, logWeight, getDashboard, getGoals, updateGoals
+├── components/
+│   ├── ProgressDashboard.jsx       # Main dashboard page — composite view (route: /progress)
+│   ├── GoalSettings.jsx            # Target weight + date form
+│   ├── GoalProgress.jsx            # Visual goal progress (weight remaining, days remaining, rate needed)
+│   ├── WeightLogForm.jsx           # Manual weight entry form
+│   ├── WeightLogTable.jsx          # Weight log history table
+│   ├── WeightChart.jsx             # Trend chart (line chart)
+│   └── WeightChartControls.jsx     # Date range selector for chart
+├── hooks/
+│   ├── useWeightHistory.js         # TanStack Query: weight log data
+│   ├── useDashboard.js             # TanStack Query: dashboard aggregate
+│   └── useGoals.js                 # TanStack Query: goal settings
+├── index.js                        # Barrel exports: ProgressDashboard, etc.
+└── utils/
+    └── progressCalculations.js     # Pure function helpers: kgToLbs, trendDirection, etc.
+```
 
-  // SPA fallback: all non-API routes → index.html
-  app.get('*', (req, res, next) => {
-    // Skip API routes
-    if (req.path.startsWith('/api/')) return next();
-    res.sendFile(path.join(distPath, 'index.html'));
+**Chart Library Decision:** The existing project has no chart dependency. Two options:
+
+| Library | Size | Bundle Impact | Complexity | Recommendation |
+|---------|------|---------------|------------|----------------|
+| Recharts | ~200KB | Moderate | Low — React-native API | **RECOMMENDED** — best DX for simple line charts |
+| Chart.js + react-chartjs-2 | ~70KB | Low | Medium — imperative API | Good alternative if bundle size critical |
+| Vanilla SVG | 0KB | Zero | High — need custom implementation | Only if avoiding deps is a hard constraint |
+
+**Recommendation: Recharts.** The weight chart is a simple `LineChart` with date X-axis and weight Y-axis. Recharts provides this with <20 lines of component code and the React API matches the project's declarative style. The ~200KB cost is acceptable for a health app targeting desktop/mobile web.
+
+### 2.5 Route Changes
+
+```
+Router.jsx changes:
+└── Add:    <Route path="/progress" element={<ResponsiveLayout><ProtectedRoute><ProgressDashboard /></ProtectedRoute></ResponsiveLayout>} />
+└── Modify: DashboardPlaceholder — add link to /progress
+```
+
+### 2.6 Express App Integration
+
+```
+app.js changes:
+├── import progressRoutes from './routes/progress.routes.js';
+├── const progressLimiter = createRateLimiter({ max: 600 });
+├── app.use('/api/progress', progressLimiter);
+└── app.use('/api/progress', progressRoutes);
+```
+
+---
+
+## 3. Complete Data Flow Diagrams
+
+### 3.1 Profile Update → Weight Auto-Log
+
+```
+User submits profile form
+    │
+    ▼
+ProfileForm.jsx
+    │ PUT /api/profile { weightKg: 75, heightCm: 175, ... }
+    │
+    ▼
+profileController.updateProfile
+    │
+    ├──► profileService.updateProfile(userId, data) ─────► profileRepository.updateByUserId()
+    │       (validates + updates profiles table)
+    │
+    ├──► weightLogService.logWeight(userId, 75, today, 'profile_update')  ◄── INTEGRATION
+    │       │
+    │       └──► weightLogRepository.create(userId, 75, today, 'profile_update')
+    │               INSERT INTO weight_logs (user_id, weight_kg, logged_date, source)
+    │               VALUES ($1, $2, $3, $4)
+    │               ON CONFLICT (user_id, logged_date) DO UPDATE SET weight_kg = $2
+    │
+    └──► response { profile, bmi, tdee, ..., weightLogged: true }
+```
+
+**Important: UPSERT not INSERT.** The `ON CONFLICT DO UPDATE` clause handles the case where a user updates their profile twice on the same day. The second update overwrites the first weight_log for that day rather than creating a duplicate.
+
+### 3.2 Manual Weight Entry
+
+```
+User opens Progress Dashboard → clicks "Log Weight"
+    │
+    ▼
+WeightLogForm.jsx
+    │ POST /api/progress/weight { weightKg: 74.5, date: "2026-06-01", notes: "morning, fasted" }
+    │
+    ▼
+progressController.logWeightManually
+    │
+    ├──► validateWeightInput(weightKg)  ← validation in service
+    │
+    ├──► progressService.logWeight(userId, 74.5, "2026-06-01", "manual_entry")
+    │       │
+    │       └──► weightLogRepository.create(userId, 74.5, "2026-06-01", "manual_entry", notes)
+    │               Same UPSERT pattern as auto-log
+    │
+    └──► response { success: true, entry: { id, weight_kg, logged_date, source } }
+```
+
+### 3.3 Dashboard Page Load
+
+```
+User navigates to /progress
+    │
+    ▼
+ProgressDashboard mounts
+    │
+    ├──► useDashboard()  ── GET /api/progress/dashboard
+    │       │               Returns: {
+    │       │                 currentWeight, targetWeight, targetDate,
+    │       │                 weightTrend: { direction, rate, days },
+    │       │                 startWeight, totalChange,
+    │       │                 recentCalorieAvg, recentActivityAvg
+    │       │               }
+    │       │
+    │       ▼
+    │   progressController.getDashboard
+    │       │
+    │       ├──► profileRepository.findByUserId(userId)
+    │       │       → current weight, height, goal settings
+    │       │
+    │       ├──► weightLogRepository.getWeightTrend(userId, 90)
+    │       │       → first, last, min, max weight over 90 days
+    │       │
+    │       ├──► foodRepository.getDailyTotalsInRange(userId, 7 days)
+    │       │       → average daily calories consumed
+    │       │
+    │       ├──► activityRepository.getDailyActivityTotal(userId, 7 days range)
+    │       │       → average daily calories burned
+    │       │
+    │       └──► assembled dashboard response
+    │
+    ├──► useWeightHistory(90)  ── GET /api/progress/weight?days=90
+    │       │
+    │       └──► returns [{ logged_date, weight_kg, source }, ...]
+    │               ↓
+    │           WeightChart renders from this data
+    │
+    └──► useGoals()  ── GET /api/progress/goals
+            │
+            └──► returns { targetWeightKg, targetDate, currentWeight, remaining, progressPct }
+                    ↓
+                GoalProgress renders from this data
+```
+
+### 3.4 Chart Data Query & Transformation
+
+```
+GET /api/progress/weight?days=90
+    │
+    ▼
+weightLogRepository.findByUserIdAndRange(userId, startDate, endDate)
+    │ SELECT id, weight_kg, logged_date, source, notes, created_at
+    │ FROM weight_logs
+    │ WHERE user_id = $1 AND logged_date >= $2 AND logged_date <= $3
+    │ ORDER BY logged_date ASC           ── ASC for chart rendering (time series)
+    │
+    ▼
+Returns: [
+  { id: 1,  weight_kg: 78.0, logged_date: "2026-03-01", source: "profile_update" },
+  { id: 2,  weight_kg: 77.5, logged_date: "2026-03-15", source: "profile_update" },
+  { id: 5,  weight_kg: 76.0, logged_date: "2026-04-01", source: "manual_entry" },
+  ...
+]
+    │
+    ▼
+WeightChart.jsx receives as prop
+    │ Transform to Recharts format:
+    │ data.map(entry => ({ date: entry.logged_date, weight: entry.weight_kg, label: ... }))
+    │
+    ▼
+<LineChart data={chartData} width={...} height={300}>
+  <XAxis dataKey="date" />
+  <YAxis dataKey="weight" domain={['dataMin - 2', 'dataMax + 2']} />
+  <Tooltip />
+  <Line type="monotone" dataKey="weight" stroke="#16a34a" dot={false} />
+  {/* Optional: Goal target line */}
+  <ReferenceLine y={targetWeightKg} stroke="#dc2626" strokeDasharray="5 5" />
+</LineChart>
+```
+
+---
+
+## 4. Component Tree & State Ownership
+
+### ProgressDashboard Composite Component
+
+```
+ProgressDashboard (page-level)
+│
+├── Top Summary Banner (inline)
+│   ├── Current Weight (from dashboard data)
+│   ├── Goal Weight (from dashboard data)
+│   ├── Remaining (calc: current - target)
+│   └── Days Remaining (calc: targetDate - today)
+│
+├── WeightChart.jsx
+│   ├── Receives: weightHistory[], targetWeightKg
+│   ├── State: viewDays (30/60/90 — default 90)
+│   └── Sub-components: WeightChartControls (date range buttons)
+│
+├── GoalSettings.jsx
+│   ├── Receives: currentGoal, onSave
+│   ├── Form fields: target_weight_kg (number), target_date (date picker)
+│   └── Submits: PUT /api/progress/goals
+│
+├── WeightLogForm.jsx (collapsible section)
+│   ├── State: weightKg, date, notes, isSubmitting
+│   └── Submits: POST /api/progress/weight
+│
+├── WeightLogTable.jsx
+│   ├── Receives: weightHistory[]
+│   ├── Display: date, weight, source badge, delete button
+│   └── Delete: DELETE /api/progress/weight/:id
+│
+└── GoalProgress.jsx (optional, shown when goal is set)
+    ├── Visual progress bar (current vs target)
+    └── Text: "5.0 kg lost in 60 days — on track for your goal"
+```
+
+### State Ownership
+
+| State | Owned By | Mechanism |
+|-------|----------|-----------|
+| `weightHistory` | `useWeightHistory` hook | TanStack Query, refetched on mutation success |
+| `dashboardData` | `useDashboard` hook | TanStack Query, staleTime: 5min |
+| `goalSettings` | `useGoals` hook | TanStack Query + local form state |
+| `viewDays` (chart range) | `ProgressDashboard` local state | useState(90) |
+| `weightLogForm` | `WeightLogForm` local state | useState per field |
+| `goalForm` | `GoalSettings` local state | react-hook-form |
+
+### Query Hook Patterns
+
+```javascript
+// hooks/useWeightHistory.js — following existing pattern
+export function useWeightHistory(days = 90) {
+  return useQuery({
+    queryKey: ['weightHistory', days],
+    queryFn: () => getWeightHistory(days),
+    staleTime: 5 * 60 * 1000,
+    select: (data) => data.data || [],
+  });
+}
+
+// hooks/useDashboard.js
+export function useDashboard() {
+  return useQuery({
+    queryKey: ['progressDashboard'],
+    queryFn: getDashboard,
+    staleTime: 5 * 60 * 1000,
+    select: (data) => data.data || null,
   });
 }
 ```
 
-### Updated docker-compose.yml
+---
 
-```yaml
-services:
-  app:
-    build: .
-    container_name: fitness_app
-    restart: unless-stopped
-    ports:
-      - "3001:3001"
-    env_file:
-      - .env
-    environment:
-      - NODE_ENV=production
-      - PORT=3001
-      - SUPABASE_URL=${SUPABASE_URL}
-      - DATABASE_URL=${DATABASE_URL}  # Supavisor pooled connection
-      - JWT_SECRET=${JWT_SECRET}
-      - FRONTEND_URL=${FRONTEND_URL}
-      # Google OAuth
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-```
+## 5. Modification Summary
 
-### Simplified Directory Structure (After Migration)
+### New Files (Backend)
 
-```
-Fitness_App/
-├── backend/
-│   ├── src/
-│   │   ├── app.js              # MODIFIED: added express.static for production
-│   │   ├── server.js           # MODIFIED: pg pool health check
-│   │   ├── config/
-│   │   │   ├── database.js     # REPLACED: mysql2 → pg Pool
-│   │   │   └── passport.js     # UNCHANGED
-│   │   ├── repositories/
-│   │   │   ├── user.repository.js    # MODIFIED: $1 placeholders
-│   │   │   ├── food.repository.js    # MODIFIED: $1, RETURNING
-│   │   │   ├── profile.repository.js # MODIFIED: $1, RETURNING
-│   │   │   └── activity.repository.js# MODIFIED: $1, jsonb/TEXT[] ops
-│   │   ├── controllers/        # UNCHANGED (4 files)
-│   │   ├── services/           # UNCHANGED (4 files)
-│   │   ├── routes/             # UNCHANGED (4 files)
-│   │   ├── middlewares/        # UNCHANGED (1 file)
-│   │   └── utils/              # UNCHANGED (2 files)
-│   ├── migrations/             # NEW: PostgreSQL schema + seed data
-│   │   ├── 001_schema.sql
-│   │   ├── 002_seed_foods.sql
-│   │   └── 003_seed_activities.sql
-│   ├── tests/                  # UNCHANGED
-│   └── package.json            # MODIFIED: mysql2 → pg
-├── frontend/                   # UNCHANGED source
-│   ├── src/                    # UNCHANGED
-│   ├── vite.config.js          # MINOR: proxy only needed for dev
-│   └── package.json            # UNCHANGED
-├── Dockerfile                  # NEW: Multi-stage (replaces backend/ + frontend/ Dockerfiles)
-├── .dockerignore               # NEW: exclude node_modules, src for stage 1
-├── docker-compose.yml          # RESTRUCTURED: single service
-└── .env                        # RESTRUCTURED: Supabase connection vars
-```
+| File | Type | Lines (est.) | Responsibility |
+|------|------|-------------|---------------|
+| `backend/src/routes/progress.routes.js` | Route | ~30 | Mount 6 endpoints with auth |
+| `backend/src/controllers/progress.controller.js` | Controller | ~150 | 6 handlers: weight CRUD + goals + dashboard |
+| `backend/src/services/progress.service.js` | Service | ~200 | Business logic: validation, trend calc, dashboard assembly |
+| `backend/src/repositories/weightLog.repository.js` | Repository | ~150 | 6 SQL queries: CRUD + trend + range |
+| `backend/db/add_weight_logs.sql` | Migration | ~20 | CREATE TABLE weight_logs |
+| `backend/db/add_goal_columns.sql` | Migration | ~15 | ALTER TABLE profiles ADD COLUMN |
+
+### Modified Files (Backend)
+
+| File | Change | Risk |
+|------|--------|------|
+| `backend/src/controllers/profile.controller.js` | Add weight auto-log after profile update (try/catch) | LOW — additive, non-blocking |
+| `backend/src/services/profile.service.js` | No changes needed | — |
+| `backend/src/repositories/profile.repository.js` | No changes needed | — |
+| `backend/src/app.js` | Add `app.use('/api/progress', progressRoutes)` | LOW — standard pattern |
+| `backend/db/schema.sql` | Add weight_logs table + goal columns | MEDIUM — schema change, must be idempotent |
+
+### New Files (Frontend)
+
+| File | Type | Responsibility |
+|------|------|---------------|
+| `frontend/src/features/progress/api/progressApi.js` | API layer | getWeightHistory, logWeight, deleteWeight, getDashboard, getGoals, updateGoals |
+| `frontend/src/features/progress/components/ProgressDashboard.jsx` | Page component | Composite view container |
+| `frontend/src/features/progress/components/WeightChart.jsx` | Component | Recharts LineChart |
+| `frontend/src/features/progress/components/WeightChartControls.jsx` | Component | Date range selector buttons |
+| `frontend/src/features/progress/components/GoalSettings.jsx` | Component | Target weight + date form |
+| `frontend/src/features/progress/components/GoalProgress.jsx` | Component | Goal progress visualization |
+| `frontend/src/features/progress/components/WeightLogForm.jsx` | Component | Manual weight entry form |
+| `frontend/src/features/progress/components/WeightLogTable.jsx` | Component | Weight history table with delete |
+| `frontend/src/features/progress/hooks/useWeightHistory.js` | Hook | TanStack Query wrapper |
+| `frontend/src/features/progress/hooks/useDashboard.js` | Hook | TanStack Query wrapper |
+| `frontend/src/features/progress/hooks/useGoals.js` | Hook | TanStack Query wrapper |
+| `frontend/src/features/progress/utils/progressCalculations.js` | Utils | Trend direction, remaining calc, date helpers |
+| `frontend/src/features/progress/index.js` | Barrel | Export components |
+
+### Modified Files (Frontend)
+
+| File | Change | Risk |
+|------|--------|------|
+| `frontend/src/app/Router.jsx` | Add `/progress` route + nav link | LOW |
+| `frontend/src/app/App.jsx` or `Router.jsx` | Add link to nav in `DashboardPlaceholder` | LOW |
+| `frontend/package.json` | Add `recharts` dependency | LOW |
 
 ---
 
-## Repository Rewrite Map
+## 6. Build Order (Dependency-Aware)
 
-### user.repository.js — Changes
+### Phase 1: Database Schema + Goal Columns **← MUST BE FIRST**
 
-| Line | MySQL (BEFORE) | PostgreSQL (AFTER) |
-|------|----------------|-------------------|
-| Import | `import { pool } from '../config/database.js'` | Same import (rewritten database.js) |
-| Placeholder | `VALUES (?, ?, ?, ?)` | `VALUES ($1, $2, $3, $4)` |
-| LAST_INSERT_ID | Two queries: INSERT + SELECT via `LAST_INSERT_ID()` | Single query: `INSERT ... RETURNING *` |
-| Error code | `err.code === 'ER_DUP_ENTRY'` | `err.code === '23505'` (PostgreSQL unique violation) |
-| Boolean values | `pdpConsent ? 1 : 0` | `pdpConsent` (boolean directly) |
-| Destructuring | `const [rows] = await pool.query(...)` | `const result = await pool.query(...)` then `result.rows[0]` |
+| Step | What | Depends On | Risk |
+|------|------|------------|------|
+| 1.1 | Create `weight_logs` table (migration script) | Nothing | LOW |
+| 1.2 | Add `target_weight_kg`, `target_date` columns to `profiles` | Nothing | LOW |
+| 1.3 | Update `backend/db/schema.sql` (idempotent — DO $$ blocks) | 1.1, 1.2 | LOW |
 
-### food.repository.js — Changes
+**Rationale:** Everything else depends on the database existing. Run migrations first, verify locally, then proceed.
 
-| MySQL | PostgreSQL |
-|-------|-----------|
-| `?` → `$1, $2, $3` | All parameter placeholders |
-| `LAST_INSERT_ID()` | `RETURNING *` |
-| `ER_DUP_ENTRY` | `'23505'` |
-| `DATE_SUB(CURDATE(), INTERVAL ? DAY)` | `CURRENT_DATE - $1::INTERVAL` or `CURRENT_DATE - MAKE_INTERVAL(days => $1)` |
-| `[rows]` destructuring | `result.rows` |
-| `rows[0].total \|\| 0` | `parseInt(result.rows[0].total) \|\| 0` (pg returns strings for numeric types) |
+### Phase 2: Backend — Weight Log CRUD
 
-### activity.repository.js — Changes
+| Step | What | Depends On | Risk |
+|------|------|------------|------|
+| 2.1 | Create `weightLog.repository.js` — create, findByUserIdAndRange, deleteByIdAndUserId | 1.1 | LOW |
+| 2.2 | Create `progress.service.js` — logWeight, getWeightHistory, deleteWeightEntry | 2.1 | LOW |
+| 2.3 | Create `progress.controller.js` — getWeightHistory, logWeightManually, deleteWeightEntry | 2.2 | LOW |
+| 2.4 | Create `progress.routes.js` — 3 weight CRUD endpoints | 2.3 | LOW |
+| 2.5 | Register routes in `app.js` | 2.4 | LOW |
+| 2.6 | Write unit tests for weight log service | 2.2 | LOW |
+| 2.7 | Write integration tests for weight endpoints | 2.5 | LOW |
 
-| MySQL | PostgreSQL |
-|-------|-----------|
-| `JSON_OVERLAPS(goal_tags, CAST(? AS JSON))` | `goal_tags::jsonb ?\| $1::text[]` if keeping JSONB, or `goal_tags && $1::text[]` if using TEXT[] |
-| `ORDER BY RAND()` | `ORDER BY RANDOM()` |
-| `[rows]` destructuring | `result.rows` |
+**Rationale:** Weight CRUD is the foundational backend capability. It has no dependencies on goals or dashboard. Build it standalone, test it, then build on top.
 
-### profile.repository.js — Changes
+### Phase 3: Backend — Profile Integration Point
 
-| MySQL | PostgreSQL |
-|-------|-----------|
-| `?` → `$1, $2, ...` | All parameter placeholders |
-| `LAST_INSERT_ID()` | `RETURNING *` |
-| `ER_DUP_ENTRY` | `'23505'` |
-| `[rows]` destructuring | `result.rows` |
-| `NOW()` | `NOW()` (same) |
+| Step | What | Depends On | Risk |
+|------|------|------------|------|
+| 3.1 | Modify `profileController.updateProfile` — add try/catch weight auto-log | 2.2 | **MEDIUM** — must not break existing profile update |
+| 3.2 | Add weight logged confirmation to profile response | 3.1 | LOW |
+| 3.3 | Write test: profile update creates weight_log entry | 3.1 | LOW |
 
----
+**Integration test critical:** The auto-log must be non-blocking. Test scenarios:
+- Profile update succeeds → weight_log created
+- Profile update succeeds → weight_log insert fails → profile update still returns success
+- Profile update with same weight twice on same day → UPSERT, not duplicate
 
-## Environment Variable Changes
+### Phase 4: Backend — Goals + Dashboard Endpoints
 
-### Current (.env)
+| Step | What | Depends On | Risk |
+|------|------|------------|------|
+| 4.1 | Add getGoals/updateGoals to progressService (read/write profile columns) | 1.2 | LOW |
+| 4.2 | Add getDashboard to progressService (composite query: profile + trend + calorie + activity) | 2.1, 4.1 | **MEDIUM** — most complex query assembly |
+| 4.3 | Add getGoals, updateGoals, getDashboard to progressController + routes | 4.1, 4.2 | LOW |
+| 4.4 | Write tests for goal service + dashboard assembly | 4.1, 4.2 | LOW |
 
-```env
-# Database (MySQL)
-DB_HOST=mysql
-DB_PORT=3306
-DB_USER=admin
-DB_PASSWORD=admin1234
-DB_NAME=fitness_app
-DB_ROOT_PASSWORD=niliterna86gt
+**Dashboard query complexity:** The dashboard endpoint is the most complex in the new module. It needs:
+- Profile (for current weight, goal, height for BMI)
+- Weight trend (weight_logs statistics over 90 days)
+- Calorie average (food_logs over 7 days)
+- Activity average (activity_logs over 7 days)
+
+**Use `Promise.all` for parallel queries** (following the existing pattern in `activity.controller.js` getActivitySummary):
+
+```javascript
+// progress.service.js — getDashboard
+export async function getDashboard(userId) {
+  const [profile, weightTrend, recentCalories, recentActivity] = await Promise.all([
+    profileRepository.findByUserId(userId),
+    weightLogRepository.getWeightTrend(userId, 90),
+    foodRepository.getDailyTotalsInRange(userId, 7),  // average consumption
+    activityRepository.getDailyActivityTotal(userId, 7),  // average burn
+  ]);
+  
+  if (!profile) return null;
+  
+  return {
+    currentWeightKg: profile.weight_kg,
+    targetWeightKg: profile.target_weight_kg,
+    targetDate: profile.target_date,
+    remainingKg: profile.target_weight_kg != null
+      ? Math.round((profile.weight_kg - profile.target_weight_kg) * 10) / 10
+      : null,
+    ...(weightTrend || {}),
+    avgDailyCaloriesConsumed: recentCalories?.avg || null,
+    avgDailyCaloriesBurned: recentActivity?.avg || null,
+  };
+}
 ```
 
-### Target (.env)
+### Phase 5: Frontend — Progress API Layer
 
-```env
-# Supabase PostgreSQL (pooled via Supavisor — port 6543)
-DATABASE_URL=postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
+| Step | What | Depends On | Risk |
+|------|------|------------|------|
+| 5.1 | Create `progressApi.js` — all API functions | 2.4, 4.3 | LOW |
+| 5.2 | Create `useWeightHistory.js`, `useDashboard.js`, `useGoals.js` hooks | 5.1 | LOW |
+| 5.3 | Install `recharts` dependency | Nothing | LOW |
 
-# Direct connection for migrations only (port 5432)
-SUPABASE_DIRECT_URL=postgresql://postgres.[ref]:[password]@db.[ref].supabase.co:5432/postgres
+### Phase 6: Frontend — GoalSettings Component
 
-# Supabase project reference (used for Supabase JS client if needed later)
-SUPABASE_URL=https://[ref].supabase.co
-SUPABASE_SERVICE_ROLE_KEY=[service-role-key]  # Only if admin operations needed
+| Step | What | Depends On | Risk |
+|------|------|------------|------|
+| 6.1 | Create `GoalSettings.jsx` — target weight + date form | 5.1 | LOW |
+| 6.2 | Create `GoalProgress.jsx` — progress bar + remaining calc | 5.2 | LOW |
+| 6.3 | Write component tests | 6.1, 6.2 | LOW |
 
-# Application
-JWT_SECRET=8f3d2b7c1a9e4f6d... (same as before)
-FRONTEND_URL=http://localhost:3001  # Updated: same origin now
+**Rationale:** Goal settings is the simplest standalone component. Building it first validates the API + hook pattern before tackling the chart.
 
-# Google OAuth2 (unchanged)
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
+### Phase 7: Frontend — WeightLogForm + WeightLogTable
 
-# SSL (Supabase SSL CA cert — optional, for verify-full mode)
-# SSL_CA_PATH=/app/certs/supabase-ca.crt
-```
+| Step | What | Depends On | Risk |
+|------|------|------------|------|
+| 7.1 | Create `WeightLogForm.jsx` — manual entry form (weight, date, notes) | 5.1 | LOW |
+| 7.2 | Create `WeightLogTable.jsx` — table with date/weight/source/delete | 5.2 | LOW |
+| 7.3 | Wire delete mutation to refetch weight history | 7.2 | LOW |
+| 7.4 | Write component tests | 7.1, 7.2 | LOW |
 
----
+### Phase 8: Frontend — WeightChart
 
-## Migration Path & Build Order
+| Step | What | Depends On | Risk |
+|------|------|------------|------|
+| 8.1 | Create `WeightChart.jsx` — Recharts LineChart component | 5.1, 5.3 | **MEDIUM** — first chart component in project |
+| 8.2 | Create `WeightChartControls.jsx` — day range toggle | 8.1 | LOW |
+| 8.3 | Wire date range changes to refetch weight history | 8.2 | LOW |
+| 8.4 | Add goal reference line to chart | 8.1 | LOW |
+| 8.5 | Write component test (mock Recharts) | 8.1 | MEDIUM — mocking canvas/charts |
 
-```
-Phase 1: Supabase Setup
-  1. Create Supabase project (via dashboard)
-  2. Get connection strings (pooler + direct)
-  3. Run migration scripts via Supabase SQL Editor
-  4. Verify schema + seed data with psql / Supabase dashboard
+### Phase 9: Frontend — ProgressDashboard Composite + Route
 
-Phase 2: Backend Query Rewrite
-  1. Add `pg` dependency to backend/package.json
-  2. Rewrite database.js: mysql2 Pool → pg Pool (SSL enabled)
-  3. Rewrite user.repository.js: $1, RETURNING, error codes
-  4. Rewrite profile.repository.js: $1, RETURNING, error codes
-  5. Rewrite food.repository.js: $1, RETURNING, date functions
-  6. Rewrite activity.repository.js: $1, JSONB/text operators
-  7. Update server.js health check (pg syntax)
+| Step | What | Depends On | Risk |
+|------|------|------------|------|
+| 9.1 | Create `ProgressDashboard.jsx` — arrange all sub-components | 6.1, 6.2, 7.1, 7.2, 8.1 | LOW |
+| 9.2 | Add `/progress` route to `Router.jsx` | 9.1 | LOW |
+| 9.3 | Add nav link to `DashboardPlaceholder` | 9.2 | LOW |
+| 9.4 | Write page-level integration test | 9.1 | LOW |
 
-Phase 3: Docker Restructure
-  1. Create root-level Dockerfile (multi-stage)
-  2. Remove mysql + adminer + frontend services from docker-compose.yml
-  3. Add static file serving in app.js (production check)
-  4. Update .env with Supabase connection vars
-  5. Create .dockerignore for optimal build caching
-  6. Remove old frontend/ Dockerfile (no longer needed)
-  7. Remove old backend/ Dockerfile (no longer needed)
+### Phase 10: Polish & Edge Cases
 
-Phase 4: Testing & Validation
-  1. Run integration tests against Supabase
-  2. Run unit tests (unchanged — they mock the pool)
-  3. Verify static file serving in single container
-  4. Smoke test all 4 API domains
-```
+| Step | What | Depends On | Risk |
+|------|------|------------|------|
+| 10.1 | Empty states: no weight data, no goal set, first visit | 9.1 | LOW |
+| 10.2 | Loading states for each sub-component | 9.1 | LOW |
+| 10.3 | Error states: API failure, stale data | 9.1 | LOW |
+| 10.4 | Mobile responsiveness: chart sizing, stacked layout | 9.1 | LOW |
 
----
-
-## Pitfalls & Mitigations
-
-| Pitfall | Risk | Mitigation |
-|---------|------|-----------|
-| **Connection pool exhaustion** on Supabase free tier (15 pooled connections) | MEDIUM | Set pg Pool `max: 5`; monitor `pg_stat_activity`; upgrade to Pro if needed |
-| **MySQL-specific SQL patterns** missed during rewrite (e.g., `DATE_SUB` with `INTERVAL ? DAY`) | HIGH | Comprehensive grep for `INTERVAL`, `LAST_INSERT_ID`, `JSON_OVERLAPS`, `NOW()`, `CURDATE()` before any rewrite |
-| **pg returns numeric as string** in `result.rows` | MEDIUM | Check all `SUM`, `COUNT`, `DECIMAL` query results; wrap with `Number()` |
-| **Supavisor doesn't support prepared statements** in transaction mode | LOW | `pg` uses unnamed (simple) queries by default with `pool.query(text, values)`; no prepared statement usage in current code |
-| **IPv6-only direct host** on Supabase | MEDIUM | Use Supavisor pooler (dual-stack, port 6543) for all application connections |
-| **Seed data SQL size** exceeds Supabase SQL Editor limits | LOW | Split seed data into separate files per category/table |
-| **Google OAuth redirect URI mismatch** after single-container deployment | LOW | Update Google Cloud Console redirect URI to match new origin (e.g., `http://localhost:3001/api/auth/google/callback`) |
-| **CORS configuration** changes with same-origin deployment | LOW | Remove or update CORS `origin` when frontend/backend are same origin; keep for development |
-| **`updated_at` trigger** missing in PostgreSQL | MEDIUM | Add PL/pgSQL trigger function for all tables that use `ON UPDATE CURRENT_TIMESTAMP` in MySQL |
-| **ESM compatibility** with `pg` module | NONE | `pg` v8.x supports ESM imports: `import pg from 'pg'; const { Pool } = pg;` |
-
----
-
-## Integration Points
-
-### Supabase ↔ Express (Database)
-
-| Integration | Pattern | Details |
-|------------|---------|---------|
-| **Connection** | pg Pool with connection string | `new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false }, max: 5 })` |
-| **Health check** | `pool.query('SELECT 1')` on server startup | Same pattern as MySQL; exits on failure |
-| **Migration** | Supabase SQL Editor (manual) | One-time; run SQL via dashboard SQL Editor |
-| **Secrets** | Environment variables | `DATABASE_URL` is the connection string with embedded credentials |
-
-### Express Backend ↔ Frontend (Static Files)
-
-| Integration | Pattern | Details |
-|------------|---------|---------|
-| **Development** | Vite dev server with proxy | `vite.config.js` proxies `/api` to `localhost:3001` (unchanged) |
-| **Production** | Express `express.static()` | Serves built files from `./dist/` after multi-stage build |
-| **SPA routing** | Catch-all route `app.get('*')` | Returns `index.html` for all non-API paths |
-
-### Authentication Flow (Same-Origin)
+### Phase Order Rationale
 
 ```
-Production:
-  Browser → http://localhost:3001/ → Express serves index.html
-  Browser → POST http://localhost:3001/api/auth/login → same origin → cookie set for same domain
-
-Development:
-  Browser → http://localhost:5173/ → Vite dev server
-  Browser → POST http://localhost:5173/api/auth/login → Vite proxy → http://localhost:3001/api/auth/login
-  Cookie set for localhost:3001 — need proxy to forward cookies or use different strategy
+Phase 1 (Schema) ─┬─→ Phase 2 (Weight CRUD) ──→ Phase 3 (Profile Integration)
+                  │
+                  └─→ Phase 4 (Goals + Dashboard)
+                            │
+                            ▼
+                  Phase 5 (Frontend API) ──→ Phase 6 (Goals UI)
+                            │                      │
+                            ├──→ Phase 7 (Weight Log UI)
+                            │           │
+                            └──→ Phase 8 (Chart) ──→ Phase 9 (Dashboard)
+                                                           │
+                                                    Phase 10 (Polish)
 ```
 
-**Important:** In development, the Vite proxy on port 5173 means the JWT cookie is set from `localhost:3001` (backend) but the browser sees `localhost:5173`. For development, either:
-1. Add `"proxy"` in `vite.config.js` to also handle cookie domain (works with `changeOrigin: true`)
-2. OR use a separate dev login flow
-
-Current Vite config already sets `changeOrigin: true`, so cookies from the backend (localhost:3001) are forwarded to the frontend (localhost:5173) correctly.
-
----
-
-## Scaling Considerations
-
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| 0-100 users | Single container + Supabase free tier (15 pooled conns); Express static serving is fine |
-| 100-1K users | Supabase Pro tier (60 pooled conns); increase pg Pool `max` to 10-15; add nginx in front for static file caching |
-| 1K-10K users | Split into separate containers; add nginx reverse proxy; add read replica on Supabase; increase compute add-on |
-
-### Bottleneck Analysis
-
-1. **First bottleneck:** Supabase free tier connection limit (15 pooled). Mitigation: pool size of 5 on Express, upgrade to Pro ($25/mo) for 60 connections.
-2. **Second bottleneck:** Express single-threaded serving static files under load. Mitigation: add nginx sidecar to serve static files directly, or split into two containers.
-3. **Third bottleneck:** Database query throughput. Mitigation: add PgBouncer dedicated pooler (Pro+), add read replicas for reporting queries.
+1. **Schema first** — database must exist for anything else
+2. **Weight CRUD before profile integration** — auto-log needs the repository to exist
+3. **Profile integration isolated** — highest risk step, needs dedicated testing
+4. **Frontend after all backend endpoints exist** — avoid mocking unimplemented APIs in tests
+5. **Goals before chart** — simplest component validates the hook + API pattern
+6. **Chart before dashboard** — chart is the most technically complex component, building it standalone first simplifies debugging
+7. **Dashboard last** — composite view depends on everything else working
 
 ---
 
-## Sources
+## 7. Risk Assessment
 
-- **node-postgres (pg) official docs**: https://node-postgres.com/ — Pool API, query syntax, SSL configuration — **HIGH confidence**
-- **Supabase SSL Enforcement docs**: https://supabase.com/docs/guides/platform/ssl-enforcement — SSL modes, CA cert download — **HIGH confidence**
-- **Supabase Connection Pooling (Supavisor)**: https://supabase.com/docs/guides/database/connecting-to-postgres — Connection string formats, port 5432 vs 6543 — **HIGH confidence**
-- **Docker multi-stage build for Node.js**: https://docs.docker.com/guides/nodejs/containerize/ — Official Docker guide — **HIGH confidence**
-- **PostgreSQL trigger for updated_at**: https://x-team.com/blog/automatic-timestamps-with-postgresql/ — PL/pgSQL trigger pattern — **MEDIUM confidence**
-- **PostgreSQL error codes**: https://www.postgresql.org/docs/current/errcodes-appendix.html — `23505` for unique violation — **HIGH confidence**
-- **Stack Overflow: Express + React single container**: https://stackoverflow.com/questions/63784949/ — Validates feasibility for low-traffic apps — **LOW confidence** (single source)
+| Risk | Severity | Likelihood | Mitigation |
+|------|----------|------------|------------|
+| Profile update auto-log breaks existing behavior | **High** | Low | Wrap in try/catch with warning log; write integration test that verifies profile update succeeds even when weight_log insert fails |
+| UPSERT conflict: user enters weight manually on same day as profile update | Low | Medium | `source` column tracks origin; weight_log value is the same (both use the weight_kg from the most recent write). Document as "last-write-wins" |
+| Recharts bundle size impacts page load | Low | Medium | Dynamic import (`React.lazy`) for ProgressDashboard; 200KB for Recharts is acceptable for a health app |
+| Chart rendering with sparse data (only 2-3 weight entries) | Low | High | WeightChart must handle empty arrays and single-point datasets. Show "Log your first weight" cta when data.length === 0 |
+| Target date is in the past (user sets goal retroactively) | Low | Medium | Client-side validation: target_date must be >= today. Server-side validation in progressService.validateGoalData |
+| Goal progress calculation with no weight logs | Medium | Low | Dashboard shows "No weight data yet — log your first weight to see progress" when weight_logs empty |
+| Weight unit inconsistencies (kg vs lbs) | Low | Low | Store in kg only (existing pattern). Display always in kg (UI consistency). If lbs display needed, it's a display-only conversion |
 
 ---
 
-*Architecture research for: Fitness_App v1.2 Supabase Migration & Single-Container Deployment*
-*Researched: 2026-05-27*
+## 8. Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Blocking profile update on weight log failure
+**What people do:** Wrap weight_log insert in the same transaction as profile update.
+**Why it's wrong:** If the weight_log insert fails (unique constraint, connection issue), the profile update also fails. Users can't save their profile because a secondary feature is broken.
+**Do this instead:** The weight auto-log is best-effort. Profile update always succeeds independently. Log a warning and move on.
+
+### Anti-Pattern 2: Computing trend/history in the database on every render
+**What people do:** A frontend component fetches ALL weight_log rows and computes trends in JavaScript on every render.
+**Why it's wrong:** With 2+ years of daily weight logging, that's 730+ rows fetched just to show "You lost 5kg in 90 days." Wasteful.
+**Do this instead:** Use `getWeightTrend(userId, 90)` SQL query that returns aggregate statistics (first, last, min, max, count) in a single row. Only fetch full history when the chart is visible.
+
+### Anti-Pattern 3: Over-abstracting the dashboard endpoint
+**What people do:** Create separate micro-endpoints for every dashboard metric (GET /api/progress/weight-trend, GET /api/progress/calorie-avg, GET /api/progress/activity-avg) and let the frontend orchestrate 5 parallel calls.
+**Why it's wrong:** The dashboard endpoint is already orchestrating 3-4 parallel queries on the backend. Pushing this orchestration to the frontend increases latency (5 round-trips instead of 1) and complexity (5 loading/error states).
+**Do this instead:** One `GET /api/progress/dashboard` endpoint that returns the composite object. The backend is closer to the database — queries are faster from there.
+
+### Anti-Pattern 4: Storing computed trend values in the database
+**What people do:** Add a `weight_trend` or `weight_change_rate` column to the profiles table, computed on profile update.
+**Why it's wrong:** Violates single source of truth. The trend depends on the query range (7 days? 30 days? 90 days?). Cached values go stale as new weight entries are added. Multiple components computing the trend differently produces inconsistent numbers.
+**Do this instead:** Compute trend on read from raw weight_log data. The database can do this efficiently with aggregate queries. If performance becomes an issue (at scale), cache the computed dashboard response, not the raw trend value.
+
+---
+
+## 9. Testing Strategy
+
+### Backend Unit Tests (new)
+
+| Test File | Tests | Pattern |
+|-----------|-------|---------|
+| `backend/tests/unit/progress.service.test.js` | validateWeightInput, calculateWeightChange, getDashboard assembly | Pure function tests (follow `profile.service.test.js` pattern) |
+
+### Backend Integration Tests (new)
+
+| Test File | Tests | Pattern |
+|-----------|-------|---------|
+| `backend/tests/integration/progress.test.js` | Weight CRUD via HTTP, profile update → weight_log auto-log, goal CRUD, dashboard endpoint | Follow `api.test.js` + `remaining-endpoints.test.js` pattern |
+
+### Frontend Component Tests (new)
+
+| Test File | Tests | Pattern |
+|-----------|-------|---------|
+| `frontend/src/features/progress/components/__tests__/GoalSettings.test.jsx` | Render, submit form, validation | Follow existing `CustomFoodForm.test.js` |
+| `frontend/src/features/progress/components/__tests__/WeightLogForm.test.jsx` | Render, submit, validation | |
+| `frontend/src/features/progress/components/__tests__/WeightLogTable.test.jsx` | Render rows, delete action | |
+| `frontend/src/features/progress/components/__tests__/WeightChart.test.jsx` | Render with data, empty state, range toggle | Mock Recharts — test data transformation |
+| `frontend/src/features/progress/components/__tests__/ProgressDashboard.test.jsx` | Page-level render, loading, error | Mock hooks |
+
+### Key Test Scenarios
+
+1. **Profile update auto-logs weight** — integration test: PUT /api/profile → weight_logs has new row
+2. **Profile update succeeds when weight_log fails** — integration test: mock weight_log insert to throw → profile update still returns 200
+3. **Duplicate weight entry same day** — integration test: PUT /api/profile twice same day → weight_logs has 1 row (UPSERT), not 2
+4. **Dashboard with no data** — integration test: fresh user → dashboard returns all-null metrics, not 500
+5. **Goal validation** — unit test: target_date must be >= today, target_weight must be 2-300kg
+
+---
+
+## 10. Summary of Recommendations
+
+| Decision | Recommendation | Confidence |
+|----------|---------------|------------|
+| weight_log storage | **New `weight_logs` table** with UPSERT on (user_id, logged_date) | HIGH |
+| Goal storage | **Columns on `profiles` table** — target_weight_kg, target_date (1:1 with user) | HIGH |
+| weight_log integration with profile | **Non-blocking auto-log** in profile.updateProfile controller. Try/catch, best-effort. | HIGH |
+| Manual weight entry | **Standalone POST /api/progress/weight** with source='manual_entry' | HIGH |
+| Chart library | **Recharts** — best DX for simple line chart, React-native API | HIGH |
+| Dashboard endpoint | **Single GET /api/progress/dashboard** — composite of profile + trend + calorie + activity | HIGH |
+| Frontend module | **New `features/progress/`** following existing pattern (api/ + components/ + hooks/ + utils/) | HIGH |
+| Trend computation | **On-read from raw weight_log data** — SQL aggregate queries, not stored computed values | HIGH |
+| Build order | Schema → Weight CRUD → Profile integration → Goals + Dashboard → Frontend API → UI (goals → log → chart → dashboard) | HIGH |
+| Weight auto-log reliability | **Non-blocking** — profile update never fails due to weight_log failure | HIGH |
+
+---
+
+## 11. Integration Points Reference
+
+### Critical Integration (MUST be handled in this order)
+
+```
+1. Schema: weight_logs table + profile goal columns
+   ↓
+2. Backend: weightLog repository (depends on 1)
+   ↓
+3. Backend: profile controller modification (depends on 2)
+   ↓
+4. Backend: dashboard endpoint (depends on 2 + profile goal columns)
+   ↓
+5. Frontend: API layer (depends on 4)
+   ↓
+6. Frontend: Components (depends on 5)
+```
+
+### What Touches What
+
+| Component | Touches | Notes |
+|-----------|---------|-------|
+| `profileController.updateProfile` | `weightLogService.logWeight()` | NEW integration — non-blocking |
+| `progressController.getDashboard` | `profileRepository`, `weightLogRepository`, `foodRepository`, `activityRepository` | Cross-module — uses existing repositories |
+| `ProfileForm.jsx` | No changes needed | Weight auto-log is backend-only |
+| `DashboardPlaceholder` | Add `<Link to="/progress">` | Minimal change |
+| Navigation | `/progress` route + nav link | One route addition |
+
+### Files That Must NOT Change
+
+| File | Reason |
+|------|--------|
+| `shared/http.js` | HTTP client works for all endpoints |
+| `shared/calendar/*` | Unrelated to progress tracking |
+| `auth.*` (all auth files) | Auth is unchanged |
+| `food.*` (all food files) | Dashboard reads food_repository but doesn't modify it |
+| `activity.*` (all activity files) | Dashboard reads activity_repository but doesn't modify it |
+| `weeklyPlan.*` | Unrelated |
+| `profile.repository.js` | No SQL changes needed — goal columns read via existing findByUserId |
+| `profile.service.js` | No changes — the integration point is in the controller, not the service |
+| Existing test files | All existing tests should pass unchanged |
+
+---
+
+*Architecture research for: Progress Tracking (Weight Logging, Goal Setting, Weight Chart, Dashboard)*  
+*Researched: 2026-06-01*

@@ -5,7 +5,7 @@ FROM node:20-alpine AS builder
 # Install ALL dependencies (including devDeps like Vite) — D-04 applies only to production stage
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm ci
+RUN npm install
 
 # Build the React app (output: frontend/dist/)
 COPY frontend/ ./
@@ -19,8 +19,11 @@ FROM node:20-alpine AS development
 # (Frontend runs via Vite dev server on host or separate container during dev)
 WORKDIR /app
 COPY backend/package*.json ./
+RUN node -e "process.exit(Number(process.version.slice(1).split('.')[0] < 18))" || (echo "Node >= 18 required for openai@^6" && exit 1)
 RUN npm install
 COPY backend/ ./
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
 ENV PORT=80
 EXPOSE 80
 
@@ -39,6 +42,7 @@ WORKDIR /app
 
 # Install only production dependencies per D-04
 COPY backend/package*.json ./
+RUN node -e "process.exit(Number(process.version.slice(1).split('.')[0] < 18))" || (echo "Node >= 18 required for openai@^6" && exit 1)
 RUN npm ci --omit=dev
 
 # Copy backend source code
@@ -46,6 +50,9 @@ COPY backend/ ./
 
 # Copy built frontend from builder stage to ./public (served by Express.static per D-02)
 COPY --from=builder /app/frontend/dist ./public
+
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup && chown -R appuser:appgroup /app
+USER appuser
 
 # Default to port 80 per D-06
 ENV PORT=80

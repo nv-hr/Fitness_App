@@ -1,74 +1,71 @@
-# Research Summary: Fitness_App v1.2 Supabase Migration
+# Research Summary: Progress Tracking Features
 
-**Domain:** Full-stack health tracking app — database migration & infrastructure simplification
-**Researched:** 2026-05-27
+**Domain:** Weight logging, goal setting, weight trend chart, progress dashboard
+**Researched:** 2026-06-01
 **Overall confidence:** HIGH
 
 ## Executive Summary
 
-The Fitness_App is migrating from a 4-service Docker Compose setup (MySQL 8.4 + Adminer + Express backend + React frontend) to a 2-tier architecture: a single container serving both the Express API and React static files, backed by managed Supabase PostgreSQL. This research covers two interconnected changes: (1) replacing `mysql2/promise` with `pg` (node-postgres) for database access, while preserving the existing repository pattern, and (2) consolidating Docker infrastructure into a multi-stage build that compiles the frontend and serves it via `express.static()`.
+Adding progress tracking (weight logging, goals, weight chart) to the existing fitness app requires minimal stack additions. The existing React 19 + Express 5 + Supabase PostgreSQL stack handles almost everything without modification.
 
-The migration is straightforward because:
-- The existing repository pattern maps cleanly to `pg` (both use Pool-based connection management)
-- The app has only 4 repository files with simple SELECT/INSERT/UPDATE queries
-- Express `express.static()` is adequate for the app's expected traffic volume
-- Supabase provides a managed PostgreSQL with a Supavisor connection pooler that handles SSL and connection multiplexing
+**The single new dependency is Recharts v3.8.1** for the weight trend line chart. It's the largest React chart library by adoption (49M weekly downloads), supports React 19 in its peerDependencies, and has a built-in `<ReferenceLine>` component that renders a goal threshold line — no custom plugin code needed. Alternatives (react-chartjs-2, Nivo, visx) either require custom reference-line plugins or are over-engineered for simple line charts.
 
-Key MySQL→PG translation differences: placeholder syntax (`?` → `$1`), result destructuring (`[rows]` → `result.rows`), `LAST_INSERT_ID()` → `RETURNING *`, boolean handling (`1/0` → `true/false`), date functions (`DATE_SUB` → `INTERVAL` syntax), and error codes (`ER_DUP_ENTRY` → `'23505'`).
+**For the database**, two new tables are needed: `weight_log` (user_id, weight_kg, measured_at, notes) for body weight time-series data, and `goals` (user_id, goal_type, target_value, current_value, deadline_date, status) for goal tracking. PostgreSQL's `date_trunc` and `generate_series` handle time-series bucketing server-side — no TimescaleDB or other extensions needed.
+
+**No other stack changes are required.** date-fns (already in the project) covers all date formatting and bucketing. The existing Route → Controller → Service → Repository pattern is followed for the new endpoints. TanStack React Query handles the new data fetching with zero new infrastructure.
 
 ## Key Findings
 
-**Stack:** Replace `mysql2` with `pg`; add Supabase connection via handled connection string; no ORM needed.
-**Architecture:** Single multi-stage Docker container for production; Vite proxy dev server for development.
-**Critical pitfall:** MySQL-specific SQL patterns (`LAST_INSERT_ID`, `JSON_OVERLAPS`, `DATE_SUB`) must be comprehensively grepped and translated before deployment. Missed patterns cause silent runtime failures.
+**Stack:** Recharts v3.8.1 (frontend), weight_log + goals tables (database), date-fns (already present — no change). No backend library additions.
+
+**Architecture:** Two new feature modules (weight tracking, goals) following the existing pattern. Weight trend chart rendered as a Recharts LineChart with ReferenceLine for goal overlay.
+
+**Critical pitfall:** Over-engineering. Weight chart is a simple line chart — don't add D3, don't add a state management library, don't add TimescaleDB. The existing stack handles everything.
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure:
+Suggested phase structure for progress tracking features:
 
-1. **Supabase Setup & Schema Migration** — Foundation
-   - Addresses: Create Supabase project, run migration SQL
-   - Avoids: Trying to run code against a database that doesn't exist yet
-   - Dependencies: None (can start immediately)
+1. **Database schema + backend API** — Create `weight_log` and `goals` tables, migrations, repositories, services, controllers, routes for CRUD operations
+   - Addresses: persistence layer for all progress features
+   - Avoids: integrating chart before data exists to test with
 
-2. **Backend Query Rewrite (pg migration)** — Core work
-   - Addresses: All 4 repository files rewritten, database.js replaced
-   - Avoids: Building Docker image before code is ready
-   - Dependencies: Supabase must exist (Phase 1)
+2. **Weight chart (frontend)** — Install Recharts, build LineChart with weight data, add ReferenceLine for goal overlay, integrate with date range filter
+   - Addresses: weight trend visualization
+   - Avoids: building chart before API endpoints exist
 
-3. **Docker Restructure (Single Container)** — Infrastructure
-   - Addresses: Multi-stage Dockerfile, docker-compose.yml rewrite, static serving
-   - Avoids: Shipping half-working container without testing
-   - Dependencies: Backend must be querying Supabase successfully (Phase 2)
+3. **Goal management UI** — Goal creation form, goal list, goal status tracking, integrate goal display on chart
+   - Addresses: goal setting feature
+   - Avoids: building goals without understanding chart display requirements
 
-4. **Testing & Validation** — Quality gate
-   - Addresses: Integration tests against Supabase, manual smoke tests
-   - Avoids: Deploying broken queries or missing static file serving
-   - Dependencies: Docker image must be buildable (Phase 3)
+4. **Progress dashboard** — Aggregate views, progress indicators, combine weight chart + goal list + summary stats
+   - Addresses: holistic progress view
+   - Avoids: premature dashboard layout decisions before component APIs settle
 
 **Phase ordering rationale:**
-- Database must exist before code can connect to it
-- Code must be querying correctly before Docker can be tested
-- Infrastructure depends on working code
+- Database must come first (data layer dependency)
+- Chart before goals UI (goals display on chart influences goal schema)
+- Dashboard last (composes all other components)
 
 **Research flags for phases:**
-- Phase 1: LOW risk — standard Supabase project creation + SQL execution
-- Phase 2: MEDIUM risk — MySQL-specific patterns potentially missed; need thorough search
-- Phase 3: LOW risk — well-understood Docker pattern
-- Phase 4: MEDIUM risk — connection pool limits on free tier could cause test flakiness
+- Phase 1: No flags — standard CRUD following existing patterns (HIGH confidence)
+- Phase 2: LOW risk — Recharts is well-documented, ReferenceLine is straightforward
+- Phase 3: Verify goal overlay design works with weight data shape
+- Phase 4: May need UX validation for dashboard layout
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | pg is mature, well-documented replacement for mysql2; both use Pool pattern |
-| Architecture | HIGH | Single-container full-stack is well-documented pattern; multi-stage build is standard |
-| Pitfalls | HIGH | Six MySQL-specific patterns identified; error codes, placeholders, result shapes all documented |
-| Supabase specifics | HIGH | Connection pooling, SSL, port selection all verified against Supabase docs (May 2026) |
+| Chart library (Recharts) | HIGH | Verified React 19 compatibility in peerDeps; 49M weekly downloads; built-in ReferenceLine |
+| Database schema | MEDIUM | Schema design from industry reference (sqlexplain.ai fitness schema); no load testing for scale |
+| Date handling | HIGH | date-fns already in project; PostgreSQL date_trunc covers server-side bucketing |
+| Backend additions | HIGH | Zero new libraries; follows existing pattern exactly |
+| No-overengineering | HIGH | Confirmed Recharts is lighter-weight than Nivo/visx; PostgreSQL is sufficient over TimescaleDB |
 
 ## Gaps to Address
 
-- **Test database**: Integration tests currently use the MySQL database. Need a strategy for test isolation with Supabase (use a separate Supabase project or the `pg-mem` library for in-memory testing).
-- **Seed data SQL size**: Supabase SQL Editor has a 1MB limit. The food seed data is ~400 lines of INSERT statements. May need to split or use `psql` for bulk insertion.
-- **Google OAuth redirect URI**: When running on single container at port 3001, the Google OAuth callback URL changes. Must be updated in Google Cloud Console.
-- **Zero-downtime migration**: If this app is already deployed, migrating from MySQL to PostgreSQL requires either an export/import process or running both databases temporarily. Determine current deployment status.
+- **Chart testing strategy:** Recharts renders SVG — integration tests should verify chart renders with data, not test chart internals. Need to decide if snapshot testing or visual regression testing is used.
+- **Goal type enumeration:** What goal types are supported initially? Weight target, body fat %, or more? Feeds into `goals.goal_type` CHECK constraint and UI design.
+- **Weight log notes schema:** Allow notes on weight entries? The `weight_log.notes TEXT` column is optional but needs frontend UI consideration.
+- **Dashboard metric aggregation:** What period-averages (weekly, monthly) and derived metrics (trend line, moving average) are computed server-side vs client-side? Impacts API response shape.

@@ -61,9 +61,10 @@ export async function createCustomFood(userId, { name, calories_per_100g, catego
  * @param {string} logData.mealType
  * @returns {Promise<Object>}
  */
-export async function createFoodLog(userId, { foodId, customFoodName, calories, portionGrams, logDate, mealType }) {
+export async function createFoodLog(userId, { foodId, customFoodName, calories, portionGrams, logDate, mealType }, clientOverride) {
+  const db = clientOverride || pool;
   try {
-    const { rows } = await pool.query(
+    const { rows } = await db.query(
       `INSERT INTO food_logs (user_id, food_id, custom_food_name, calories, portion_grams, log_date, meal_type)
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       [userId, foodId || null, customFoodName || null, calories, portionGrams, logDate, mealType]
@@ -169,6 +170,40 @@ export async function getRecentFoods(userId, limit = 10) {
 }
 
 /**
+ * Batch log multiple food items in a single atomic PostgreSQL transaction.
+ * All inserts succeed or all are rolled back — prevents partial food diary commits.
+ * Per-meal logging supported: items array can contain a subset of the day's meals.
+ * Calories are always server-calculated from calories_per_100g × portion / 100.
+ * @param {number} userId
+ * @param {Array<{foodId: number, portionGrams: number, calories: number, logDate: string, mealType: string}>} items
+ * @returns {Promise<Array>}
+ */
+export async function batchLogItems(userId, items, clientOverride) {
+  if (!items || items.length === 0) return [];
+  const client = clientOverride || await pool.connect();
+  const ownsClient = !clientOverride;
+  try {
+    if (ownsClient) await client.query('BEGIN');
+    const inserted = [];
+    for (const item of items) {
+      const { rows } = await client.query(
+        `INSERT INTO food_logs (user_id, food_id, calories, portion_grams, log_date, meal_type)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [userId, item.foodId, item.calories, item.portionGrams, item.logDate, item.mealType]
+      );
+      inserted.push(rows[0]);
+    }
+    if (ownsClient) await client.query('COMMIT');
+    return inserted;
+  } catch (err) {
+    if (ownsClient) await client.query('ROLLBACK');
+    throw new AppError('DatabaseError', `Failed to batch log items: ${err.message}`, 500);
+  } finally {
+    if (ownsClient) client.release();
+  }
+}
+
+/**
  * Count foods by filter criteria (used by food.service.js for seed verification).
  * @param {Object} filters
  * @param {boolean} filters.is_custom
@@ -213,6 +248,53 @@ export async function findByCategory(category, { is_custom } = {}) {
  * @param {number} foodId
  * @returns {Promise<Object|null>}
  */
+/**
+ * Get foods by category for a user.
+ * @param {number} userId
+ * @param {string} category
+ * @param {number} limit
+ * @returns {Promise<Array>}
+ */
+export async function getFoodsByCategory(userId, category, limit = 50) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, name, calories_per_100g, category
+       FROM foods
+       WHERE (is_custom = FALSE OR user_id = $1)
+         AND category ILIKE $2
+       ORDER BY name
+       LIMIT $3`,
+      [userId, category, limit]
+    );
+    return rows;
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to get foods by category: ${err.message}`, 500);
+  }
+}
+
+/**
+ * Delete a food log entry by food_id, log_date, and meal_type.
+ * @param {number} userId
+ * @param {number} foodId
+ * @param {string} logDate
+ * @param {string} mealType
+ * @returns {Promise<Object|null>}
+ */
+export async function deleteFoodLogByPlan(userId, foodId, logDate, mealType, clientOverride) {
+  const db = clientOverride || pool;
+  try {
+    const { rows } = await db.query(
+      `DELETE FROM food_logs
+       WHERE user_id = $1 AND food_id = $2 AND log_date = $3::date AND meal_type = $4
+       RETURNING *`,
+      [userId, foodId, logDate, mealType]
+    );
+    return rows[0] || null;
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to delete food log: ${err.message}`, 500);
+  }
+}
+
 export async function getFoodById(foodId) {
   try {
     const { rows } = await pool.query(

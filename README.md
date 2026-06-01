@@ -8,9 +8,19 @@ Built with React 19, Express 5, and Supabase PostgreSQL.
 
 - **BMI Calculator** — Calculate Body Mass Index from height and weight with health category classification.
 - **TDEE Calculator** — Estimate Total Daily Energy Expenditure based on BMR (Mifflin-St Jeor) and activity level.
-- **Food Logging** — Search a database of 200+ ingredients, log by ingredient and weight, calculate exact calorie and macronutrient values.
+- **Food Logging** — Search a database of 200+ ingredients, log by ingredient and weight in grams, calculate exact calorie and macronutrient values.
 - **Calorie Tracking** — Daily summary with caloric balance, history view, and progress bar toward your TDEE goal.
-- **Activity Recommendations** — Get simple physical activity suggestions tailored to your profile.
+- **Activity Logging** — Log completed activities with duration and intensity, track daily active minutes and calories burned.
+- **Activity Calendar** — Month-grid view of your weekly activity plan with color-coded days, per-day detail panel, activity swap, and completion toggle. Past days read-only.
+- **Meal Calendar** — Month-grid view of your daily meal plan with per-meal-type log buttons, auto-generation, and past-day read-only.
+- **Weight Tracking** — Log weight with date and notes, set target weight and goal date, auto-log on profile update with UPSERT pattern.
+- **Progress Dashboard** — Centralized `/progress` view with weight entry form, trend chart, history table, and goal status.
+- **Weight Trend Chart** — Recharts LineChart with 30/60/90 day date range filter, goal reference line, and all-state handling (empty/loading/insufficient/normal).
+- **Trend Prediction** — OLS linear regression estimates target completion date with color-coded status (green/amber/red).
+- **LLM Weekly Activity Plans** — AI-generated variable-day (4-6) activity plans powered by OpenRouter, personalized to your profile, fitness goal, and history.
+- **LLM Daily Meal Plans** — AI-generated 1-day meal recommendations with auto-calculated portions to meet your calorie target.
+- **Auto-Logging** — Generated activities and meals auto-save to their respective logs with one-click completion toggle and batch-log support.
+- **Per-Activity Swap** — Swap individual activities or meal items with LLM-generated replacements without regenerating the entire plan.
 
 ## Tech Stack
 
@@ -20,6 +30,7 @@ Built with React 19, Express 5, and Supabase PostgreSQL.
 | Backend     | Express 5 (ESM), Passport (JWT + Google OAuth), Helmet, express-rate-limit |
 | Database    | Supabase PostgreSQL 17 (pg driver, no ORM)                                |
 | Auth        | Email/password registration + login, Google OAuth, httpOnly JWT cookies   |
+| LLM         | OpenRouter API (free-tier models), node-cache                             |
 | Deployment  | Docker multi-stage build (single container, Express serves built frontend) |
 | Testing     | Jest (backend), Vitest (frontend)                                         |
 
@@ -48,6 +59,10 @@ Edit `backend/.env` with your settings:
 | `GOOGLE_CLIENT_ID`     | Google OAuth 2.0 client ID             |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth 2.0 client secret         |
 | `GOOGLE_CALLBACK_URL`  | OAuth callback URL                     |
+| `OPENROUTER_API_KEY`   | OpenRouter API key for LLM features    |
+| `OPENROUTER_BASE_URL`  | `https://openrouter.ai/api/v1`         |
+| `LLM_MODEL`            | Primary model for weekly plan generation |
+| `LLM_FALLBACK_MODEL`   | Fallback model when primary unavailable |
 | `DATABASE_URL`         | Supabase PostgreSQL connection string  |
 
 ### 2. Install dependencies
@@ -119,6 +134,8 @@ fitness-app/
 │   │   ├── app/              # App root, providers, router
 │   │   ├── features/         # Feature modules (auth, food-log, activities, profile)
 │   │   ├── shared/           # Shared components and utilities
+│   │   │   ├── calendar/     # CalendarGrid, MonthNav, DayDetailPanel, hooks, utils
+│   │   │   └── hooks/        # useResponsive, etc.
 │   │   └── __tests__/        # Vitest test suites
 │   └── vite.config.js        # Vite config (dev proxy included)
 ├── supabase/                 # Database configuration and migrations

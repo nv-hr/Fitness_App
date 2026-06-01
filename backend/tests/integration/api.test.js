@@ -771,4 +771,328 @@ describe('Activity Endpoints', () => {
       expect(res.body.data.activities.length).toBeGreaterThan(0);
     });
   });
+
+  describe('POST /api/activities/log', () => {
+    let logAgent;
+    let seededActivityId;
+
+    beforeAll(async () => {
+      logAgent = request.agent(app);
+      const email = `activity_log_${Date.now()}@example.com`;
+      await logAgent
+        .post('/api/auth/register')
+        .send({ email, password: 'TestP@ss123', pdpConsent: true });
+
+      // Create profile for summary tests later
+      await logAgent.post('/api/profile').send({
+        weightKg: 75, heightCm: 170, age: 32, gender: 'male',
+        fitnessGoal: 'lose_weight', activityLevel: 'very_active',
+      });
+
+      // Get a seeded activity ID
+      const getRes = await logAgent.get('/api/activities');
+      expect(getRes.body.data?.activities?.length).toBeGreaterThan(0);
+      seededActivityId = getRes.body.data.activities[0].id;
+    });
+
+    it('should log an activity with valid data → 201 + calories_burned', async () => {
+      if (!seededActivityId) throw new Error('No seeded activity found');
+      const res = await logAgent.post('/api/activities/log').send({
+        activityId: seededActivityId,
+        durationMin: 30,
+        intensity: 'moderate',
+      });
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toBeDefined();
+      expect(res.body.data.activity_id).toBe(seededActivityId);
+      expect(res.body.data.duration_min).toBe(30);
+      expect(res.body.data.intensity).toBe('moderate');
+      expect(res.body.data.calories_burned).toBeGreaterThan(0);
+    });
+
+    it('should log an activity with custom loggedDate → 201 + date matches', async () => {
+      if (!seededActivityId) throw new Error('No seeded activity found');
+      const res = await logAgent.post('/api/activities/log').send({
+        activityId: seededActivityId,
+        durationMin: 20,
+        intensity: 'light',
+        loggedDate: '2026-01-15',
+      });
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.logged_date).toBe('2026-01-15');
+    });
+
+    it('should reject log with invalid intensity → 400 VALIDATION_ERROR', async () => {
+      const res = await logAgent.post('/api/activities/log').send({
+        activityId: seededActivityId,
+        durationMin: 30,
+        intensity: 'extreme',
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('should reject log with duration > 1440 → 400 VALIDATION_ERROR', async () => {
+      const res = await logAgent.post('/api/activities/log').send({
+        activityId: seededActivityId,
+        durationMin: 1500,
+        intensity: 'moderate',
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+  });
+
+  describe('GET /api/activities/logs', () => {
+    let logsAgent;
+    let seededActivityId;
+
+    beforeAll(async () => {
+      logsAgent = request.agent(app);
+      const email = `activity_logs_${Date.now()}@example.com`;
+      await logsAgent
+        .post('/api/auth/register')
+        .send({ email, password: 'TestP@ss123', pdpConsent: true });
+
+      await logsAgent.post('/api/profile').send({
+        weightKg: 70, heightCm: 175, age: 30, gender: 'male',
+        fitnessGoal: 'maintain', activityLevel: 'moderate',
+      });
+
+      const getRes = await logsAgent.get('/api/activities');
+      expect(getRes.body.data?.activities?.length).toBeGreaterThan(0);
+      seededActivityId = getRes.body.data.activities[0].id;
+
+      // Log an activity for today
+      if (seededActivityId) {
+        await logsAgent.post('/api/activities/log').send({
+          activityId: seededActivityId,
+          durationMin: 30,
+          intensity: 'moderate',
+          loggedDate: today,
+        });
+      }
+    });
+
+    it('should return logs for a date after logging → 200 + array with entries', async () => {
+      if (!seededActivityId) throw new Error('No seeded activity found');
+      const res = await logsAgent.get(`/api/activities/logs?date=${today}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data.length).toBeGreaterThan(0);
+      expect(res.body.data[0].activity_name).toBeDefined();
+      expect(res.body.data[0].calories_burned).toBeGreaterThan(0);
+    });
+
+    it('should return empty array for date with no logs → 200 + []', async () => {
+      const res = await logsAgent.get('/api/activities/logs?date=2025-01-01');
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data.length).toBe(0);
+    });
+  });
+
+  describe('DELETE /api/activities/log/:id', () => {
+    let deleteAgent;
+    let seededActivityId;
+    let logEntryId;
+
+    beforeAll(async () => {
+      deleteAgent = request.agent(app);
+      const email = `activity_delete_${Date.now()}@example.com`;
+      await deleteAgent
+        .post('/api/auth/register')
+        .send({ email, password: 'TestP@ss123', pdpConsent: true });
+
+      const getRes = await deleteAgent.get('/api/activities');
+      expect(getRes.body.data?.activities?.length).toBeGreaterThan(0);
+      seededActivityId = getRes.body.data.activities[0].id;
+
+      // Log an activity so we can delete it
+      if (seededActivityId) {
+        const logRes = await deleteAgent.post('/api/activities/log').send({
+          activityId: seededActivityId,
+          durationMin: 15,
+          intensity: 'light',
+        });
+        logEntryId = logRes.body.data?.id;
+      }
+    });
+
+    it('should delete an existing log entry → 200 + success: true', async () => {
+      if (!logEntryId) throw new Error('No log entry created');
+      const res = await deleteAgent.delete(`/api/activities/log/${logEntryId}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+    });
+
+    it('should return 404 for non-existent log ID → 404 NOT_FOUND', async () => {
+      const res = await deleteAgent.delete('/api/activities/log/999999');
+
+      expect(res.status).toBe(404);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+    });
+
+    it('should return 400 for invalid ID (0) → 400 VALIDATION_ERROR', async () => {
+      const res = await deleteAgent.delete('/api/activities/log/0');
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+  });
+
+  describe('GET /api/activities/summary', () => {
+    let summaryAgent;
+    let seededActivityId;
+
+    beforeAll(async () => {
+      summaryAgent = request.agent(app);
+      const email = `activity_summary_${Date.now()}@example.com`;
+      await summaryAgent
+        .post('/api/auth/register')
+        .send({ email, password: 'TestP@ss123', pdpConsent: true });
+
+      await summaryAgent.post('/api/profile').send({
+        weightKg: 70, heightCm: 175, age: 30, gender: 'male',
+        fitnessGoal: 'maintain', activityLevel: 'moderate',
+      });
+
+      const getRes = await summaryAgent.get('/api/activities');
+      expect(getRes.body.data?.activities?.length).toBeGreaterThan(0);
+      seededActivityId = getRes.body.data.activities[0].id;
+
+      // Log an activity for today
+      if (seededActivityId) {
+        await summaryAgent.post('/api/activities/log').send({
+          activityId: seededActivityId,
+          durationMin: 30,
+          intensity: 'moderate',
+          loggedDate: today,
+        });
+      }
+    });
+
+    it('should return summary with activity data after logging → 200 with all fields', async () => {
+      if (!seededActivityId) throw new Error('No seeded activity found');
+      const res = await summaryAgent.get(`/api/activities/summary?date=${today}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.date).toBe(today);
+      expect(res.body.data.totalActiveMinutes).toBeGreaterThan(0);
+      expect(res.body.data.totalCaloriesBurned).toBeGreaterThan(0);
+      expect(res.body.data.totalConsumed).toBeGreaterThanOrEqual(0);
+      expect(res.body.data.calorieTarget).toBeDefined();
+      expect(res.body.data.calorieTarget).toBeGreaterThan(0);
+      expect(res.body.data.netCalories).toBeDefined();
+      expect(res.body.data.netVsTarget).toBeDefined();
+    });
+
+    it('should calculate netCalories correctly (consumed − burned)', async () => {
+      if (!seededActivityId) throw new Error('No seeded activity found');
+      const res = await summaryAgent.get(`/api/activities/summary?date=${today}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.netCalories).toBe(
+        res.body.data.totalConsumed - res.body.data.totalCaloriesBurned
+      );
+    });
+
+    it('should return zero totals for date with no activity', async () => {
+      const res = await summaryAgent.get('/api/activities/summary?date=2025-06-01');
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.totalActiveMinutes).toBe(0);
+      expect(res.body.data.totalCaloriesBurned).toBe(0);
+    });
+  });
+
+  describe('GET /api/activities/history', () => {
+    describe('with logged activity', () => {
+      let historyAgent;
+      let seededActivityId;
+
+      beforeAll(async () => {
+        historyAgent = request.agent(app);
+        const email = `activity_history_${Date.now()}@example.com`;
+        await historyAgent
+          .post('/api/auth/register')
+          .send({ email, password: 'TestP@ss123', pdpConsent: true });
+
+        await historyAgent.post('/api/profile').send({
+          weightKg: 70, heightCm: 175, age: 30, gender: 'male',
+          fitnessGoal: 'maintain', activityLevel: 'moderate',
+        });
+
+        const getRes = await historyAgent.get('/api/activities');
+        expect(getRes.body.data?.activities?.length).toBeGreaterThan(0);
+        seededActivityId = getRes.body.data.activities[0].id;
+
+        // Log an activity for today
+        await historyAgent.post('/api/activities/log').send({
+          activityId: seededActivityId,
+          durationMin: 25,
+          intensity: 'moderate',
+          loggedDate: today,
+        });
+      });
+
+      it('should return grouped history with entries after logging → 200 + array', async () => {
+        const res = await historyAgent.get('/api/activities/history?days=7&includeEntries=true');
+
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(Array.isArray(res.body.data)).toBe(true);
+        expect(res.body.data.length).toBeGreaterThan(0);
+        expect(res.body.data[0].logged_date).toBeDefined();
+        expect(res.body.data[0].total_minutes).toBeGreaterThan(0);
+        expect(res.body.data[0].total_burned).toBeGreaterThan(0);
+        expect(Array.isArray(res.body.data[0].entries)).toBe(true);
+        expect(res.body.data[0].entries.length).toBeGreaterThan(0);
+      });
+    });
+
+    describe('with no logged activity', () => {
+      let historyAgent;
+
+      beforeAll(async () => {
+        historyAgent = request.agent(app);
+        const email = `activity_history_empty_${Date.now()}@example.com`;
+        await historyAgent
+          .post('/api/auth/register')
+          .send({ email, password: 'TestP@ss123', pdpConsent: true });
+
+        await historyAgent.post('/api/profile').send({
+          weightKg: 70, heightCm: 175, age: 30, gender: 'male',
+          fitnessGoal: 'maintain', activityLevel: 'moderate',
+        });
+        // NOTE: No activity logged — testing the empty history case
+      });
+
+      it('should return empty history when no logs exist → 200 + []', async () => {
+        const res = await historyAgent.get('/api/activities/history?days=1&includeEntries=true');
+
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(Array.isArray(res.body.data)).toBe(true);
+        expect(res.body.data.length).toBe(0);
+      });
+    });
+  });
 });

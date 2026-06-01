@@ -1,0 +1,45 @@
+import * as weightLogService from '../services/weightLog.service.js';
+import { successResponse, errorResponse } from '../utils/response.js';
+import { ValidationError, NotFoundError } from '../utils/errors.js';
+
+export async function postWeight(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const { weightKg, loggedDate, notes } = req.body;
+    const entry = await weightLogService.logWeight(userId, { weightKg, loggedDate, notes });
+    return successResponse(res, { entry }, 201);
+  } catch (err) {
+    if (err instanceof ValidationError) {
+      return errorResponse(res, err.message, 400, 'VALIDATION_ERROR');
+    }
+    next(err);
+  }
+}
+
+export async function getWeightHistory(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const limit = parseInt(req.query.limit, 10) || 50;
+    const entries = await weightLogService.getHistory(userId, limit);
+    return successResponse(res, { entries });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteWeight(req, res, next) {
+  try {
+    const userId = req.user.userId;
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return errorResponse(res, 'Invalid weight log ID', 400, 'VALIDATION_ERROR');
+    }
+    await weightLogService.deleteEntry(id, userId);
+    return successResponse(res, { deleted: true });
+  } catch (err) {
+    if (err instanceof NotFoundError) {
+      return errorResponse(res, err.message, 404, 'NOT_FOUND');
+    }
+    next(err);
+  }
+}

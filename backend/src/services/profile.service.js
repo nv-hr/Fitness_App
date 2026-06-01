@@ -100,7 +100,7 @@ export function getCalorieTarget(tdee, fitnessGoal, calorieRate) {
  * @param {Object} data
  */
 function validateProfileData(data) {
-  const { weightKg, heightCm, age, gender, fitnessGoal } = data;
+  const { weightKg, heightCm, age, gender, fitnessGoal, targetWeightKg, targetDate } = data;
 
   if (weightKg == null || weightKg < 2 || weightKg > 300) {
     throw new ValidationError('Weight must be between 2-300 kg');
@@ -117,6 +117,24 @@ function validateProfileData(data) {
   if (!['lose_weight', 'maintain', 'gain_weight'].includes(fitnessGoal)) {
     throw new ValidationError('Fitness goal must be lose_weight, maintain, or gain_weight');
   }
+
+  if (targetWeightKg != null && (targetWeightKg < 2 || targetWeightKg > 300)) {
+    throw new ValidationError('Target weight must be between 2-300 kg');
+  }
+  if (targetWeightKg != null && weightKg != null) {
+    if (fitnessGoal === 'lose_weight' && targetWeightKg >= weightKg) {
+      throw new ValidationError('Target weight must be less than current weight for weight loss goal');
+    }
+    if (fitnessGoal === 'gain_weight' && targetWeightKg <= weightKg) {
+      throw new ValidationError('Target weight must be greater than current weight for weight gain goal');
+    }
+  }
+  if (targetDate != null) {
+    const today = new Date().toISOString().split('T')[0];
+    if (targetDate < today) {
+      throw new ValidationError('Target date must be today or later');
+    }
+  }
 }
 
 /**
@@ -128,7 +146,7 @@ function validateProfileData(data) {
 export async function createProfile(userId, profileData) {
   validateProfileData(profileData);
 
-  const { weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate } = profileData;
+  const { weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate, targetWeightKg, targetDate } = profileData;
 
   const profile = await createProfileRepo({
     userId,
@@ -139,7 +157,21 @@ export async function createProfile(userId, profileData) {
     fitnessGoal,
     activityLevel,
     calorieRate,
+    targetWeightKg,
+    targetDate,
   });
+
+  try {
+    const { upsertWeightLog } = await import('../repositories/weightLog.repository.js');
+    await upsertWeightLog(userId, {
+      weightKg,
+      loggedDate: new Date().toISOString().split('T')[0],
+      source: 'auto',
+      notes: null,
+    });
+  } catch (err) {
+    console.error('Failed to seed initial weight log:', err.message);
+  }
 
   const bmi = calculateBmi(weightKg, heightCm);
   const bmiCategory = getBmiCategory(bmi);
@@ -179,9 +211,21 @@ export async function getProfile(userId) {
 export async function updateProfile(userId, profileData) {
   validateProfileData(profileData);
 
-  const { weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate } = profileData;
+  const { weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate, targetWeightKg, targetDate } = profileData;
 
-  await updateByUserId(userId, { weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate });
+  await updateByUserId(userId, { weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate, targetWeightKg, targetDate });
+
+  try {
+    const { upsertWeightLog } = await import('../repositories/weightLog.repository.js');
+    await upsertWeightLog(userId, {
+      weightKg,
+      loggedDate: new Date().toISOString().split('T')[0],
+      source: 'auto',
+      notes: null,
+    });
+  } catch (err) {
+    console.error('Failed to auto-log weight:', err.message);
+  }
 
   return getProfile(userId);
 }

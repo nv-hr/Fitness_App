@@ -12,13 +12,17 @@ import authController from './controllers/auth.controller.js';
 import profileRoutes from './routes/profile.routes.js';
 import foodRoutes from './routes/food.routes.js';
 import activityRoutes from './routes/activity.routes.js';
+import weeklyPlanRoutes from './routes/weeklyPlan.routes.js';
+import dailyMealPlanRoutes from './routes/dailyMealPlan.routes.js';
+import activityPlanRoutes from './routes/activityPlan.routes.js';
+import progressRoutes from './routes/progress.routes.js';
 import docsRoutes from './routes/docs.routes.js';
 import { errorResponse } from './utils/response.js';
 
 const app = express();
 
 // Validate and sanitize FRONTEND_URL for CORS and OAuth redirects (WR-02)
-const parseFrontendUrl = (url) => {
+const parseFrontendUrl = () => {
   const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
   try {
     const parsed = new URL(FRONTEND_URL);
@@ -50,6 +54,16 @@ const createRateLimiter = (options = {}) => {
   });
 };
 
+// Global aggregate rate limiter — counts ALL requests toward one bucket, regardless of IP
+const isTestGlobal = process.env.NODE_ENV === 'test';
+const globalLimiter = rateLimit({
+  windowMs: isTestGlobal ? 1000 : 15 * 60 * 1000,
+  max: isTestGlobal ? 50000 : 10000,
+  keyGenerator: () => 'global',
+  message: { success: false, error: { message: 'Global rate limit exceeded. Please try again later.', code: 'RATE_LIMITED' } },
+});
+app.use(globalLimiter);
+
 // === Middleware (order matters) ===
 
 // 1. Security headers
@@ -79,11 +93,11 @@ app.use(cookieParser());
 app.use(passport.initialize());
 
 // 8. General rate limiter for /api/ routes
-const limiter = createRateLimiter();
+const limiter = createRateLimiter({ max: 5000 });
 app.use('/api/', limiter);
 
 // 9. Stricter rate limiter for auth endpoints (T-01-06, T-01-10)
-const authLimiter = createRateLimiter({ max: 10, message: 'Too many auth attempts', testMax: 100 });
+const authLimiter = createRateLimiter({ max: 100, message: 'Too many auth attempts', testMax: 100 });
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
@@ -101,19 +115,31 @@ app.use('/api/docs', docsRoutes);
 app.use('/api/auth', authRoutes);
 
 // Profile API routes — stricter rate limiter for user data endpoints
-const profileLimiter = createRateLimiter({ max: 15, message: 'Too many profile requests' });
+const profileLimiter = createRateLimiter({ max: 600, message: 'Too many profile requests' });
 app.use('/api/profile', profileLimiter);
 app.use('/api/profile', profileRoutes);
 
 // Food API routes — higher rate limit for search-as-you-type (T-04-08)
-const foodLimiter = createRateLimiter({ max: 200, message: 'Too many food requests' });
+const foodLimiter = createRateLimiter({ max: 2000, message: 'Too many food requests' });
 app.use('/api/food', foodLimiter);
 app.use('/api/food', foodRoutes);
 
 // Activity API routes — rate limiter for ORDER BY RAND() queries (T-05-07)
-const activityLimiter = createRateLimiter({ max: 60, message: 'Too many activity requests' });
+const activityLimiter = createRateLimiter({ max: 600, message: 'Too many activity requests' });
 app.use('/api/activities', activityLimiter);
 app.use('/api/activities', activityRoutes);
+
+// Weekly plan routes — rate limited via middleware (D-20)
+app.use('/api/weekly-plans', weeklyPlanRoutes);
+
+// Daily meal plan routes (v1.5 per-day generation)
+app.use('/api/daily-meal-plans', dailyMealPlanRoutes);
+
+// Activity plan routes
+app.use('/api/activity-plans', activityPlanRoutes);
+
+// Progress routes (weight logging, goal tracking)
+app.use('/api/progress', progressRoutes);
 
 // Google OAuth routes (must be separate from authRoutes for Passport middleware)
 app.get(
@@ -122,10 +148,19 @@ app.get(
 );
 app.get(
   '/api/auth/google/callback',
-  passport.authenticate('google', {
-    session: false,
-    failureRedirect: FRONTEND_URL + '/login',
-  }),
+  (req, res, next) => {
+    const cb = passport.authenticate('google', {
+      session: false,
+      failureRedirect: FRONTEND_URL + '/login?error=google_auth_failed',
+    });
+    cb(req, res, (err) => {
+      if (err) {
+        console.error('Google OAuth callback error:', err.message);
+        return res.redirect(`${FRONTEND_URL}/login?error=google_auth_error`);
+      }
+      next();
+    });
+  },
   authController.googleCallback
 );
 

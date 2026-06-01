@@ -16,6 +16,8 @@ const schema = z.object({
   fitnessGoal: z.enum(['lose_weight', 'maintain', 'gain_weight'], { message: 'Fitness goal is required' }),
   activityLevel: z.enum(['sedentary', 'light', 'moderate', 'very_active', 'extra_active']).optional(),
   calorieRate: z.enum(['low', 'medium', 'high']).optional(),
+  targetWeightKg: z.coerce.number().min(2, 'Target weight must be at least 2 kg').max(300, 'Target weight must be at most 300 kg').optional(),
+  targetDate: z.string().optional(),
 });
 
 export default function ProfileForm() {
@@ -53,6 +55,12 @@ export default function ProfileForm() {
         setValue('fitnessGoal', profile.fitness_goal);
         if (profile.activity_level) {
           setValue('activityLevel', profile.activity_level);
+        }
+        if (profile.target_weight_kg) {
+          setValue('targetWeightKg', profile.target_weight_kg);
+        }
+        if (profile.target_date) {
+          setValue('targetDate', profile.target_date);
         }
       setBmiResult({ bmi: response.data.bmi, bmiCategory: response.data.bmiCategory });
       if (response.data.tdee) {
@@ -201,6 +209,37 @@ export default function ProfileForm() {
             <option value="high">{'1 kg/week (Extreme)'}</option>
           </select>
         </div>
+
+        {isUpdate && (
+          <div style={{ marginBottom: '1rem', padding: '1rem', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#fafafa' }}>
+            <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '1rem' }}>Goal Settings</h3>
+            <div style={{ marginBottom: '0.75rem' }}>
+              <label htmlFor="targetWeightKg">Target Weight (kg)</label>
+              <input
+                id="targetWeightKg"
+                type="number"
+                step="0.1"
+                min="2"
+                max="300"
+                {...register('targetWeightKg')}
+                style={{ display: 'block', width: '100%', padding: '0.75rem 0.5rem', marginTop: '0.25rem', boxSizing: 'border-box', minHeight: '44px' }}
+                placeholder="0.0"
+              />
+              {errors.targetWeightKg && <p style={{ color: 'red', fontSize: '0.875rem' }}>{errors.targetWeightKg.message}</p>}
+            </div>
+            <div style={{ marginBottom: '0.75rem' }}>
+              <label htmlFor="targetDate">Target Date</label>
+              <input
+                id="targetDate"
+                type="date"
+                min={new Date().toISOString().split('T')[0]}
+                {...register('targetDate')}
+                style={{ display: 'block', width: '100%', padding: '0.75rem 0.5rem', marginTop: '0.25rem', boxSizing: 'border-box', minHeight: '44px' }}
+              />
+              {errors.targetDate && <p style={{ color: 'red', fontSize: '0.875rem' }}>{errors.targetDate.message}</p>}
+            </div>
+          </div>
+        )}
 
         <button
           type="submit"
