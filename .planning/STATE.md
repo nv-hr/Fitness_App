@@ -22,7 +22,7 @@ See: .planning/PROJECT.md (updated 2026-06-01)
 
 **Core value:** Users can accurately calculate their BMI and TDEE, log daily food intake by selecting ingredients and entering weight in grams, log physical activities with intensity-based calorie tracking, understand their calorie balance, track weight with trend visualization and trend prediction — all in one integrated, easy-to-use English-language health tool.
 
-**Current focus:** All planned milestones shipped — project is feature-complete per v1.9 requirements.
+**Current focus:** All planned milestones shipped — project is feature-complete per v1.9 requirements. Ready for next milestone definition.
 
 ## Current Position
 
@@ -119,8 +119,8 @@ Items acknowledged at v1.9 milestone close on 2026-06-01:
 ## Session Continuity
 
 Last session: 2026-06-01T16:10:00.000Z
-Stopped at: v1.9 shipped — all milestones complete
-Last activity: 2026-06-01 — Restrict all logging/toggling to today only (quick task 260601-dr1)
+Stopped at: v1.9 shipped and archived — all milestones complete
+Last activity: 2026-06-01 — v1.9 milestone archived and tagged
 Resume file: (none — all milestones complete)
 
 ## Operator Next Steps
