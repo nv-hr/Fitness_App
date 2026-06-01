@@ -4,8 +4,8 @@ milestone: v1.9
 milestone_name: Progress Tracking
 status: Awaiting next milestone
 stopped_at: v1.9 shipped — all milestones complete
-last_updated: "2026-06-01T09:53:55.933Z"
-last_activity: 2026-06-01 — Updated README.md and AGENTS.md (v1.9 docs refresh)
+last_updated: "2026-06-01T10:05:02.026Z"
+last_activity: 2026-06-01 — Updated API.md and Postman collection (quick task 260601-nq7)
 progress:
   total_phases: 46
   completed_phases: 46
@@ -116,12 +116,13 @@ Items acknowledged at v1.9 milestone close on 2026-06-01:
 | 260601-gry | Grey-out logged meal items persistently | 2026-06-01 | `eebbdad` | [260601-gry-grey-logged-meals](./quick/260601-gry-grey-logged-meals/) |
 | 260601-m13 | Fix activity calendar persistence | 2026-06-01 | `a7c148e` | [260601-m13-fix-the-activity-callender-after-check-c](./quick/260601-m13-fix-the-activity-callender-after-check-c/) |
 | 260601-dr1 | Restrict all logging/toggling to today only | 2026-06-01 | `6b56b31` | [260601-dr1-date-restrict-logging](./quick/260601-dr1-date-restrict-logging/) |
+| 260601-nq7 | Update API backend docs and Postman docs | 2026-06-01 | `772c9d8`, `1fc97c6` | [260601-nq7-update-api-backend-docs-and-postman-docs](./quick/260601-nq7-update-api-backend-docs-and-postman-docs/) |
 
 ## Session Continuity
 
 Last session: 2026-06-01T16:10:00.000Z
 Stopped at: v1.9 shipped and archived — all milestones complete
-Last activity: 2026-06-01 — v1.9 milestone archived and tagged
+Last activity: 2026-06-01 — Completed quick task 260601-nq7: update api backend docs and postman docs
 Resume file: (none — all milestones complete)
 
 ## Operator Next Steps
