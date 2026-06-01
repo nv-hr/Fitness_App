@@ -4,8 +4,8 @@ milestone: v1.9
 milestone_name: Progress Tracking
 status: shipped
 stopped_at: All v1.9 phases (42-46) complete
-last_updated: "2026-06-01T14:51:00.000Z"
-last_activity: 2026-06-01 — Fix activity calendar persistence (quick task 260601-m13)
+last_updated: "2026-06-01T16:10:00.000Z"
+last_activity: 2026-06-01 — Restrict all logging/toggling to today only (quick task 260601-dr1)
 progress:
   total_phases: 46
   completed_phases: 46
@@ -70,10 +70,11 @@ Last activity: 2026-06-01 — v1.9 Progress Tracking shipped
 | 260601-237 | Disable logged meal items in plan | 2026-06-01 | `ce20c72` | [260601-237-disable-logged-meals](./quick/260601-237-disable-logged-meals/) |
 | 260601-gry | Grey-out logged meal items persistently | 2026-06-01 | `eebbdad` | [260601-gry-grey-logged-meals](./quick/260601-gry-grey-logged-meals/) |
 | 260601-m13 | Fix activity calendar persistence | 2026-06-01 | `a7c148e` | [260601-m13-fix-the-activity-callender-after-check-c](./quick/260601-m13-fix-the-activity-callender-after-check-c/) |
+| 260601-dr1 | Restrict all logging/toggling to today only | 2026-06-01 | `b794bcd` | [260601-dr1-date-restrict-logging](./quick/260601-dr1-date-restrict-logging/) |
 
 ## Session Continuity
 
-Last session: 2026-06-01T14:51:00.000Z
+Last session: 2026-06-01T16:10:00.000Z
 Stopped at: v1.9 shipped — all milestones complete
-Last activity: 2026-06-01 — Fix activity calendar persistence (quick task 260601-m13)
+Last activity: 2026-06-01 — Restrict all logging/toggling to today only (quick task 260601-dr1)
 Resume file: (none — all milestones complete)

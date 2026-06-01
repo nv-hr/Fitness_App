@@ -67,6 +67,9 @@ async function logMeals(req, res, next) {
       return errorResponse(res, 'Invalid date format (use YYYY-MM-DD)', 400, 'VALIDATION_ERROR');
     }
     const planDate = date || getTodayString();
+    if (planDate !== getTodayString()) {
+      return errorResponse(res, 'Can only log meals for today', 400, 'VALIDATION_ERROR');
+    }
     if (!Array.isArray(mealTypes) || mealTypes.length === 0) {
       return errorResponse(res, 'mealTypes must be a non-empty array', 400, 'VALIDATION_ERROR');
     }
@@ -123,12 +126,15 @@ async function logMeals(req, res, next) {
 async function toggleItemLogged(req, res, next) {
   try {
     const userId = req.user.userId;
-    const { date, mealType, foodId, logged } = req.body;
+    const { date: toggleDate, mealType, foodId, logged } = req.body;
 
-    if (date && !isValidDateString(date)) {
+    if (toggleDate && !isValidDateString(toggleDate)) {
       return errorResponse(res, 'Invalid date format (use YYYY-MM-DD)', 400, 'VALIDATION_ERROR');
     }
-    const planDate = date || getTodayString();
+    const planDate = toggleDate || getTodayString();
+    if (planDate !== getTodayString()) {
+      return errorResponse(res, 'Can only toggle meals for today', 400, 'VALIDATION_ERROR');
+    }
     const validMealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
     if (!validMealTypes.includes(mealType)) {
       return errorResponse(res, `Invalid mealType "${mealType}"`, 400, 'VALIDATION_ERROR');
@@ -190,12 +196,15 @@ async function toggleItemLogged(req, res, next) {
 async function swapItemHandler(req, res, next) {
   try {
     const userId = req.user.userId;
-    const { date, mealType, foodId } = req.body;
+    const { date: swapDate, mealType, foodId } = req.body;
 
-    if (date && !isValidDateString(date)) {
+    if (swapDate && !isValidDateString(swapDate)) {
       return errorResponse(res, 'Invalid date format (use YYYY-MM-DD)', 400, 'VALIDATION_ERROR');
     }
-    const planDate = date || getTodayString();
+    const planDate = swapDate || getTodayString();
+    if (planDate !== getTodayString()) {
+      return errorResponse(res, 'Can only swap meals for today', 400, 'VALIDATION_ERROR');
+    }
     const validMealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
     if (!validMealTypes.includes(mealType)) {
       return errorResponse(res, `Invalid mealType "${mealType}"`, 400, 'VALIDATION_ERROR');

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { format, isBefore, startOfToday, startOfMonth } from 'date-fns';
+import { format, isBefore, isAfter, isToday, startOfToday, startOfMonth } from 'date-fns';
 import { CalendarPageLayout } from '../../../shared/calendar/index.js';
 import { getDailyMealPlan, generateDailyMealPlan, logMeals, toggleItemLogged, swapMealItem } from '../api/dailyMealPlanApi.js';
 import { useResponsive } from '../../../shared/hooks/useResponsive.js';
@@ -241,12 +241,14 @@ export default function MealCalendarSection({
   }, [selectedDay, swapRetryAfter]);
 
   let isPast = false;
+  let isNotToday = true;
   if (selectedDay) {
     const today = startOfToday();
     const sel = new Date(selectedDay);
     sel.setHours(0, 0, 0, 0);
     today.setHours(0, 0, 0, 0);
     isPast = sel < today;
+    isNotToday = sel.getTime() !== today.getTime();
   }
 
   const renderDayContent = () => {
@@ -283,7 +285,7 @@ export default function MealCalendarSection({
             return (
               <div key={meal.meal_type} style={{
                 border: '1px solid #e5e7eb', borderRadius: '4px', padding: '0.5rem',
-                opacity: isPast ? 0.6 : allLogged ? 0.65 : 1,
+                opacity: isNotToday ? 0.6 : allLogged ? 0.65 : 1,
               }}>
                 <div style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -298,7 +300,7 @@ export default function MealCalendarSection({
                     )}
                     {allLogged ? (
                       <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Logged ✓</span>
-                    ) : isPast ? (
+                    ) : isNotToday ? (
                       <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Not logged</span>
                     ) : (
                       <button
@@ -341,7 +343,7 @@ export default function MealCalendarSection({
                               }} title="Logged">
                                 ✓
                               </span>
-                            ) : isPast ? null : (
+                            ) : isNotToday ? null : (
                               <button
                                 onClick={() => handleToggleItem(meal.meal_type, item.food_id, item.logged)}
                                 style={{
@@ -362,7 +364,7 @@ export default function MealCalendarSection({
                             )}
 
                             {/* Swap button */}
-                            {!isPast && !item.logged && (
+                            {!isNotToday && !item.logged && (
                               isSwapping ? (
                                 <div style={{
                                   width: '28px', height: '28px', minWidth: '28px',

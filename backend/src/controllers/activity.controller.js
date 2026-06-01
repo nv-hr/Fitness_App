@@ -73,6 +73,12 @@ async function logActivity(req, res, next) {
     // Default loggedDate to today
     const logDate = loggedDate || new Date().toISOString().split('T')[0];
 
+    // Only allow logging for today
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (logDate !== todayStr) {
+      return errorResponse(res, 'Can only log activities for today', 400, 'VALIDATION_ERROR');
+    }
+
     const log = await activityRepo.createActivityLog(req.user.userId, {
       activityId,
       durationMin,

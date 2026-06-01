@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { format, isBefore, startOfToday, startOfWeek, startOfMonth } from 'date-fns';
+import { format, isBefore, isToday, startOfToday, startOfWeek, startOfMonth } from 'date-fns';
 import { CalendarPageLayout } from '../../../shared/calendar/index.js';
 import DayActivityRow from '../../weekly-plan/components/DayActivityRow.jsx';
 import Toast from '../../weekly-plan/components/Toast.jsx';
@@ -241,6 +241,7 @@ export default function ActivityCalendarSection({
   }, [selectedDay]);
 
   const isPast = selectedDay ? isBefore(selectedDay, startOfToday()) : false;
+  const isNotToday = selectedDay ? !isToday(selectedDay) : true;
 
   return (
     <div style={{ maxWidth: isMobile ? '100%' : '600px', margin: '0 auto', padding: '0 0 2rem' }}>
@@ -296,15 +297,15 @@ export default function ActivityCalendarSection({
                   <DayActivityRow
                     key={activity.activity_id}
                     activity={activity}
-                    onSwap={isPast ? undefined : () => handleSwap(activity.activity_id, ((selectedDay.getDay() + 6) % 7))}
-                    isSwapping={swappingActivityId === activity.activity_id}
-                    swapRetryAfter={swapRetryAfter}
-                    onToggle={isPast ? undefined : () => handleToggleComplete(
+                    onSwap={isNotToday ? undefined : () => handleSwap(activity.activity_id, ((selectedDay.getDay() + 6) % 7))}
+
+                    onToggle={isNotToday ? undefined : () => handleToggleComplete(
+                      selectedDay,
+                      dayIndex,
                       activity.activity_id,
-                      ((selectedDay.getDay() + 6) % 7),
-                      completedActivities.has(activity.activity_id)
+                      !activity.completed,
                     )}
-                    disabled={isPast}
+                    disabled={isNotToday}
                     completed={completedActivities.has(activity.activity_id)}
                   />
                 ))}

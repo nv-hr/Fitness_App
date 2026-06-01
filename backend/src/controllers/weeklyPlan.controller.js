@@ -235,6 +235,17 @@ async function swapHandler(req, res, next) {
     }
     targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());
 
+    // Only allow swapping for today
+    const todayStr = new Date().toISOString().split('T')[0];
+    const dayDate = getMonday(new Date());
+    const dayOffset = dayIndex;
+    const targetDate = new Date(dayDate);
+    targetDate.setDate(targetDate.getDate() + dayOffset);
+    const targetDateStr = targetDate.toISOString().split('T')[0];
+    if (targetDateStr !== todayStr) {
+      return errorResponse(res, 'Can only swap activities for today', 400, 'VALIDATION_ERROR');
+    }
+
     // CR-02: Acquire per-user lock to make the entire migration+swap sequence atomic.
     // This prevents concurrent swap requests from racing on cache/DB state.
     const lockKey = `swap_${userId}_${targetWeekStart}`;
@@ -434,6 +445,12 @@ async function toggleComplete(req, res, next) {
     const activityIdx = day.activities.findIndex(a => a.activity_id === activityId);
     if (activityIdx === -1) {
       return errorResponse(res, 'Activity not found in plan day', 404, 'NOT_FOUND');
+    }
+
+    // Only allow toggling for today
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (day.date !== todayStr) {
+      return errorResponse(res, 'Can only toggle activities for today', 400, 'VALIDATION_ERROR');
     }
 
     // Set the completed flag

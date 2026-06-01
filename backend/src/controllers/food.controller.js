@@ -64,6 +64,12 @@ export async function logFood(req, res, next) {
     // Default logDate to today
     const logDateValue = logDate || new Date().toISOString().split('T')[0];
 
+    // Only allow logging for today
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (logDateValue !== todayStr) {
+      return errorResponse(res, 'Can only log food for today', 400, 'VALIDATION_ERROR');
+    }
+
     let calories;
     if (foodId) {
       // Seeded food: calculate server-side from calories_per_100g (T-04-06)

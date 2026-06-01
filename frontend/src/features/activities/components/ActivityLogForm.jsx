@@ -87,8 +87,8 @@ export default function ActivityLogForm({ activity, onSubmit, onCancel }) {
             id="loggedDate"
             type="date"
             value={loggedDate}
-            onChange={(e) => setLoggedDate(e.target.value)}
-            style={{ display: 'block', width: '100%', padding: '0.5rem', boxSizing: 'border-box' }}
+            readOnly
+            style={{ display: 'block', width: '100%', padding: '0.5rem', boxSizing: 'border-box', background: '#f3f4f6', cursor: 'not-allowed' }}
           />
         </div>
 
