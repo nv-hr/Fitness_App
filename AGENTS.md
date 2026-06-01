@@ -49,7 +49,7 @@ A web-based health application that helps users monitor their body condition thr
 ## Build / Tooling
 - **Vite 8** — Frontend build tool
 - **Docker** — Multi-stage production build
-- **Jest** (backend) + **Vitest** (frontend) — 141 frontend + backend tests
+- **Jest** (backend) + **Vitest** (frontend) — 175 tests
 <!-- GSD:stack-end -->
 
 <!-- GSD:conventions-start source:CONVENTIONS.md -->
@@ -79,7 +79,7 @@ A web-based health application that helps users monitor their body condition thr
 | Branch naming | `features` (from PR #1 merge) |
 | PR style | Standard GitHub merge |
 ## Notes
-- Codebase has 450+ commits across 41 phases. See .planning/PROJECT.md for full history.
+- Codebase has 590+ commits across 46 phases. See .planning/PROJECT.md for full history.
 <!-- GSD:conventions-end -->
 
 <!-- GSD:architecture-start source:ARCHITECTURE.md -->
@@ -116,7 +116,7 @@ A web-based health application that helps users monitor their body condition thr
 - **BMR**: Mifflin-St Jeor or Harris-Benedict equation
 - **KCAL**: Food item calorie summation
 ## Notes
-- 41 phases completed across 8 milestones (v1.0 through v1.8). See .planning/ROADMAP.md for full phase breakdown.
+- 46 phases completed across 9 milestones (v1.0 through v1.9). See .planning/ROADMAP.md for full phase breakdown.
 <!-- GSD:architecture-end -->
 
 <!-- GSD:skills-start source:skills/ -->
