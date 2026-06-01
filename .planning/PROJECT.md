@@ -10,21 +10,21 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 
 ## Current State
 
-**Building:** v1.7 Calendar-Based Plan UI
-**Shipped:** v1.6 Activity Planner Rework (2026-05-31)
-**Phases:** 33 complete (v1.0: 5, v1.1: 3, v1.2: 4, v1.3: 5, v1.4: 6, v1.5: 6, v1.6: 4) | **Plans:** 76 | **Commits:** 292+
+**Building:** Planning next milestone
+**Shipped:** v1.7 Calendar-Based Plan UI (2026-06-01)
+**Phases:** 37 complete (v1.0: 5, v1.1: 3, v1.2: 4, v1.3: 5, v1.4: 6, v1.5: 6, v1.6: 4, v1.7: 4) | **Plans:** 68 | **Commits:** 450+
+
+### v1.7 shipped:
+- **Activity Calendar Page** — Month grid view at `/activity-calendar` with color-coded days (blue=incomplete, green=completed, grey=missed past), above-calendar Generate Week button, day-click detail panel with DayActivityRow cards including per-activity swap and completion toggle
+- **Meal Calendar Page** — Month grid view at `/meal-calendar` with same color coding, above-calendar Generate Day button, day-click detail panel with per-meal-type sections and individual Log buttons (breakfast, lunch, dinner, snack)
+- **Past Days Read-Only** — Both calendars: past days are greyed out with no interactions (no swap, no toggle, no log)
+- **Auto-Generation** — Both pages auto-generate plans when viewing today with no existing plan; ref guard prevents re-fire on month navigation
+- **Shared Calendar Components** — CalendarGrid, MonthNav, DayDetailPanel, CalendarPageLayout, useMonthData, calendarUtils — 896 LOC, 33 tests, reusable across feature pages
+- **Backend toggle-complete** — POST `/api/weekly-plans/toggle-complete` with validation and optimistic update support
+- **Cleanup** — Old WeeklyPlanPage, MealPlanPage, DayCard, DayMealCard, ActivitiesPage components and their 32 tests removed; dead imports cleaned
+- **141 tests passing** (0 failures) across 15 test files
 
 ### v1.6 shipped:
-- **Variable-Day Weekly Plans** — LLM generates plans with 4-6 activity days (user selected), remaining days as rest
-- **Profile-Driven Activity Selection** — Activities chosen based on user's fitness goal, activity level, and profile
-- **Activity Swapping** — Per-activity swap button with LLM replacement, rate-limited independently
-- **Days Selector UI** — Visual checkbox panel to configure available days before generating a plan
-- **Rest Day Cards** — Dedicated green DayCard variant for rest days with recovery messaging
-- **Plan Migration** — Old-format plans auto-migrate to new format on next visit (transparent, no data loss)
-- **Swap Edge Cases** — 404 for nonexistent activityId, auto-migration for swap on old-format plans
-- **62/63 tests passing** (1 pre-existing validatePlanStructure test data issue)
-
-### v1.5 shipped:
 - **Activity Plan Logging** — Generated activities auto-save to activity log with completed toggle
 - **Daily Meal Plan Logging** — Generated meals auto-save to food log with completed/regenerate actions
 - **3-Day Meal Plan Backend** — Meal recommendations generate for 1 day (not weekly), with LLM correction loop and fuzzy ingredient matching
@@ -38,17 +38,9 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 - **LLM Weekly Activity Plans** — AI-generated 7-day personalized plans via OpenRouter with day-by-day cards, single-day regeneration, and rate-limit UX
 - **260/260 tests passing** — backend 134 + frontend 126
 
-## Current Milestone: v1.7 Calendar-Based Plan UI
+## Next Milestone: v2.0 (Planning Phase)
 
-**Goal:** Replace the existing Activity Plan and Food Log pages with calendar-driven UIs for visualizing and managing weekly plans and daily meals.
-
-**Target features:**
-- Activity Calendar page — month grid view with color-coded days (blue=incomplete, green=completed, grey=missed past), above-calendar generate button, day click shows detail panel with activity cards including swap and completion toggle
-- Meal Calendar page — month grid view with same color coding, above-calendar generate button, day click shows meal detail with log action
-- Past days are read-only (grey)
-- Auto-generate on view today if no plan exists
-- Keep swap (activity) and log (meal) interactions; remove other interactions and their tests
-- Same backend endpoints — no API changes
+**Goal:** TBD — awaiting requirements definition.
 
 ## Requirements
 
@@ -113,6 +105,16 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 - ✓ Rate-limited: generate 5/15min, regenerate 3/30min, log-day 30/15min — v1.4
 - ✓ Batch log with atomic transaction — v1.4
 
+#### v1.7 Calendar-Based Plan UI
+- ✓ Activity Calendar page with month grid, color-coded days, Generate Week, swap, completion toggle, past read-only — v1.7
+- ✓ Meal Calendar page with month grid, per-meal-type log buttons, Generate Day, past read-only — v1.7
+- ✓ Auto-generation with ref guard (no re-fire on month navigation) — v1.7
+- ✓ Past days read-only (grey) on both calendars — v1.7
+- ✓ Shared calendar components: CalendarGrid, MonthNav, DayDetailPanel, CalendarPageLayout, useMonthData — v1.7
+- ✓ Backend toggle-complete endpoint — v1.7
+- ✓ Old WeeklyPlanPage, MealPlanPage, DayCard, DayMealCard, ActivitiesPage removed — v1.7
+- ✓ All 27 CAL requirements satisfied — v1.7
+
 #### v1.6 Activity Planner Rework
 - ✓ Variable-day scheduling: 4-6 available days selection — v1.6
 - ✓ Rest days displayed as rest day cards — v1.6
@@ -125,14 +127,7 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 
 ### Active
 
-- **CAL-01**: Activity Calendar page with month grid, color-coded days, and day-click detail panel
-- **CAL-02**: Meal Calendar page with month grid, color-coded days, and day-click meal detail
-- **CAL-03**: Generate button above calendar for weekly activity / daily meal generation
-- **CAL-04**: Auto-generate plan when viewing today with no existing plan
-- **CAL-05**: Past days are read-only (grey) — no backfill logging
-- **CAL-06**: Activity swap interaction preserved in day detail panel
-- **CAL-07**: Meal one-click log interaction preserved in day detail panel
-- **CAL-08**: Remove deprecated UI interactions (single-day regenerate, etc.) and associated tests
+*(None — next requirements to be defined)*
 
 ### Out of Scope
 
@@ -173,8 +168,10 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 - **v1.2 shipped**: 4 phases (9-12), 13 plans, 87 commits, Supabase PostgreSQL migration
 - **v1.3 shipped**: 5 phases (13-17), 9 plans, 110 commits, +13,786 LOC
 - **v1.6 shipped**: 4 phases (30-33), 8 plans, 62 commits, 40 files, +6,889 LOC
+- **v1.7 shipped**: 4 phases (34-37), ~164 commits, 161 files modified, ~1,650 LOC new (896 shared calendar + 671 feature pages + backend)
 - **Activity Planning**: 7-day template with rest_day flag, variable activity days (4-6), profile-driven LLM selection, per-activity swap with dedicated rate limit
-- **Test Status**: 63 backend unit tests (62 pass, 1 pre-existing data issue); 46 backend integration tests require running DB
+- **Calendar UI**: Month grid with custom CSS Grid + date-fns (no calendar library), color-coded day status (blue/green/grey), slot-based DayDetailPanel, generic useMonthData hook, parallel 5-6 weekly or 28-31 daily fetches
+- **Test Status**: 141 frontend tests passing (0 failures) across 15 test files
 
 ## Constraints
 
@@ -219,6 +216,12 @@ Users can accurately calculate their BMI and TDEE, log daily food intake by sele
 | 5-minute migration cooldown Map | Prevents infinite LLM retry on migration failure | ✓ Good — v1.6 |
 | Lazy migration on GET request | Transparent migration, no user notification | ✓ Good — v1.6 |
 | Swap triggers auto-migration for old-format plans | Prevents 404 on nonexistent activities | ✓ Good — v1.6 |
+| Custom CSS Grid + date-fns (no calendar library) | Full calendar libraries wrong paradigm for day-status model | ✓ Good — v1.7 |
+| useMonthData generic with fetchWeekFn | Reusable across activity/meal pages with different APIs | ✓ Good — v1.7 |
+| 5-6 parallel weekly calls (activity) vs 28-31 daily calls (meal) | Different data sources by design (weekly plan vs daily plan) | ✓ Good — v1.7 |
+| Past-day read-only enforced client-side | Past-day interactions have no security impact | ✓ Good — v1.7 |
+| Auto-gen ref guard (monthNavRef) | Prevents auto-gen re-fire during month navigation | ✓ Good — v1.7 |
+| DayActivityRow extended with onToggle/disabled/completed | Completion toggle + past-day disabled state in one component | ✓ Good — v1.7 |
 
 ## Evolution
 
@@ -238,4 +241,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-31 after initiating v1.7 milestone*
+*Last updated: 2026-06-01 after v1.7 milestone completion*

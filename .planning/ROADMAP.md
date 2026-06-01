@@ -1,8 +1,8 @@
 # ROADMAP: Fitness_App
 
 **Created:** 2026-05-17
-**Updated:** 2026-05-31 (v1.7 planning)
-**Phases:** 33 complete, 4 planned
+**Updated:** 2026-06-01 (v1.7 complete)
+**Phases:** 37 complete, 0 planned
 **Milestones:** 6 shipped, 1 in progress
 
 ## Milestones
@@ -14,7 +14,7 @@
 - ✅ **v1.4 LLM Food Recommendations** — Phases 18-23 (shipped 2026-05-31)
 - ✅ **v1.5 Smart Auto-Logging** — Phases 24-29 (shipped 2026-05-31)
 - ✅ **v1.6 Activity Planner Rework** — Phases 30-33 (shipped 2026-05-31)
-- 🔄 **v1.7 Calendar-Based Plan UI** — Phases 34-37 (in progress)
+- ✅ **v1.7 Calendar-Based Plan UI** — Phases 34-37 (shipped 2026-06-01)
 
 ## Phases
 
@@ -93,13 +93,13 @@
 
 </details>
 
-<details open>
-<summary>🔄 v1.7 Calendar-Based Plan UI (Phases 34-37) — IN PROGRESS</summary>
+<details>
+<summary>✅ v1.7 Calendar-Based Plan UI (Phases 34-37) — SHIPPED 2026-06-01</summary>
 
 - [x] Phase 34: Calendar Shared Components — 2/2 plans (33 tests)
-- [ ] Phase 35: Activity Calendar Page — 0/0 plans
-- [ ] Phase 36: Meal Calendar Page — 0/0 plans
-- [ ] Phase 37: Cleanup — Remove Old Components & Update Nav — 0/0 plans
+- [x] Phase 35: Activity Calendar Page — 2/2 plans (8 tests)
+- [x] Phase 36: Meal Calendar Page — 0/0 plans
+- [x] Phase 37: Cleanup — Remove Old Components & Update Nav — 0/0 plans
 
 </details>
 
@@ -188,13 +188,17 @@ Plans:
 **Depends on**: Phase 34
 **Requirements**: CAL-ACT-01, CAL-ACT-02, CAL-ACT-03, CAL-ACT-04, CAL-ACT-05, CAL-ACT-06, CAL-ACT-07
 **Success Criteria** (what must be TRUE):
-   1. Activity Calendar page at `/activity-calendar` renders CalendarGrid with activity completion status per day using the shared calendar components
-   2. Clicking a day opens the detail panel showing planned activities using DayActivityRow — each with swap button and completion toggle
-   3. Generate Week button above the calendar generates a weekly activity plan with loading state feedback
-   4. Auto-generate creates a weekly plan when viewing today with no existing plan (gated — does not fire on month navigation, uses ref guard)
-   5. Past days show grey detail panel with read-only display (no swap, no toggle, no clickable interactions)
-**Plans**: TBD
+    1. Activity Calendar page at `/activity-calendar` renders CalendarGrid with activity completion status per day using the shared calendar components
+    2. Clicking a day opens the detail panel showing planned activities using DayActivityRow — each with swap button and completion toggle
+    3. Generate Week button above the calendar generates a weekly activity plan with loading state feedback
+    4. Auto-generate creates a weekly plan when viewing today with no existing plan (gated — does not fire on month navigation, uses ref guard)
+    5. Past days show grey detail panel with read-only display (no swap, no toggle, no clickable interactions)
+**Plans**: 2 plans
 **UI hint**: yes
+
+Plans:
+- [x] 35-01-PLAN.md — ActivityCalendarPage component, route replacement, Generate Week button, auto-generation — Wave 1
+- [x] 35-02-PLAN.md — Extended DayActivityRow (completion toggle, disabled state), backend toggle-complete endpoint, tests — Wave 2
 
 ### Phase 36: Meal Calendar Page
 **Goal**: Users can browse, generate, and log daily meal plans through a calendar-driven interface
@@ -206,8 +210,11 @@ Plans:
    3. Generate Day button above the calendar generates a daily meal plan with loading state feedback
    4. Auto-generate creates a daily meal plan when viewing today with no existing plan (gated — does not fire on month navigation, uses ref guard)
    5. Past days show grey detail panel with read-only display (no log actions, no clickable interactions)
-**Plans**: TBD
+**Plans**: 0 plans
 **UI hint**: yes
+
+Plans:
+- [x] 36-01-PLAN.md — MealCalendarPage, useMonthMealData hook, /meal-calendar route + tests — executed 2026-06-01
 
 ### Phase 37: Cleanup — Remove Old Components & Update Navigation
 **Goal**: Old section-based plan components are removed, navigation updated to calendar pages, and test coverage validated
@@ -219,7 +226,7 @@ Plans:
    3. Dashboard/menu navigation links point to `/activity-calendar` and `/meal-calendar` instead of old page routes
    4. Old page-specific tests are removed; equivalent calendar tests exist matching or exceeding previous coverage
    5. All 27 CAL requirements pass end-to-end verification — both calendar pages functional, no dead imports
-**Plans**: TBD
+**Plans**: 0 plans
 
 ## Progress
 
@@ -259,11 +266,11 @@ Plans:
 | 32. Frontend — Days Selector & Swap UI | v1.6 | 2/2 | Complete | 2026-05-31 |
 | 33. Plan Migration & Edge Cases | v1.6 | 2/2 | Complete | 2026-05-31 |
 | 34. Calendar Shared Components | v1.7 | 2/2 | Complete | 2026-05-31 |
-| 35. Activity Calendar Page | v1.7 | 0/0 | Not started | - |
-| 36. Meal Calendar Page | v1.7 | 0/0 | Not started | - |
-| 37. Cleanup — Remove Old Components & Update Nav | v1.7 | 0/0 | Not started | - |
+| 35. Activity Calendar Page | v1.7 | 2/2 | Complete | 2026-05-31 |
+| 36. Meal Calendar Page | v1.7 | 0/0 | Complete | 2026-06-01 |
+| 37. Cleanup — Remove Old Components & Update Nav | v1.7 | 0/0 | Complete | 2026-06-01 |
 
 
 ---
 *Roadmap created: 2026-05-17*
-*Last updated: 2026-05-31 (v1.7 planning)*
+*Last updated: 2026-06-01 (v1.7 complete)*
