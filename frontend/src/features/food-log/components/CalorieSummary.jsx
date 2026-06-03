@@ -5,25 +5,22 @@ export default function CalorieSummary({ totalConsumed, calorieTarget, remaining
   const isOverTarget = calorieTarget > 0 && totalConsumed > calorieTarget;
   
   // Decide badge styling and progress bar coloring
-  let cardBg = 'bg-white border-slate-200/50 shadow-lux';
-  let barGradient = 'from-emerald-500 to-teal-400';
-  let statusText = 'text-slate-600';
+  let cardBg = 'bg-[#1a1a1a] border-[#2d2d2d] shadow-lux';
+  let barGradient = 'from-emerald-500 to-emerald-600';
+  let statusText = 'text-slate-400';
   let statusIcon = <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
 
   if (isOverTarget) {
-    cardBg = 'bg-rose-50/50 border-rose-200/60 shadow-xs';
+    cardBg = 'bg-[#2d1212] border-[#4c1a1a] shadow-xs';
     barGradient = 'from-rose-500 to-orange-400';
-    statusText = 'text-rose-600 font-semibold';
+    statusText = 'text-rose-500 font-semibold';
     statusIcon = <ShieldAlert className="w-4 h-4 text-rose-500" />;
   } else if (isExtremeDeficit && totalConsumed > 0) {
-    cardBg = 'bg-amber-50/60 border-amber-200/60 shadow-xs';
+    cardBg = 'bg-[#2a1e12] border-amber-900/60 shadow-xs';
     barGradient = 'from-amber-500 to-yellow-400';
-    statusText = 'text-amber-700 font-semibold';
+    statusText = 'text-amber-500 font-semibold';
     statusIcon = <ShieldAlert className="w-4 h-4 text-amber-500" />;
-  } else if (totalConsumed > 0) {
-    cardBg = 'bg-emerald-50/25 border-emerald-200/40 shadow-sm';
   }
-
   return (
     <div className={`p-6 rounded-2xl border transition-all duration-300 ${cardBg}`}>
       {/* Top metrics grid */}

@@ -19,7 +19,7 @@ const schema = z.object({
   targetDate: z.string().optional(),
 });
 
-export default function ProfileForm() {
+export default function ProfileForm({ onSaveSuccess, isOverlay = false }) {
   const {
     register,
     handleSubmit,
@@ -105,6 +105,12 @@ export default function ProfileForm() {
         setExistingProfile(response.data.profile);
       }
       setSuccess('Health profile successfully saved and analyzed!');
+      if (onSaveSuccess) {
+        // Wait briefly so they can read the success message
+        setTimeout(() => {
+          onSaveSuccess(response.data.profile);
+        }, 800);
+      }
     } catch (err) {
       setError(err.message || 'Failed to save profile');
     }
@@ -123,14 +129,16 @@ export default function ProfileForm() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      <div>
-        <h1 className="font-display font-extrabold text-3xl text-slate-800 tracking-tight">
-          Biometrics & TDEE Profile
-        </h1>
-        <p className="text-slate-500 text-sm mt-1 leading-relaxed">
-          Measure BMI, calculate TDEE, and customize calorie targets according to your activity level.
-        </p>
-      </div>
+      {!isOverlay && (
+        <div>
+          <h1 className="font-display font-extrabold text-3xl text-slate-800 tracking-tight">
+            Biometrics & TDEE Profile
+          </h1>
+          <p className="text-slate-500 text-sm mt-1 leading-relaxed">
+            Measure BMI, calculate TDEE, and customize calorie targets according to your activity level.
+          </p>
+        </div>
+      )}
 
       {success && (
         <div className="flex gap-2.5 p-3.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-100 text-sm items-center shadow-xs">

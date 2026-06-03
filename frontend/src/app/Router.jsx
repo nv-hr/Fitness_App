@@ -8,6 +8,8 @@ import { FoodLogPage } from '../features/food-log/index.js';
 import { ActivityPage } from '../features/activities/index.js';
 import { ProgressPage } from '../features/progress/index.js';
 import { getProfile } from '../features/profile/api/profileApi.js';
+import { BMICalculator, TDEECalculator } from '../features/calculators/index.js';
+import { LandingPage } from '../features/landing/index.js';
 
 import { useResponsive } from '../shared/hooks/useResponsive.js';
 import { 
@@ -20,7 +22,12 @@ import {
   Activity,
   ChevronRight,
   TrendingUp,
-  Flame
+  Flame,
+  Settings,
+  HelpCircle,
+  Mail,
+  UserCheck,
+  Scale
 } from 'lucide-react';
 
 function Loader({ message = 'Loading health system...' }) {
@@ -40,25 +47,63 @@ function ResponsiveLayout({ children }) {
   const { user, logout } = useAuth();
   const location = useLocation();
 
+  const [profileMissing, setProfileMissing] = useState(false);
+  const [checkingProfile, setCheckingProfile] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      getProfile()
+        .then((res) => {
+          const p = res?.data?.profile;
+          if (!p || !p.weight_kg || !p.height_cm || !p.age || !p.gender) {
+            setProfileMissing(true);
+          } else {
+            setProfileMissing(false);
+          }
+          setCheckingProfile(false);
+        })
+        .catch(() => {
+          setProfileMissing(true);
+          setCheckingProfile(false);
+        });
+    } else {
+      setCheckingProfile(false);
+      setProfileMissing(false);
+    }
+  }, [user]);
+
+  const handleProfileSaveSuccess = () => {
+    setProfileMissing(false);
+  };
+
   const navItems = [
-    { path: '/', label: 'Overview', icon: LayoutDashboard },
-    { path: '/profile', label: 'Profile & TDEE', icon: User },
-    { path: '/food-log', label: 'Calorie & Nutrition', icon: Apple },
-    { path: '/activities', label: 'Workout Tracker', icon: Dumbbell },
-    { path: '/progress', label: 'Weight Progress', icon: LineChart },
+    { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/bmi', label: 'BMI Calculator', icon: Scale },
+    { path: '/tdee', label: 'TDEE Calculator', icon: Flame },
+    { path: '/food-log', label: 'Food Tracker', icon: Apple },
+    { path: '/activities', label: 'Activities', icon: Activity },
+    { path: '/progress', label: 'Progress', icon: LineChart },
+    { path: '/profile', label: 'Profile', icon: User },
+    { path: '#', label: 'About', icon: HelpCircle, dummy: true },
+    { path: '#', label: 'Contact', icon: Mail, dummy: true },
   ];
 
-  // For unauthenticated flow (Login/Register)
+  // For unauthenticated flow — landing page is full-bleed,
+  // login / register get the centred card wrapper.
   if (!user) {
+    const isAuthForm = location.pathname === '/login' || location.pathname === '/register';
+    if (!isAuthForm) {
+      return <>{children}</>;
+    }
     return (
-      <div className="min-h-screen bg-slate-50/50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <div className="flex justify-center items-center gap-2 mb-2">
             <div className="p-2 bg-emerald-500 rounded-xl shadow-md text-white">
               <Activity className="w-6 h-6 animate-pulse" />
             </div>
-            <span className="font-display font-bold text-2xl tracking-tight text-slate-900">
-              Kala<span className="text-emerald-500">Fit</span>
+            <span className="font-display font-bold text-2xl tracking-tight text-white">
+              Fit<span className="text-emerald-500">Life</span>
             </span>
           </div>
         </div>
@@ -71,57 +116,41 @@ function ResponsiveLayout({ children }) {
     );
   }
 
+  if (checkingProfile) {
+    return <Loader message="Verifying profile completion..." />;
+  }
+
   return (
-    <div className="min-h-screen bg-slate-50/40 font-sans flex flex-col">
-      {/* Dynamic Header */}
-      <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b border-slate-200/50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
+    <div className="min-h-screen bg-[#121212] font-sans flex flex-col">
+      {/* Top Header */}
+      <header className="sticky top-0 z-40 w-full bg-[#801414] border-b border-[#991b1b]/30 shadow-md">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-14 items-center">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2.5 group">
-              <div className="p-1.5 bg-emerald-500 rounded-lg text-white shadow-sm group-hover:scale-105 transition-transform">
-                <Activity className="w-5 h-5" />
-              </div>
-              <span className="font-display font-bold text-xl tracking-tight text-slate-800">
-                Kala<span className="text-emerald-500">Fit</span>
+            <Link to="/" className="flex items-center gap-2 group">
+              <Activity className="w-5 h-5 text-white" />
+              <span className="font-display font-extrabold text-xl tracking-tight text-white">
+                Fit<span className="font-light">Life</span>
               </span>
             </Link>
 
-            {/* Desktop Navigation */}
-            {!isMobile && (
-              <nav className="flex space-x-1 bg-slate-100/60 p-1 rounded-xl">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = location.pathname === item.path;
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                        isActive
-                          ? 'bg-white text-emerald-600 shadow-sm font-semibold'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4" />
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </nav>
-            )}
-
-            {/* User Session Handler */}
-            <div className="flex items-center gap-3">
+            {/* Header Right Action Items */}
+            <div className="flex items-center gap-4">
               {!isMobile && (
-                <div className="text-right">
-                  <p className="text-xs text-slate-400">Logged in as</p>
-                  <p className="text-xs font-semibold text-slate-700 max-w-[150px] truncate">{user?.email}</p>
+                <div className="text-right text-white">
+                  <p className="text-[10px] opacity-75">Logged in as</p>
+                  <p className="text-xs font-semibold max-w-[150px] truncate">{user?.email}</p>
                 </div>
               )}
               <button
+                className="text-white hover:opacity-80 transition-opacity cursor-pointer"
+                title="Settings"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+              <button
                 onClick={logout}
-                className="flex items-center justify-center p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200/40 hover:border-rose-100 transition-colors"
+                className="flex items-center justify-center p-2 rounded-xl text-white hover:bg-white/10 transition-colors cursor-pointer"
                 title="Log out"
               >
                 <LogOut className="w-4 h-4" />
@@ -129,45 +158,90 @@ function ResponsiveLayout({ children }) {
             </div>
           </div>
         </div>
+      </header>
 
-        {/* Mobile Mini Navigation Tab-Scroll */}
-        {isMobile && (
-          <div className="w-full border-t border-slate-100 bg-white overflow-x-auto scrollbar-none flex px-4 py-2 space-x-2">
-            {navItems.map((item) => {
+      {/* Main Layout Grid / Flex */}
+      <div className="flex-1 flex flex-col md:flex-row">
+        {/* Left Sidebar on desktop */}
+        {!isMobile ? (
+          <aside className="w-64 bg-[#151515] border-r border-[#222] flex flex-col justify-between py-6 shrink-0">
+            <nav className="flex flex-col space-y-1 px-3">
+              {navItems.map((item, idx) => {
+                const Icon = item.icon;
+                const isActive = item.dummy ? false : (
+                  (item.path === '/' && location.pathname === '/') ||
+                  (item.path !== '/' && location.pathname.startsWith(item.path))
+                );
+                return (
+                  <Link
+                    key={idx}
+                    to={item.path}
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                      isActive
+                        ? 'bg-emerald-500 text-white font-semibold shadow-md'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+            <div className="px-6 pt-4 border-t border-[#222]">
+              <p className="text-[10px] text-slate-500">© FitLife App</p>
+            </div>
+          </aside>
+        ) : (
+          /* Mobile Navigation */
+          <div className="w-full border-b border-[#222] bg-[#1a1a1a] overflow-x-auto scrollbar-none flex px-4 py-2 space-x-2">
+            {navItems.filter(item => !item.dummy).map((item, idx) => {
               const Icon = item.icon;
-              const isActive = location.pathname === item.path;
+              const isActive = (item.path === '/' && location.pathname === '/') ||
+                (item.path !== '/' && location.pathname.startsWith(item.path));
               return (
                 <Link
-                  key={item.path}
+                  key={idx}
                   to={item.path}
-                  className={`flex items-center gap-1 px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0 ${
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0 ${
                     isActive
-                      ? 'bg-emerald-50 text-emerald-600 border border-emerald-100/60'
-                      : 'text-slate-600 bg-slate-50 border border-transparent hover:bg-slate-100'
+                      ? 'bg-emerald-500 text-white'
+                      : 'text-slate-400 bg-[#222] hover:bg-[#333]'
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
-                  {item.label}
+                  <span>{item.label}</span>
                 </Link>
               );
             })}
           </div>
         )}
-      </header>
 
-      {/* Main Content Dashboard Frame */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-transparent">
-          {children}
-        </div>
-      </main>
+        {/* Main Content Area */}
+        <main className="flex-1 bg-[#121212] py-8 px-4 sm:px-6 lg:px-8">
+          <div>
+            {children}
+          </div>
+        </main>
+      </div>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-slate-200/40 py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-400">
-          <p>© {new Date().getFullYear()} KalaFit — Modern Healthy Lifestyle Companion App.</p>
+      {/* Biometrics overlay modal */}
+      {profileMissing && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-[#181818] border border-[#2d2d2d] rounded-3xl max-w-5xl w-full p-6 sm:p-8 max-h-[90vh] overflow-y-auto shadow-2xl relative">
+            <div className="mb-6 text-center">
+              <div className="mx-auto w-12 h-12 rounded-full bg-red-950/40 border border-red-500/30 flex items-center justify-center text-red-500 mb-3">
+                <UserCheck className="w-6 h-6 animate-pulse" />
+              </div>
+              <h2 className="font-display font-extrabold text-2xl text-white">Complete Your Health Profile</h2>
+              <p className="text-slate-400 text-xs mt-1">
+                Please enter your biometrics below to unlock the features of FitLife.
+              </p>
+            </div>
+            <ProfileForm onSaveSuccess={handleProfileSaveSuccess} isOverlay={true} />
+          </div>
         </div>
-      </footer>
+      )}
     </div>
   );
 }
@@ -179,6 +253,19 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+/**
+ * HomeRoute — renders the marketing LandingPage for unauthenticated
+ * visitors and the authenticated dashboard for logged-in users.
+ * Why: keeps '/' as the single entry point for everyone while
+ * avoiding a redirect loop between '/' and '/login'.
+ */
+function HomeRoute() {
+  const { user, loading } = useAuth();
+  if (loading) return <Loader message="Loading..." />;
+  if (!user) return <LandingPage />;
+  return <ProfileGuard><DashboardPlaceholder /></ProfileGuard>;
+}
+
 function PublicRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return <Loader message="Preparing portal..." />;
@@ -187,17 +274,6 @@ function PublicRoute({ children }) {
 }
 
 function ProfileGuard({ children }) {
-  const [checked, setChecked] = useState(false);
-  const [hasProfile, setHasProfile] = useState(true);
-
-  useEffect(() => {
-    getProfile()
-      .then(() => { setHasProfile(true); setChecked(true); })
-      .catch(() => { setHasProfile(false); setChecked(true); });
-  }, []);
-
-  if (!checked) return <Loader message="Analyzing biometric health metrics..." />;
-  if (!hasProfile) return <Navigate to="/profile" replace />;
   return children;
 }
 
@@ -209,7 +285,7 @@ function DashboardPlaceholder() {
   useEffect(() => {
     getProfile()
       .then((data) => {
-        setProfile(data);
+        setProfile(data.data.profile);
         setLoading(false);
       })
       .catch(() => {
@@ -278,12 +354,12 @@ function DashboardPlaceholder() {
             <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-4 border-t border-slate-700/50 pt-6">
               <div>
                 <p className="text-xs text-slate-400 uppercase tracking-wider">Actual Weight</p>
-                <p className="text-xl font-bold font-mono text-emerald-400 mt-1">{profile.weight} <span className="text-xs font-sans text-slate-300">kg</span></p>
+                <p className="text-xl font-bold font-mono text-emerald-400 mt-1">{profile.weight_kg} <span className="text-xs font-sans text-slate-300">kg</span></p>
               </div>
               <div>
                 <p className="text-xs text-slate-400 uppercase tracking-wider">Biometric BMI</p>
                 <p className="text-xl font-bold font-mono text-teal-400 mt-1">
-                  {((profile.weight / ((profile.height / 100) * (profile.height / 100))) || 0).toFixed(1)}
+                  {((profile.weight_kg / ((profile.height_cm / 100) * (profile.height_cm / 100))) || 0).toFixed(1)}
                 </p>
               </div>
               <div className="col-span-2 sm:col-span-1">
@@ -361,11 +437,13 @@ export default function Router() {
           <Route path="/login" element={<PublicRoute><LoginForm /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><RegisterForm /></PublicRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfileForm /></ProtectedRoute>} />
+          <Route path="/bmi" element={<ProtectedRoute><BMICalculator /></ProtectedRoute>} />
+          <Route path="/tdee" element={<ProtectedRoute><TDEECalculator /></ProtectedRoute>} />
           <Route path="/food-log" element={<ProtectedRoute><FoodLogPage /></ProtectedRoute>} />
           <Route path="/meal-calendar" element={<Navigate to="/food-log" replace />} />
           <Route path="/activities" element={<ProtectedRoute><ActivityPage /></ProtectedRoute>} />
           <Route path="/progress" element={<ProtectedRoute><ProgressPage /></ProtectedRoute>} />
-          <Route path="/" element={<ProtectedRoute><ProfileGuard><DashboardPlaceholder /></ProfileGuard></ProtectedRoute>} />
+          <Route path="/" element={<HomeRoute />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </ResponsiveLayout>

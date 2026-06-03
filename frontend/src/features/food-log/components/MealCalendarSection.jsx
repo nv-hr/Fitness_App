@@ -29,10 +29,10 @@ function formatCountdown(seconds) {
 }
 
 const MEAL_META = {
-  breakfast: { label: 'Breakfast', color: 'text-amber-500 bg-amber-50 border-amber-100', icon: Coffee },
-  lunch: { label: 'Lunch', color: 'text-emerald-500 bg-emerald-50 border-emerald-100', icon: Utensils },
-  dinner: { label: 'Dinner', color: 'text-indigo-500 bg-indigo-50 border-indigo-100', icon: Moon },
-  snack: { label: 'Snack', color: 'text-rose-500 bg-rose-50 border-rose-100', icon: Cookie },
+  breakfast: { label: 'Breakfast', color: 'text-red-400 bg-red-950/40 border-red-900/30', icon: Coffee },
+  lunch: { label: 'Lunch', color: 'text-red-400 bg-red-950/40 border-red-900/30', icon: Utensils },
+  dinner: { label: 'Dinner', color: 'text-red-400 bg-red-950/40 border-red-900/30', icon: Moon },
+  snack: { label: 'Snack', color: 'text-red-400 bg-red-950/40 border-red-900/30', icon: Cookie },
 };
 
 export default function MealCalendarSection({

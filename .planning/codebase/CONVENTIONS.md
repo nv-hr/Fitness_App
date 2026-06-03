@@ -2,229 +2,125 @@
 
 **Analysis Date:** 2026-06-02
 
-## Naming Patterns
+## Project Structure
 
-**Files:**
-- Backend: `.js` extension (ESM modules), kebab-case for routes (`auth.routes.js`, `activity.routes.js`), dot-notation for logical grouping
-- Frontend: `.jsx` extension for all React files, PascalCase for components (`LoginForm.jsx`, `ActivityCard.jsx`), camelCase for utilities (`calendarUtils.js`, `http.js`)
-- Test files: `*.test.js` (backend Jest), `*.test.jsx` (frontend Vitest), co-located in `__tests__/` directories
+```
+fitness-app/
+├── backend/              # Express.js API server (ESM)
+│   ├── src/
+│   │   ├── app.js                  # Express app setup
+│   │   ├── server.js               # Server entry point
+│   │   ├── config/                 # Database, Passport config
+│   │   ├── controllers/            # Request handlers
+│   │   ├── middlewares/            # Auth, rate limiters
+│   │   ├── repositories/           # SQL query layer
+│   │   ├── routes/                 # Express route definitions
+│   │   ├── services/               # Business logic
+│   │   └── utils/                  # Errors, response, strings, food helpers
+│   ├── tests/
+│   │   ├── unit/                   # Unit tests
+│   │   └── integration/            # Integration tests
+│   └── package.json
+├── frontend/              # React SPA (Vite + ESM)
+│   └── src/
+│       ├── app/                    # App, Router, Providers
+│       ├── features/               # Feature modules
+│       │   ├── auth/
+│       │   ├── activities/
+│       │   ├── food-log/
+│       │   ├── profile/
+│       │   ├── progress/
+│       │   └── weekly-plan/
+│       └── shared/                 # Shared lib, hooks, calendar
+└── package.json          # Root workspace config
+```
 
-**Functions:**
-- Backend: `camelCase` — named async functions (`async function register(req, res, next)`)
-- Frontend: `camelCase` — arrow functions for callbacks, named function declarations for components
-- Event handlers prefixed with `handle` or `on`: `onSubmit`, `handleSubmit`
+## Languages & Runtime
 
-**Variables:**
-- `camelCase` everywhere
-- Constants use `UPPER_SNAKE_CASE` (`VALID_INTENSITIES`, `INTENSITY_MULTIPLIERS`)
-- Destructured imports use exact property names from the source
+- **Backend:** Node.js ≥18 with ES Modules (`"type": "module"`)
+- **Frontend:** React 19 with JSX, Vite 8 bundler
+- **TypeScript:** Type checking via `tsc --noEmit` at root level only (no TS compilation), actual source files are `.js`/`.jsx`
+  - `tsconfig.json` has `"allowJs": true` and `"noEmit": true`
+  - Path alias: `@/*` maps to root `./*`
 
-**Types/Classes:**
-- PascalCase for React components, custom classes (`AppError`, `ValidationError`, `AuthenticationError`), and React contexts (`AuthProvider`)
-- Error classes extend `AppError` with pattern: `class ValidationError extends AppError`
+## Naming Conventions
+
+### Files
+
+| Pattern | Example | Usage |
+|---------|---------|-------|
+| `kebab-case.js` | `auth.routes.js`, `activityLog.service.js`, `dbErrors.js` | Backend utility/data files |
+| `PascalCase.jsx` | `LoginForm.jsx`, `CalendarGrid.jsx`, `App.jsx` | Frontend React components |
+| `camelCase.js` | `authApi.js`, `http.js`, `calendarUtils.js` | Frontend non-component modules (hooks, utils, API clients) |
+| `camelCase.test.js` | `calendarUtils.test.js`, `food.utils.test.js` | Test files (both platforms) |
+| `camelCase.test.jsx` | `CalendarGrid.test.jsx`, `ActivitySummary.test.jsx` | Frontend component tests |
+
+### Functions & Variables
+
+- **Functions:** `camelCase` — `export function register()`, `calculateBmi()`, `fuzzyMatchFoodName()`
+- **Variables:** `camelCase` — `const weekStarts`, `let bestDistance`
+- **Constants:** `UPPER_SNAKE_CASE` — `VALID_INTENSITIES`, `INTENSITY_MULTIPLIERS`, `API_BASE`, `DAY_STATUS`
+- **Classes:** `PascalCase` — `AppError`, `ValidationError`, `NotFoundError`
+- **React Components:** `PascalCase` — `LoginForm`, `CalendarGrid`, `DashboardPlaceholder`
+- **Hooks:** `camelCase` with `use` prefix — `useAuth`, `useResponsive`, `useMonthData`
+- **Props destructuring:** In function signature — `export function DayActivityRow({ activity, onToggle, completed, disabled })`
+- **Boolean variables:** No strict prefix convention, but `isX` patterns appear (`isMobile`, `isSubmitting`, `isPast`, `isCustom`, `isOldFormat`)
+
+### Exports
+
+- **Controllers:** Named exports for individual handler functions + `export default { ... }` object
+- **Services:** Named exports throughout (no default exports)
+- **React Components:** `export default function ComponentName()` pattern
+- **Utils/Helpers:** Named exports throughout
+- **Route definitions:** `export default router`
+
+```javascript
+// controllers — named + default object
+export async function register(req, res, next) { ... }
+export default { register, login, logout, getMe, googleCallback };
+
+// services — named only
+export function calculateBmi(weightKg, heightCm) { ... }
+export async function getProfile(userId) { ... }
+
+// React components — default export
+export default function CalendarGrid() { ... }
+```
 
 ## Code Style
 
-**Formatting:**
-- No Prettier config detected — formatting is implicit (no `.prettierrc` found)
-- Single quotes for strings in both frontend and backend
-- Semicolons required
-- 2-space indentation (inferred from file contents)
-- Trailing commas in multiline objects and arrays
+### Formatting & Linting
 
-**Linting:**
-- No ESLint or Biome config detected across the project
-- The root `tsconfig.json` with `"noEmit": true` and `"strict": false` provides minimal type checking
-- Backend uses `// eslint-disable-next-line jest/no-standalone-expect` in `helpers.js` — suggests eslint-plugin-jest may be expected but not configured
+- **No ESLint, Prettier, or Biome config detected** — no automated formatter or linter is configured
+- **Root `tsc --noEmit`** runs TypeScript checks (catches type errors via JSDoc annotations)
+- **Style consistency appears manual**, based on observed patterns:
+  - 2-space indentation (inferred from all source files)
+  - Single quotes for strings
+  - Semicolons required
+  - Trailing commas on multi-line objects/arrays
 
-## Import Organization
+### Imports
 
-**Order:**
-1. Core/external library imports (`express`, `react`, `jsonwebtoken`, `zod`)
-2. Internal project imports with relative paths (`../services/auth.service.js`, `./hooks/useAuth.jsx`)
-3. CSS imports (frontend only: `./index.css`)
+**Order (both platforms):**
+1. External library imports (express, react, jwt, bcrypt)
+2. Internal project imports (controllers, services, utils)
+3. CSS imports (frontend only)
 
-**Path Aliases:**
-- Frontend: No path aliases used — all imports are relative (`../../../shared/lib/http.js`, `../api/authApi.js`)
-- Backend: No path aliases used — all imports are relative (`../repositories/user.repository.js`, `../utils/errors.js`)
+**No barrel files** — imports are direct paths to module files, e.g.:
+```javascript
+import { register as registerUser } from '../services/auth.service.js';
+import { successResponse, errorResponse } from '../utils/response.js';
+import { Router } from 'express';
+```
 
-**Module System:**
-- Both frontend and backend use ES Modules (`"type": "module"` in `package.json`)
-- Backend uses `import { fileURLToPath } from 'url'` + `path.dirname()` for `__dirname` equivalent
-- Frontend uses `import.meta.env` for environment variables
+**Path aliases:** `@/*` available via tsconfig but not widely used in source files.
 
-## Error Handling
+### React Patterns
 
-**Backend Patterns:**
-
-1. **Custom Error Classes** (`backend/src/utils/errors.js`):
-   - `AppError` — base class with `name`, `message`, `statusCode`, `isOperational`
-   - `ValidationError` — 400
-   - `AuthenticationError` — 401
-   - `NotFoundError` — 404
-
-2. **Uniform Response Format** (`backend/src/utils/response.js`):
-   ```js
-   // Success: { success: true, data: ... }
-   export function successResponse(res, data, statusCode = 200) {
-     return res.status(statusCode).json({ success: true, data });
-   }
-
-   // Error: { success: false, error: { message, code } }
-   export function errorResponse(res, message, statusCode = 500, code = 'INTERNAL_ERROR') {
-     return res.status(statusCode).json({ success: false, error: { message, code } });
-   }
-   ```
-
-3. **Controller try-catch-next pattern** — every handler wraps logic in try/catch and passes to `next(err)`:
-   ```js
-   async function getAllActivitiesHandler(req, res, next) {
-     try {
-       // ... logic ...
-       return successResponse(res, { activities, total: activities.length });
-     } catch (err) {
-       next(err);
-     }
-   }
-   ```
-
-4. **Global error handler** in `backend/src/app.js` — converts error names to UPPER_SNAKE_CASE codes:
-   ```js
-   app.use((err, req, res, next) => {
-     const statusCode = err.statusCode || 500;
-     const errorCode = (err.code || err.name || 'INTERNAL_ERROR')
-       .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-       .replace(/([A-Z])([A-Z][a-z])/g, '$1_$2')
-       .toUpperCase();
-     errorResponse(res, err.message, statusCode, errorCode);
-   });
-   ```
-
-5. **Specific error handling in auth.controller.js** — checks `instanceof` before falling through:
-   ```js
-   if (err instanceof ValidationError) {
-     return errorResponse(res, err.message, 400, 'VALIDATION_ERROR');
-   }
-   next(err);
-   ```
-
-**Frontend Patterns:**
-
-1. **try-catch with setError** in form handlers:
-   ```jsx
-   const onSubmit = async (data) => {
-     try {
-       setError('');
-       await login(data);
-       navigate('/');
-     } catch (err) {
-       setError(err.message || 'Incorrect email or password');
-     }
-   };
-   ```
-
-2. **API fetch with error object** in `frontend/src/shared/lib/http.js`:
-   ```js
-   if (!response.ok) {
-     const err = new Error(data.error?.message || 'Request failed');
-     err.retryAfter = data.error?.retryAfter;
-     err.code = data.error?.code;
-     throw err;
-   }
-   ```
-
-## Logging
-
-**Framework:** `console.log`, `console.error`, `console.warn` — no structured logging library (e.g., Winston, Pino) detected
-
-**Backend Patterns:**
-- Server startup: `console.log(\`Server running on port ${PORT} ...\`)`
-- Error context: `console.error('[DailyMealPlan] Failed to fetch user data:', err.message)`
-- Warnings: `console.warn(\`[LLM] Swap LLM call failed: ${err.message}\`)`
-- Fallback indicators: `console.warn('[DailyMealPlan] All generation attempts failed, returning fallback')`
-- Component prefix convention: `[ComponentName]` prefix in log messages (`[LLM]`, `[DailyMealPlan]`)
-
-**Frontend:**
-- Minimal logging — errors handled via state (`setError`) rather than console
-
-## Comments
-
-**When to Comment:**
-- JSDoc/TSDoc for public service functions (backend)
-- Inline comments for non-obvious business logic
-- Requirement references: `// D-01: Set httpOnly JWT cookie`, `// T-01-06: prevent email enumeration`
-- Section separators: `// === Middleware (order matters) ===`, `// ──────────────────────────────────────────────`
-
-**JSDoc/TSDoc:**
-- Backend services use `@param`, `@returns`, `@throws` annotations consistently:
-  ```js
-  /**
-   * Register a new user with email, password, and PDP consent.
-   * @param {Object} params
-   * @param {string} params.email
-   * @param {boolean} params.pdpConsent
-   * @returns {Promise<{user: Object, token: string}>}
-   */
-  ```
-- Controllers use `/** GET /api/activities — Full activity pool */` header-style comments
-- Frontend components have minimal JSDoc — mostly inline comments
-
-## Function Design
-
-**Size:** Functions vary from small (5-line route handlers) to large (780-line `llm.service.js` with 20+ functions). Controllers are typically 15-60 lines each.
-
-**Parameters:**
-- Backend: Standard Express signature `(req, res, next)` for middleware/controllers
-- Backend services: Single `params` object pattern: `async function register({ email, password, pdpConsent })`
-- Backend LLM service: Dependency injection pattern with `deps` object: `async function generateWeeklyPlan(deps)`
-- Frontend components: Named props via destructuring: `function ActivityCard({ activity, onLogClick, isLogging })`
-
-**Return Values:**
-- Backend controllers: Always return `successResponse(res, data)` or `errorResponse(res, msg, code, errCode)`
-- Backend services: Return `{ user, token }`, `{ plan, fromCache, status }`, or throw custom errors
-- Frontend API functions: Return the full response object from `apiGet`/`apiPost` (which returns `data` from `{ success: true, data }`)
-
-## Module Design
-
-**Exports:**
-- Backend controllers: Export a default object with named handler functions:
-  ```js
-  export default {
-    getAllActivities: getAllActivitiesHandler,
-    logActivity,
-    getActivityLogs,
-  };
-  ```
-  Also use named exports for some controller functions: `export async function register(req, res, next)`
-- Backend services: Primarily named exports (`export async function register`, `export function generateToken`)
-- Frontend components: Default export (`export default function LoginForm()`)
-- Frontend utilities: Named exports (`export const DAY_STATUS = ...`, `export function buildMonthGrid(...)`)
-- Frontend hooks: Named exports + context provider exports (`export function AuthProvider`, `export function useAuth()`)
-
-**Barrel Files:**
-- Frontend uses barrel `index.js` files per feature: `frontend/src/features/activities/index.js`:
-  ```js
-  export { default as ActivityCalendarSection } from './components/ActivityCalendarSection.jsx';
-  export { default as ActivityPage } from './ActivityPage.jsx';
-  ```
-
-## Security Patterns
-
-- **JWT in httpOnly cookie** (D-01): Token read from `req.cookies.token`, not Authorization header — defined in `backend/src/middlewares/auth.middleware.js`
-- **HS256 algorithm enforced**: `jwt.verify(token, secret, { algorithms: ['HS256'] })` to prevent algorithm confusion
-- **Rate limiting**: `express-rate-limit` applied per-route with per-user key generators and NODE_ENV-aware config (lower limits in dev, higher in test)
-- **bcrypt**: 10 salt rounds, timing-safe comparison with dummy hash to prevent email enumeration
-- **Helmet, CORS, compression** middleware chain in `app.js`
-- **Cookie options**: `{ httpOnly: true, secure: true, sameSite: 'none', maxAge: 7d }`
-
-## Frontend-Specific Patterns
-
-**Component Structure:**
-- Functional components with hooks, no class components
-- Consistent Tailwind CSS v4 styling with theme tokens (`font-display`, `shadow-lux`, `shadow-elevated`)
-- Lucide React icons for all icons
-- Form validation with `react-hook-form` + `zod`:
-
+- **Functional components only** — no class components anywhere
+- **Hooks for state/side effects** — `useState`, `useEffect`, custom hooks
+- **Context for global state** — `AuthContext` with `useAuth()` consumer hook
+- **Form handling:** `react-hook-form` with `zod` schema validation
   ```jsx
   const schema = z.object({
     email: z.string().email('Invalid email format'),
@@ -234,35 +130,165 @@
     resolver: zodResolver(schema),
   });
   ```
+- **Data fetching:** TanStack React Query (`@tanstack/react-query`) with `useQueries` and `QueryClientProvider`
+- **Styling:** Tailwind CSS v4 with `@tailwindcss/vite` plugin
+- **Icons:** `lucide-react` for all icon components
 
-**Data Fetching:**
-- Custom `apiFetch` wrapper at `frontend/src/shared/lib/http.js` with `credentials: 'include'` for cookie auth
-- Feature-specific API modules: `activityApi.js`, `activityCalendarApi.js`, `dailyMealPlanApi.js`
-- TanStack React Query for caching via `Providers.jsx` with default `staleTime: 5 * 60 * 1000`, `retry: 1`
+### Backend Patterns
 
-**Directory Structure per Feature:**
+**Layer architecture:** `route → controller → service → repository`
+
+1. **Routes** (`routes/*.routes.js`): Define HTTP method + path, attach middleware and controller
+   ```javascript
+   const router = Router();
+   router.use(authenticateToken);
+   router.post('/', profileController.createProfile);
+   export default router;
+   ```
+
+2. **Controllers** (`controllers/*.controller.js`): Handle request/response, call services
+   ```javascript
+   export async function createProfile(req, res, next) {
+     try {
+       const result = await profileService.createProfile(userId, data);
+       return successResponse(res, result, 201);
+     } catch (err) {
+       if (err instanceof ValidationError) {
+         return errorResponse(res, err.message, 400, 'VALIDATION_ERROR');
+       }
+       next(err);
+     }
+   }
+   ```
+
+3. **Services** (`services/*.service.js`): Business logic, validation, computation
+   ```javascript
+   export function calculateBmi(weightKg, heightCm) {
+     const heightM = heightCm / 100;
+     const bmi = weightKg / (heightM * heightM);
+     return Math.round(bmi * 10) / 10;
+   }
+   ```
+
+4. **Repositories** (`repositories/*.repository.js`): SQL queries via `pg.Pool`
+   ```javascript
+   export async function findByUserId(userId) {
+     try {
+       const { rows } = await pool.query(
+         'SELECT * FROM profiles WHERE user_id = $1 LIMIT 1',
+         [userId]
+       );
+       return rows[0] || null;
+     } catch (err) {
+       throw new AppError('DatabaseError', `Failed to find profile: ${err.message}`, 500);
+     }
+   }
+   ```
+
+**ESM import patterns:**
+- `import { Router } from 'express';`
+- `import { pool } from '../config/database.js';`
+- File extensions required in ESM imports (`.js`)
+- `__dirname` computed via `fileURLToPath` + `dirname` for path resolution
+
+### JSDoc Annotations
+
+Services and utilities use JSDoc for public functions:
+
+```javascript
+/**
+ * Calculate BMI from weight (kg) and height (cm).
+ * Per D-13: heightM = heightCm / 100, bmi = weightKg / (heightM * heightM)
+ * @param {number} weightKg
+ * @param {number} heightCm
+ * @returns {number} BMI rounded to 1 decimal place
+ */
+export function calculateBmi(weightKg, heightCm) { ... }
 ```
-features/feature-name/
-  index.js           # barrel exports
-  api/               # API functions
-  components/        # React components (with __tests__/ subdirectory)
-  hooks/             # Custom hooks
+
+Controllers and routes are less consistently documented.
+
+## Error Handling
+
+### Custom Error Classes (`backend/src/utils/errors.js`)
+
+Hierarchy of operational errors:
+
+```javascript
+export class AppError extends Error {
+  constructor(name, message, statusCode, isOperational = true) {
+    super(message);
+    this.name = name;
+    this.statusCode = statusCode;
+    this.isOperational = isOperational;
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
+
+export class ValidationError extends AppError { constructor(message) { super('ValidationError', message, 400); } }
+export class AuthenticationError extends AppError { constructor(message) { super('AuthenticationError', message, 401); } }
+export class NotFoundError extends AppError { constructor(message) { super('NotFoundError', message, 404); } }
 ```
 
-## Backend-Specific Patterns
+### Response Format
 
-**Layer Architecture:**
+Consistent JSON envelope:
+
+```javascript
+// Success
+{ success: true, data: { ... } }
+
+// Error
+{ success: false, error: { message: '...', code: 'VALIDATION_ERROR' } }
 ```
-routes/      → controllers/    → services/    → repositories/    → database/
-  (router)      (handlers)       (business       (data access)      (pg pool)
-                                  logic)
+
+Helper functions in `backend/src/utils/response.js`:
+```javascript
+successResponse(res, data, statusCode = 200);
+errorResponse(res, message, statusCode = 500, code = 'INTERNAL_ERROR');
 ```
 
-**Route definitions**: `Router()` with chained `.get()`, `.post()`, `.delete()` methods, middleware applied via `router.use(authenticateToken)` or inline.
+### Error Flow in Controllers
 
-**Repository pattern**: All SQL queries live in `repositories/` — controllers and services never write raw SQL.
+```javascript
+export async function handler(req, res, next) {
+  try {
+    // ... business logic
+    return successResponse(res, data);
+  } catch (err) {
+    if (err instanceof KnownError) {
+      return errorResponse(res, err.message, statusCode, 'ERROR_CODE');
+    }
+    next(err);  // Pass to global error handler
+  }
+}
+```
 
-**Utils pattern**: Utility functions in `utils/` — `errors.js`, `response.js`, `string.js`, `food.js`, `dbErrors.js`.
+### Global Error Handler (`backend/src/app.js`)
+
+- Converts camelCase error names to `UPPER_SNAKE_CASE` error codes (e.g., `HTTPServerError` → `HTTP_SERVER_ERROR`)
+- Returns `500` for unhandled errors
+
+### Database Error Handling (`backend/src/utils/dbErrors.js`)
+
+- Maps PostgreSQL error codes (`23505`, `23503`, etc.) to readable names
+- Exposes `code`, `message`, `sqlState`, `table`, `constraint`, `detail`
+
+## Logging
+
+- **Backend:** `morgan('dev')` for HTTP request logging
+- **Backend:** `console.error` for errors, `console.log` for startup/info
+- **Frontend:** `console` only — no structured logging library
+- No log levels framework detected
+
+## Testing
+
+(Full details in TESTING.md)
+
+- **Backend:** Jest with `supertest` for HTTP integration tests
+- **Frontend:** Vitest with `@testing-library/react`
+- **Test location:** `__tests__/` directories co-located with source files
+- **Mocking:** `vi.fn()` / `vi.mock()` on frontend, manual stubs on backend
 
 ---
 

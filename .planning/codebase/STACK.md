@@ -1,3 +1,8 @@
+---
+focus: tech
+mapped: 2026-06-02
+---
+
 # Technology Stack
 
 **Analysis Date:** 2026-06-02
@@ -5,119 +10,194 @@
 ## Languages
 
 **Primary:**
-- JavaScript (ESM) - Backend (`backend/src/**/*.js`) and Frontend (`frontend/src/**/*.jsx`)
-- JSX - React component files in `frontend/src/**/*.jsx`
+- JavaScript (ES2022+) — Entire application (both frontend and backend) using ES modules (`"type": "module"`)
+- TypeScript ~5.8.2 — Used for type-checking only (via `tsc --noEmit`); no `.ts` runtime files detected; backend is pure `.js`
 
 **Secondary:**
-- TypeScript (config only, `.js` runtime) - `tsconfig.json` present with `allowJs: true`, `noEmit: true`. Actual source files are `.js`/`.jsx`, not `.ts`/`.tsx`.
-- SQL - Database migration scripts (referenced in `scripts/db-init.js` as `backend/db/schema.sql`, `backend/db/seed.sql`)
+- SQL (PostgreSQL dialect) — Database schema, seed scripts, migration files in `backend/db/`
+- HTML — `frontend/index.html` entry point
+- CSS (Tailwind CSS v4 utility classes) — `frontend/src/index.css` and inline via `tailwindcss/vite` plugin
 
 ## Runtime
 
 **Environment:**
-- Node.js >=18 (enforced by `backend/package.json` `engines.node`)
-- Tested via npm workspaces monorepo
+- Node.js >=18 (required by backend `package.json` `engines` field)
+- Package Manager: npm (npm workspaces monorepo)
+- Lockfile: `package-lock.json` present
 
-**Package Manager:**
-- npm workspaces (root `package.json` defines `workspaces: ["frontend", "backend"]`)
-- Lockfile: Not detected in repo (likely `.gitignore`d)
+**Platform:**
+- App name: **KalaFit** (per `metadata.json`)
+- Original title: "Kalkulator Kesehatan" (per `frontend/index.html`)
 
 ## Frameworks
 
+### Frontend
+
 **Core:**
-- Express ^5.2.0 (`backend/package.json`) - HTTP server framework, ESM (`"type": "module"`)
-- React ^19.2.0 (`frontend/package.json`) - UI component library
-- Vite ^8.0.0 (`frontend/package.json`) - Build tool and dev server
-- React Router ^7.6.0 (`frontend/package.json`) - Client-side routing
+- **React ^19.2.0** — UI library with JSX (`react`, `react-dom`)
+- **Vite ^8.0.0** (frontend) / **Vite ^6.2.3** (root) — Build tool with HMR, proxy to backend at `/api`
+- **@vitejs/plugin-react ^6.0.0** — Vite React plugin
+- **@tailwindcss/vite ^4.1.14** — Tailwind CSS v4 Vite integration (PostCSS-less, JIT-based)
 
-**Testing:**
-- Jest ^30.4.2 (`backend/package.json`) - Test runner for backend
-- Supertest ^7.2.2 (`backend/package.json`) - HTTP integration test assertions
+**Routing:**
+- **react-router-dom ^7.6.0** — Client-side routing with `BrowserRouter`, `Routes`, `Route`, `Navigate`, `Link`
 
-**Build/Dev:**
-- Vite ^8.0.0 + @vitejs/plugin-react ^6.0.0 - Frontend build pipeline
-- @tailwindcss/vite ^4.1.14 - Tailwind CSS integration via Vite plugin
-- tailwindcss ^4.1.14 - Utility CSS framework
-- esbuild ^0.25.0 - Bundler used by Vite
-- tsx ^4.21.0 - TypeScript execution
-- nodemon ^3.1.0 - Backend dev server restart (devDependency)
-- autoprefixer ^10.4.21 - CSS vendor prefixing
+**State & Data:**
+- **@tanstack/react-query ^5.80.0** — Server state management (caching, refetching, retries); configured with `staleTime: 5min`, `retry: 1`
+- **React Context** — Auth state via custom hook (`useAuth`)
 
-## Key Dependencies
+**UI & Charts:**
+- **lucide-react ^0.546.0** — Icon library (used for nav, dashboard cards, buttons)
+- **motion ^12.23.24** — Animation library (replaces framer-motion)
+- **recharts ^3.8.1** — Charting library (weight trend charts, progress visualization)
+- **react-day-picker ^9.14.0** — Date picker component
+- **date-fns ^3.6.0** — Date utility library
 
-**Critical:**
-- `express ^5.2.0` (backend) - All HTTP routing and middleware
-- `pg ^8.21.0` (backend) - PostgreSQL client, direct connection pool
-- `openai ^6.39.1` (backend) - OpenAI SDK used to call OpenRouter API for LLM features
-- `@google/genai ^2.4.0` (root) - Google Gemini AI SDK
-- `react ^19.2.0` / `react-dom ^19.2.0` (frontend) - UI rendering
-- `react-router-dom ^7.6.0` (frontend) - Navigation/routing
-- `@tanstack/react-query ^5.80.0` (frontend) - Server state management and API data fetching
-- `tailwindcss ^4.1.14` (root config) - All styling via utility classes
+**Forms:**
+- **react-hook-form ^7.58.0** (devDep) — Form state management
+- **@hookform/resolvers ^4.1.0** (devDep) — Schema validation resolvers
+- **zod ^3.25.0** (devDep) — Schema validation library
 
-**Infrastructure:**
-- `cors ^2.8.5` - Cross-origin requests from frontend
-- `helmet ^8.1.0` - Security headers
-- `express-rate-limit ^8.5.0` - Rate limiting for all API routes
-- `compression ^1.8.1` - Gzip compression
-- `morgan ^1.10.0` - HTTP request logging
-- `cookie-parser ^1.4.7` - Cookie parsing for JWT
-- `jsonwebtoken ^9.0.2` - JWT creation/verification (HS256, 7-day expiry)
-- `bcryptjs ^2.4.3` - Password hashing (10 salt rounds)
-- `passport ^0.7.0` / `passport-local ^1.0.0` / `passport-google-oauth20 ^2.0.0` - Authentication strategies
-- `node-cache ^5.1.2` - In-memory caching for LLM plans (1 hour TTL)
-- `express-validator ^7.3.0` - Request validation
-- `lucide-react ^0.546.0` (root) - Icon library
-- `recharts ^3.8.1` (frontend) - Charts/graphs
-- `date-fns ^3.6.0` (frontend) - Date utilities
-- `react-day-picker ^9.14.0` (frontend) - Date picker component
-- `react-hook-form ^7.58.0` + `zod ^3.25.0` (frontend devDeps) - Form validation
-- `@hookform/resolvers ^4.1.0` - Zod resolver for react-hook-form
-- `motion ^12.23.24` (root) - Animation library
+### Backend
+
+**Core:**
+- **Express ^5.2.0** — HTTP server framework (Express 5 with async error handling)
+- **dotenv ^17.4.0** — Environment variable loading from `.env`
+- **cors ^2.8.5** — Cross-origin resource sharing (configured for `FRONTEND_URL`)
+- **helmet ^8.1.0** — Security headers
+- **compression ^1.8.1** — Gzip response compression
+- **cookie-parser ^1.4.7** — Cookie parsing (required for httpOnly JWT cookie)
+- **morgan ^1.10.0** — HTTP request logging
+
+**Database:**
+- **pg ^8.21.0** — PostgreSQL client with `Pool` connection pooling
+- Hosted on **Supabase** (session pooler mode, port 6543)
+
+**Authentication:**
+- **passport ^0.7.0** — Authentication middleware
+- **passport-google-oauth20 ^2.0.0** — Google OAuth 2.0 strategy
+- **passport-local ^1.0.0** — Local email/password strategy (available but not explicitly wired in code)
+- **jsonwebtoken ^9.0.2** — JWT generation and verification (HS256 algorithm, 7-day expiry)
+- **bcryptjs ^2.4.3** — Password hashing (10 salt rounds)
+
+**Security:**
+- **express-rate-limit ^8.5.0** — Rate limiting (global, per-route, per-user for LLM endpoints)
+- **express-validator ^7.3.0** — Request validation
+
+**LLM Integration:**
+- **openai ^6.39.1** — OpenAI SDK (connected to OpenRouter API, not OpenAI directly)
+- **node-cache ^5.1.2** — In-memory caching for LLM-generated plans (TTL: 1h, max 1000 keys)
+
+**Error Handling:**
+- Custom `AppError` hierarchy with `ValidationError`, `AuthenticationError`, `NotFoundError` in `src/utils/errors.js`
+- Global Express error handler with camelCase→UPPER_SNAKE_CASE code transformation
+
+### Testing
+
+**Backend:**
+- **Jest ^30.4.2** — Test runner with `--experimental-vm-modules` for ESM support
+- **supertest ^7.2.2** — HTTP integration testing
+- **nodemon ^3.1.0** — Development auto-reload
+
+**Frontend:**
+- Tests use `*.test.js` / `*.test.jsx` naming (co-located in `__tests__/` directories)
+- Testing framework not explicitly declared in `frontend/package.json` (likely Vitest + jsdom via Vite ecosystem)
+
+## Dependencies
+
+### Critical Dependencies
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| express | ^5.2.0 | Backend HTTP server |
+| react | ^19.2.0 | Frontend UI library |
+| pg | ^8.21.0 | PostgreSQL database client |
+| openai | ^6.39.1 | LLM integration via OpenRouter |
+| jsonwebtoken | ^9.0.2 | JWT auth token management |
+| passport-google-oauth20 | ^2.0.0 | Google OAuth 2.0 |
+| @tanstack/react-query | ^5.80.0 | Frontend data fetching/caching |
+| react-router-dom | ^7.6.0 | Frontend routing |
+| tailwindcss | ^4.1.14 | CSS utility framework |
+
+### Infrastructure Dependencies
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| helmet | ^8.1.0 | HTTP security headers |
+| cors | ^2.8.5 | CORS configuration |
+| express-rate-limit | ^8.5.0 | Rate limiting |
+| compression | ^1.8.1 | Gzip compression |
+| node-cache | ^5.1.2 | In-memory caching |
+
+### Dev Dependencies
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| typescript | ~5.8.2 | Type checking |
+| jest | ^30.4.2 | Backend testing |
+| supertest | ^7.2.2 | HTTP integration tests |
+| tsx | ^4.21.0 | TypeScript execution |
+| esbuild | ^0.25.0 | Bundler utilities |
+| cross-env | ^10.1.0 | Cross-platform env vars |
+| nodemon | ^3.1.0 | Dev auto-reload |
 
 ## Configuration
 
-**Environment:**
-- `backend/src/server.js` loads `dotenv` at startup
-- `backend/src/config/database.js` loads `.env` from `../../.env` relative to config directory
-- Env vars consumed:
-  - `DATABASE_URL` - PostgreSQL connection string (Supabase, session mode port 6543)
-  - `JWT_SECRET` - HS256 signing key
-  - `OPENROUTER_API_KEY` - LLM API key
-  - `OPENROUTER_BASE_URL` - LLM API base URL (defaults to `https://openrouter.ai/api/v1`)
-  - `LLM_MODEL` - Model name (defaults to `openrouter/owl-alpha`)
-  - `LLM_FALLBACK_MODEL` / `LLM_FALLBACK_MODEL_2` - Fallback models
-  - `GEMINI_API_KEY` - Google Gemini AI key
-  - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` - Google OAuth credentials
-  - `GOOGLE_CALLBACK_URL` - OAuth callback URL
-  - `FRONTEND_URL` - CORS origin and OAuth redirect target (defaults to `http://localhost:5173`)
-  - `PORT` - Server port (defaults to 3001)
-  - `VITE_API_PROXY_TARGET` - Dev proxy target (defaults to `http://localhost:3001`)
-  - `NODE_ENV` - Environment mode (development/test/production)
+### Environment Variables (`.env.example`)
 
-**Build:**
-- `frontend/vite.config.js` - Vite configuration with Tailwind, React plugin, dev proxy for `/api` to backend
-- `tsconfig.json` (root) - TypeScript config targeting ES2022, bundler module resolution
-- Root `package.json` scripts orchestrate via npm workspaces
+**App:**
+- `NODE_ENV` — Environment mode (development/production/test)
+- `PORT` — Backend server port (default: 3001)
+- `FRONTEND_URL` — Frontend origin for CORS and OAuth redirects (default: `http://localhost:3000`)
 
-**Dev scripts:**
-```bash
-npm run dev               # Starts both backend (port 3001) and frontend (port 5173) via concurrently
-npm run build             # Builds frontend only via workspace
-npm run lint              # TypeScript type-check (noEmit)
+**Authentication:**
+- `JWT_SECRET` — HMAC secret for JWT signing (HS256)
+
+**Google OAuth:**
+- `GOOGLE_CLIENT_ID` — Google OAuth app client ID
+- `GOOGLE_CLIENT_SECRET` — Google OAuth app client secret
+- `GOOGLE_CALLBACK_URL` — OAuth callback URL
+
+**Database:**
+- `DATABASE_URL` — PostgreSQL connection string (Supabase session pooler)
+- `DATABASE_URL_TEST` — Test database URL with `search_path=fitness_test` schema isolation
+
+**LLM:**
+- `OPENROUTER_API_KEY` — OpenRouter API key
+- `OPENROUTER_BASE_URL` — OpenRouter base URL (default: `https://openrouter.ai/api/v1`)
+- `LLM_MODEL` — Primary model for plan generation (default: `openrouter/owl-alpha`)
+- `LLM_FALLBACK_MODEL` — First fallback model
+- `LLM_FALLBACK_MODEL_2` — Second fallback model
+
+### Build Configuration
+
+**Root `tsconfig.json`** — Targets ES2022, uses `bundler` module resolution, enables `react-jsx`, supports path alias `@/*` mapping to `./*`.
+
+**Frontend `vite.config.js`** — Custom es-toolkit compat plugin for CJS→ESM resolution, proxies `/api` to backend, HMR toggle via `DISABLE_HMR` env var.
+
+## Project Structure
+
 ```
-
-## Platform Requirements
-
-**Development:**
-- Node.js >=18
-- PostgreSQL instance (Supabase recommended, session mode pooler port 6543)
-- `.env` file with required secrets (see `.env.example`)
-
-**Production:**
-- Deployed as a single service — backend serves React static build from `frontend/dist/`
-- Express SPA catch-all serves `index.html` for non-API GET requests
-- No Dockerfile present in repo (`.dockerignore` exists, but actual Dockerfile not committed)
+Fitness_App/
+├── frontend/          # React SPA (Vite, Tailwind v4)
+│   ├── src/
+│   │   ├── app/       # App shell, Router, Providers
+│   │   ├── features/  # Feature modules (auth, profile, food-log, activities, progress, weekly-plan)
+│   │   └── shared/    # Shared components (calendar, hooks, HTTP client)
+│   └── index.html
+├── backend/           # Express API server
+│   ├── src/
+│   │   ├── config/    # Database pool, Passport config
+│   │   ├── controllers/ # Route handlers
+│   │   ├── middlewares/  # Auth, rate limiters
+│   │   ├── repositories/ # Data access layer (raw SQL queries)
+│   │   ├── routes/       # Express route definitions
+│   │   ├── services/     # Business logic (auth, profile, food, activity, LLM, meal plan)
+│   │   └── utils/        # Error classes, response helpers
+│   └── prompts/          # LLM prompt templates (Markdown)
+├── scripts/          # Utility scripts (db-init, start-all)
+└── package.json      # Root workspace config
+```
 
 ---
 

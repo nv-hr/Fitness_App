@@ -5,343 +5,367 @@
 
 ## System Overview
 
-The codebase follows a **two-tier monorepo architecture** with a React SPA frontend and Express.js REST API backend, communicating over HTTP. A PostgreSQL database (Supabase-hosted) stores all persistent data. The backend integrates with OpenRouter (LLM API) for AI-generated workout and meal plans.
-
 ```text
-┌─────────────────────────────────────────────────────────────────────┐
-│                        FRONTEND (React SPA)                         │
-│  `frontend/src/`                                                     │
-├──────────────────────┬──────────────────────┬───────────────────────┤
-│    App Entry          │   Feature Pages       │   Shared Components    │
-│  `main.jsx`           │  `features/*/`        │  `shared/`             │
-│  `app/App.jsx`       │  (auth, activities,   │  (http.js, calendar)   │
-│  `app/Router.jsx`    │   food-log, profile,  │                       │
-│                       │   progress)           │                       │
-└──────────┬────────────┴───────────┬──────────┴──────────┬────────────┘
-           │  HTTP (fetch)          │  Vite Proxy          │
-           │  credentials: include  │  /api → localhost:3001│
-           ▼                       ▼                      ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                     BACKEND (Express.js REST API)                     │
-│  `backend/src/`                                                       │
-├──────────────────────────────────────────────────────────────────────┤
-│  server.js → app.js                                                   │
-│   ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐              │
-│   │Routes    │→│Controllers│→│Services  │→│Repositories│→ Postgres  │
-│   │`routes/` │ │`controllers/`│`services/`│  │`repositories/`│ │  DB    │
-│   └──────────┘ └──────────┘ └─────┬────┘ └──────────┘ └────────┤     │
-│                                    │                              │     │
-│                                    ▼                              │     │
-│                            ┌──────────────┐                      │     │
-│                            │ LLM Service   │──→ OpenRouter API    │     │
-│                            │ (OpenAI compat)│                     │     │
-│                            └──────────────┘                      │     │
-│                                    │                              │     │
-│                                    ▼                              │     │
-│                            ┌──────────────┐                      │     │
-│                            │ node-cache    │ (in-memory plan cache)│    │
-│                            └──────────────┘                      │     │
-│                                                                      │
-│  Cross-cutting: auth.middleware, rate-limiters, error handlers,      │
-│  Passport.js (local + Google OAuth), helmet, cors, compression      │
-└──────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────┐
+│                         FRONTEND (React 19 SPA + Vite 8)                   │
+│                                                                           │
+│  ┌─────────────┐  ┌────────────┐  ┌────────────┐  ┌──────────────┐      │
+│  │  Auth        │  │  Profile   │  │  Food Log  │  │  Activities  │      │
+│  │  features/   │  │  features/ │  │  features/ │  │  features/   │      │
+│  │  auth/       │  │  profile/  │  │  food-log/ │  │  activities/ │      │
+│  └──────┬───────┘  └─────┬──────┘  └─────┬──────┘  └──────┬────────┘      │
+│         │                │               │               │               │
+│         └────────────────┴───────┬───────┴───────────────┘               │
+│                                  │                                       │
+│                     ┌────────────┴────────────┐                          │
+│                     │       Shared Layer       │                          │
+│                     │  shared/lib/http.js      │                          │
+│                     │  shared/hooks/           │                          │
+│                     │  shared/calendar/        │                          │
+│                     └────────────┬────────────┘                          │
+│                                  │                                       │
+│                    Vite Dev Proxy: /api → localhost:3001                  │
+└──────────────────────────────────┼───────────────────────────────────────┘
+                                   │ HTTP (JSON + httpOnly JWT cookie)
+                                   ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│                       BACKEND (Express 5 ESM Server)                       │
+│                                                                           │
+│  ┌──────────────────────────────────────────────────────────┐             │
+│  │  app.js — Middleware Chain                                 │             │
+│  │  Helmet → CORS → Compression → Morgan → JSON Body Parse   │             │
+│  │  → Cookie Parse → Passport Init → Rate Limiters → Routes  │             │
+│  └────────────────────────┬──────────────────────────────────┘             │
+│                           │                                              │
+│  ┌──────────────────────────────────────────────────────────┐             │
+│  │  Routes (express.Router)  —  backend/src/routes/          │             │
+│  │  auth.routes.js  profile.routes.js  food.routes.js        │             │
+│  │  activity.routes.js  weeklyPlan.routes.js                 │             │
+│  │  dailyMealPlan.routes.js  progress.routes.js              │             │
+│  │  docs.routes.js  activityPlan.routes.js                   │             │
+│  └────────────────────────┬──────────────────────────────────┘             │
+│                           │                                              │
+│  ┌──────────────────────────────────────────────────────────┐             │
+│  │  Middlewares  —  backend/src/middlewares/                  │             │
+│  │  auth.middleware.js (JWT verification from httpOnly cookie)│             │
+│  │  *RateLimiter.js (per-endpoint rate limiters)             │             │
+│  └────────────────────────┬──────────────────────────────────┘             │
+│                           │                                              │
+│  ┌──────────────────────────────────────────────────────────┐             │
+│  │  Controllers  —  backend/src/controllers/                 │             │
+│  │  (Request handling, response formatting, validation)      │             │
+│  └────────────────────────┬──────────────────────────────────┘             │
+│                           │                                              │
+│  ┌──────────────────────────────────────────────────────────┐             │
+│  │  Services  —  backend/src/services/                       │             │
+│  │  (Business logic, LLM orchestration, calculation)         │             │
+│  └────────────────────────┬──────────────────────────────────┘             │
+│                           │                                              │
+│  ┌──────────────────────────────────────────────────────────┐             │
+│  │  Repositories  —  backend/src/repositories/               │             │
+│  │  (Raw SQL via `pg` Pool — parameterized queries)          │             │
+│  └────────────────────────┬──────────────────────────────────┘             │
+│                           │                                              │
+│  ┌──────────────────────────────────────────────────────────┐             │
+│  │  Config + Utils                                           │             │
+│  │  config/database.js (pg Pool)  config/passport.js         │             │
+│  │  utils/response.js  utils/errors.js  utils/dbErrors.js    │             │
+│  │  utils/food.js  utils/string.js                           │             │
+│  └────────────────────────┬──────────────────────────────────┘             │
+│                           │                                              │
+└───────────────────────────┼───────────────────────────────────────────────┘
+                            │
+                            ▼
+              ┌─────────────────────────────┐
+              │     PostgreSQL Database      │
+              │  (Supabase, pg driver)       │
+              │  Tables: users, profiles,    │
+              │  foods, food_logs,           │
+              │  activities, activity_logs,  │
+              │  weekly_plans, daily_meal_   │
+              │  plans, weight_logs          │
+              └─────────────────────────────┘
 ```
-
-**Project Name:** KalaFit — Track biometrics, calorie budget, and get personalized AI workout/food recommendations.
-
-## Component Responsibilities
-
-| Component | Responsibility | File(s) |
-|-----------|----------------|---------|
-| `server.js` | Entrypoint — loads env, starts Express on PORT, connects DB pool | `backend/src/server.js` |
-| `app.js` | Express app setup — middleware stack, route mounting, error handling, SPA catch-all | `backend/src/app.js` |
-| Routes | Map HTTP paths to controller functions; apply auth and rate-limit middleware | `backend/src/routes/*.js` |
-| Controllers | Request handling — validate input, call services, format response | `backend/src/controllers/*.js` |
-| Services | Business logic — auth, LLM plan generation, meal plan logic, profile calculations | `backend/src/services/*.js` |
-| Repositories | Data access layer — raw SQL queries via `pg.Pool` | `backend/src/repositories/*.js` |
-| LLM Service | OpenRouter API integration — prompt building, model calling, plan validation, caching | `backend/src/services/llm.service.js` |
-| Middlewares | Auth token verification (JWT), per-endpoint rate limiters | `backend/src/middlewares/*.js` |
-| Utils | Shared helpers — response format, error classes, string utilities | `backend/src/utils/*.js` |
-| Config | Database pool config, Passport.js strategies | `backend/src/config/*.js` |
-| Prompts | LLM prompt templates (Markdown with `{{variables}}`) | `backend/prompts/*.md` |
-| DB | SQL schema, seed data, migration scripts | `backend/db/*.sql` |
-| `App.jsx` | React root — renders Providers + Router | `frontend/src/app/App.jsx` |
-| `Router.jsx` | Client-side routing, auth guards, layout, navigation | `frontend/src/app/Router.jsx` |
-| Features | Feature-sliced modules (auth, activities, food-log, profile, progress) | `frontend/src/features/*/` |
-| `http.js` | Shared HTTP client — `apiFetch`, `apiGet`, `apiPost`, `apiDelete` with credentials | `frontend/src/shared/lib/http.js` |
-| `useAuth.jsx` | Auth context provider — login, register, logout, session check | `frontend/src/features/auth/hooks/useAuth.jsx` |
 
 ## Pattern Overview
 
-**Overall:** Layered architecture (Route → Controller → Service → Repository → DB) with cross-cutting middleware.
+**Overall:** Monorepo with npm workspaces — a backend-first layered architecture where the Express 5 server serves as both the API backend and static file server for the production-built React SPA.
 
 **Key Characteristics:**
-- **ESM throughout** — both backend and frontend use `"type": "module"` with `import`/`export`
-- **Monorepo with npm workspaces** — root `package.json` orchestrates `frontend/` and `backend/`
-- **Layered backend** — strict separation: routes handle HTTP, controllers orchestrate, services house business logic, repositories own data access
-- **Feature-based frontend** — each domain (auth, activities, food-log, profile, progress) is a self-contained directory
-- **LLM-first planning** — AI generates weekly workout plans and daily meal plans via LLM, with template-based fallback when AI is unavailable
-- **Cache-aside for LLM** — generated plans cached in-memory via `node-cache` to reduce API calls and latency
-- **Multi-layer rate limiting** — global, per-route, per-user rate limiters protect API resources
-- **JWT in httpOnly cookies** — tokens stored in httpOnly cookies (not localStorage), verified using HS256
+- **Backend Layered Architecture**: Routes → Controllers → Services → Repositories — a strict unidirectional dependency chain (`backend/src/routes/` → `backend/src/controllers/` → `backend/src/services/` → `backend/src/repositories/`) with `config/`, `middlewares/`, and `utils/` as horizontal support layers.
+- **Feature-Colocated Frontend**: Each feature (auth, profile, food-log, activities, progress) encapsulates its own `api/`, `components/`, `hooks/`, and an `index.js` barrel. Shared code lives in `frontend/src/shared/`.
+- **LLM Orchestration via Services**: The `services/llm.service.js` layer handles all LLM interactions — prompt building, OpenRouter API calls, plan validation, fuzzy matching, and in-memory plan caching (`node-cache`). Specific LLM-driven features (weekly plans, daily meal plans) orchestrate LLM calls through the shared `llm.service.js`.
+- **JWT Auth via httpOnly Cookies**: Authentication token is stored in an httpOnly, secure, SameSite=None cookie (`D-01`). The `auth.middleware.js` reads it from `req.cookies.token`, never from the `Authorization` header.
+- **Multi-Layer Rate Limiting**: Global limiter (600 req/min) → per-route limiters → per-endpoint limiters with custom 429 responses. Rate limiters detect `NODE_ENV=test` to use relaxed limits.
+- **Git tag-driven versioning**: The project uses git tags (v1.0 through v1.9) to mark milestones.
 
 ## Layers
+
+### Backend Layers
+
+**Route Layer:**
+- Purpose: Define URL-to-controller mappings and attach middlewares
+- Location: `backend/src/routes/`
+- Contains: 9 Express Router modules — `auth.routes.js`, `profile.routes.js`, `food.routes.js`, `activity.routes.js`, `weeklyPlan.routes.js`, `dailyMealPlan.routes.js`, `activityPlan.routes.js`, `progress.routes.js`, `docs.routes.js`
+- Depends on: Controllers, Middlewares
+- Used by: `app.js` (Express app instance)
+
+**Controller Layer:**
+- Purpose: Handle HTTP requests — parse input, call services, format responses using `successResponse`/`errorResponse` utilities
+- Location: `backend/src/controllers/`
+- Contains: 8 controller modules — `auth.controller.js`, `profile.controller.js`, `food.controller.js`, `activity.controller.js`, `weeklyPlan.controller.js`, `dailyMealPlan.controller.js`, `activityPlan.controller.js`, `weightLog.controller.js`
+- Pattern: Each controller function is an `async (req, res, next) => {...}` Express handler with `try/catch` blocks that forward errors to `next(err)`
+- Used by: Routes
+
+**Service Layer:**
+- Purpose: All business logic — calculations (BMI/TDEE), LLM orchestration, plan generation, data validation
+- Location: `backend/src/services/`
+- Contains: 9 service modules — `auth.service.js`, `profile.service.js`, `food.service.js`, `activity.service.js`, `activityLog.service.js`, `llm.service.js`, `activityPlan.service.js`, `mealPlan.service.js`, `dailyMealPlan.service.js`, `weightLog.service.js`
+- Key patterns:
+  - `auth.service.js` handles password hashing, JWT signing, email/password and Google OAuth registration
+  - `profile.service.js` implements Mifflin-St Jeor BMR formula, TDEE calculation, BMI classification
+  - `llm.service.js` manages OpenRouter client, prompt caching, plan caching (node-cache), per-user mutex locks, LLM swap/regenerate operations
+  - `activityPlan.service.js` and `dailyMealPlan.service.js` each call `llm.service.js` for generation and have their own structure validation
+- Depends on: Repositories, Utils
+
+**Repository Layer:**
+- Purpose: Direct database access via raw parameterized SQL through the `pg` Pool
+- Location: `backend/src/repositories/`
+- Contains: 9 repository modules — `user.repository.js`, `profile.repository.js`, `food.repository.js`, `activity.repository.js`, `weeklyPlan.repository.js`, `dailyMealPlan.repository.js`, `activityPlan.repository.js`, `weightLog.repository.js`, `mealPlan.repository.js`
+- Pattern: Each function is `async` with `try/catch` wrapping `pool.query(...)`. Errors are wrapped in `AppError` with prefix "DatabaseError". Some repositories accept an optional `clientOverride` parameter for transactional queries.
+- Used by: Services, Controllers (occasionally directly for simple lookups)
+
+**Middleware Layer:**
+- Purpose: Authentication, authorization, rate limiting, request preprocessing
+- Location: `backend/src/middlewares/`
+- Contains: `auth.middleware.js`, `weeklyPlanRateLimiter.js`, `dailyMealPlanRateLimiter.js`, `activityPlanRateLimiter.js`
+
+**Config Layer:**
+- Purpose: Service initialization and configuration
+- Location: `backend/src/config/`
+- Contains: `database.js` (pg Pool creation), `passport.js` (Google OAuth strategy)
+
+**Utils Layer:**
+- Purpose: Shared helpers used across all layers
+- Location: `backend/src/utils/`
+- Contains:
+  - `response.js` — `successResponse(res, data, statusCode)` and `errorResponse(res, message, statusCode, code)`
+  - `errors.js` — `AppError`, `ValidationError`, `AuthenticationError`, `NotFoundError` class hierarchy
+  - `dbErrors.js` — PostgreSQL error code to human-readable mapping
+  - `string.js` — `getMonday()`, `levenshteinDistance()`
+  - `food.js` — `fuzzyMatchFoodName()`, `recalculateDayCalories()`
+
+**Prompts Layer (LLM):**
+- Purpose: Static prompt templates for LLM interactions (stored as Markdown files with `{{variable}}` placeholders)
+- Location: `backend/prompts/`
+- Contains: `system-prompt.md`, `weekly-plan-prompt.md`, `meal-plan-prompt.md`, `daily-meal-plan-prompt.md`, `correction-prompt.md`, `meal-correction-prompt.md`, `activity-swap-prompt.md`
+- Used by: `services/llm.service.js`
 
 ### Frontend Layers
 
 **App Layer:**
-- Purpose: Root component, providers, routing, global layout
+- Purpose: Application root, providers, and routing
 - Location: `frontend/src/app/`
-- Contains: `App.jsx`, `Router.jsx`, `Providers.jsx`
-- Depends on: React Router, @tanstack/react-query, useAuth context
-- Used by: `main.jsx` entry point
+- Contains: `App.jsx` (root component), `Providers.jsx` (TanStack Query + AuthProvider), `Router.jsx` (all routes, layout, protected/public guards, profile guard)
+- Key patterns: `Providers.jsx` wraps children in `QueryClientProvider` (TanStack React Query) then `AuthProvider`. `Router.jsx` uses `BrowserRouter` with `ResponsiveLayout` wrapper.
 
-**Feature Layer:**
-- Purpose: Domain-specific pages, components, and API clients
+**Feature Modules:**
+- Purpose: Self-contained feature logic with colocated API, components, hooks
 - Location: `frontend/src/features/`
-- Contains: `activities/`, `auth/`, `food-log/`, `profile/`, `progress/`
-- Depends on: Shared library, app layer
-- Used by: Router
+- Modules:
+  - `auth/` — `useAuth.jsx` (AuthContext provider + hook), `LoginForm.jsx`, `RegisterForm.jsx`, `authApi.js`, `index.js` (barrel)
+  - `profile/` — `ProfileForm.jsx`, `BmiResult.jsx`, `TdeeResult.jsx`, `profileApi.js`, `index.js`
+  - `food-log/` — `FoodLogPage.jsx`, `FoodLogForm.jsx`, `FoodSearch.jsx`, `FoodLogTable.jsx`, `CalorieSummary.jsx`, `CalorieHistory.jsx`, `CustomFoodForm.jsx`, `MealCalendarSection.jsx`, `previewCalories.js`, `useMonthMealData.js`, `foodLogApi.js`, `dailyMealPlanApi.js`, `index.js`
+  - `activities/` — `ActivityPage.jsx`, `ActivityLogForm.jsx`, `ActivityHistory.jsx`, `ActivitySummary.jsx`, `ActivityPool.jsx`, `ActivityCalendarSection.jsx`, `ActivityLogSection.jsx`, `ActivityCard.jsx`, `DayActivityRow.jsx`, `previewCalories.js`, `activityApi.js`, `activityPlanApi.js`, `activityCalendarApi.js`, `index.js`
+  - `progress/` — `ProgressPage.jsx`, `WeightEntryCard.jsx`, `WeightHistoryTable.jsx`, `WeightTrendChart.jsx`, `TrendPredictionCard.jsx`, `useTrendPrediction.js`, `weightApi.js`, `index.js`
+- Pattern: Each feature has an `index.js` barrel file that re-exports public components/APIs
 
 **Shared Layer:**
-- Purpose: Reusable utilities, HTTP client, calendar components, hooks
+- Purpose: Cross-feature reusable code
 - Location: `frontend/src/shared/`
-- Contains: `lib/http.js`, `calendar/`, `hooks/`
-- Depends on: Nothing internal
-- Used by: All feature modules
-
-### Backend Layers
-
-**Entry Layer:**
-- Purpose: Server bootstrap, env loading, DB connection
-- Location: `backend/src/server.js`
-- Depends on: `app.js`, `config/database.js`
-- Used by: Runtime
-
-**Middleware Layer:**
-- Purpose: Request preprocessing (auth verification, rate limiting)
-- Location: `backend/src/middlewares/`
-- Contains: `auth.middleware.js`, `dailyMealPlanRateLimiter.js`, `weeklyPlanRateLimiter.js`, `activityPlanRateLimiter.js`
-- Depends on: `utils/errors.js`, `jsonwebtoken`
-- Applied by: `app.js` and individual route files
-
-**Route Layer:**
-- Purpose: HTTP method + path mapping to controllers, middleware binding
-- Location: `backend/src/routes/`
-- Contains: `auth.routes.js`, `activity.routes.js`, `dailyMealPlan.routes.js`, `food.routes.js`, `profile.routes.js`, `weeklyPlan.routes.js`, `progress.routes.js`, `docs.routes.js`, `activityPlan.routes.js`
-- Depends on: Controllers, middleware
-- Used by: `app.js` via `app.use('/api/...', routes)`
-
-**Controller Layer:**
-- Purpose: Request validation, service orchestration, response formatting
-- Location: `backend/src/controllers/`
-- Contains: `auth.controller.js`, `activity.controller.js`, `dailyMealPlan.controller.js`, `food.controller.js`, `profile.controller.js`, `weeklyPlan.controller.js`, `weightLog.controller.js`, `activityPlan.controller.js`
-- Depends on: Services, utils (`response.js`, `errors.js`)
-- Used by: Routes
-
-**Service Layer:**
-- Purpose: Business logic, LLM integration, calculations
-- Location: `backend/src/services/`
-- Contains: `auth.service.js`, `llm.service.js`, `dailyMealPlan.service.js`, `profile.service.js`, `activity.service.js`, `activityLog.service.js`, `food.service.js`, `mealPlan.service.js`, `weightLog.service.js`, `activityPlan.service.js`
-- Depends on: Repositories, utils, LLM client
-- Used by: Controllers
-
-**Repository Layer:**
-- Purpose: Data access — raw SQL queries against PostgreSQL via `pg.Pool`
-- Location: `backend/src/repositories/`
-- Contains: `user.repository.js`, `food.repository.js`, `profile.repository.js`, `activity.repository.js`, `weeklyPlan.repository.js`, `dailyMealPlan.repository.js`, `weightLog.repository.js`, `mealPlan.repository.js`, `activityPlan.repository.js`
-- Depends on: `config/database.js` (pool)
-- Used by: Services
-
-**Config Layer:**
-- Purpose: Database connection pool, Passport strategies
-- Location: `backend/src/config/`
-- Contains: `database.js`, `passport.js`
-- Depends on: `pg`, `passport`, `dotenv`
-- Used by: Server bootstrap, auth middleware
+- Contains: `lib/http.js` (apiFetch, apiGet, apiPost, apiDelete with `credentials: 'include'`), `hooks/useResponsive.js`, `calendar/` (CalendarGrid, MonthNav, DayDetailPanel, CalendarPageLayout, calendarUtils, useMonthData)
 
 ## Data Flow
 
-### Primary Request Path (API Request → Response)
+### Primary Request Path (Authenticated API Call)
 
-1. **HTTP Request arrives** at Express server (`backend/src/server.js:9`)
-2. **Middleware stack** processes request in order (`backend/src/app.js:78-101`):
-   - `helmet()` → security headers
-   - `cors(origin: FRONTEND_URL, credentials: true)` → CORS
-   - `compression()` → gzip
-   - `morgan('dev')` → request logging
-   - `express.json()` → body parsing
-   - `cookieParser()` → cookie parsing
-   - `passport.initialize()` → Passport init
-   - Global rate limiter
-3. **Route-level rate limiter** applied per-route group
-4. **Auth middleware** (`authenticateToken`) verifies JWT from httpOnly cookie (`backend/src/middlewares/auth.middleware.js`)
-5. **Route handler** calls controller function with `(req, res, next)`
-6. **Controller** extracts/validates input, calls service(s), formats response
-7. **Service** executes business logic, calls repositories for data
-8. **Repository** runs SQL query against PostgreSQL pool
-9. **Response** flows back as `{ success: true, data: {...} }` or `{ success: false, error: { message, code } }`
+1. **Entry Point** — HTTP request arrives at Express 5 server (`backend/src/server.js:9`)
+2. **Middleware Chain** (order matters per `backend/src/app.js:76-101`):
+   - `helmet()` — Security headers
+   - `cors()` — CORS with credentials allowed for `FRONTEND_URL`
+   - `compression()` — Gzip
+   - `morgan('dev')` — Request logging
+   - `express.json()` — Body parsing
+   - `cookieParser()` — Cookie parsing (reads JWT from `req.cookies.token`)
+   - `passport.initialize()` — Passport init
+   - `globalLimiter` — Aggregate rate limiter
+   - Per-route rate limiters applied in `app.js`
+3. **Route Resolution** — `app.use('/api/profile', profileLimiter, profileRoutes)` → routes in `backend/src/routes/profile.routes.js`
+4. **Auth Middleware** — `authenticateToken` (`backend/src/middlewares/auth.middleware.js:11-41`) verifies JWT from httpOnly cookie, attaches `req.user = { userId, email }`
+5. **Controller** — `profileController.getProfile` (`backend/src/controllers/profile.controller.js:37-52`) calls service, catches known errors, formats response via `successResponse`/`errorResponse`
+6. **Service** — `profileService.getProfile` (`backend/src/services/profile.service.js:191-203`) fetches profile, calculates BMI/TDEE, returns enriched data
+7. **Repository** — `profileRepository.findByUserId` (`backend/src/repositories/profile.repository.js:36-46`) executes parameterized SQL query against `pg` pool
+8. **Response** — Controller returns JSON response `{ success: true, data: {...} }` to client
 
-### LLM Plan Generation Flow (Weekly Activity Plan)
+### LLM Plan Generation Flow
 
-1. **Client** calls `POST /api/weekly-plans/generate` with `{ weekStart }`
-2. **Controller** calls `generateWeeklyPlan(deps)` in `llm.service.js`
-3. **Service** checks `getCachedPlan()` — returns cached plan if fresh
-4. **Service** fetches profile, activity history, DB activities in parallel via `Promise.all()`
-5. **Service** builds system prompt from template (`backend/prompts/weekly-plan-prompt.md`)
-6. **Service** calls OpenRouter API with model chain (primary → fallback1 → fallback2)
-7. **Service** validates LLM response structure via `validatePlanStructure()`
-8. **Service** fuzzy-matches activity names via `validateAndFixPlan()` (exact → contains → Levenshtein)
-9. **Service** retries with correction prompt if validation fails (up to 2 attempts)
-10. **Service** caches result via `setCachedPlan()` and returns to controller
-11. **Fallback** — if all LLM attempts fail, `generateFallbackPlan()` creates template-based plan from recent history
+1. **Client** sends POST to `/api/weekly-plans/generate` (or daily-meal-plans/generate)
+2. **Route + Auth** → rate limiter → controller
+3. **Controller** (`weeklyPlan.controller.js:133-179`) checks DB for existing plan, then calls service
+4. **Service** (`llm.service.js:433-533`) fetches user data in parallel, builds prompt from template with `buildPrompt()`, calls OpenRouter via `callLlmApi()`, validates response structure, fuzzy-matches activity names, stores in `node-cache` and returns
+5. **Controller** persists plan to DB and returns response
 
-### Auth Flow (Login → Session)
+### Auth Flow (Login)
 
-1. **POST /api/auth/login** with `{ email, password }`
-2. **Controller** calls `loginUser()` in `auth.service.js`
-3. **Service** finds user by email, compares bcrypt hash, generates JWT (HS256, 7d expiry)
-4. **Response** sets httpOnly `token` cookie + returns user object
-5. **Frontend** `useAuth` context calls `/api/auth/me` to verify session on mount
-6. **Subsequent requests** browser automatically sends `token` cookie
+1. **POST** `/api/auth/login` → `authLimiter` (10 req/15min) → `authController.login`
+2. **Controller** calls `authService.login()` which checks email, compares bcrypt hash, generates JWT (`HS256`, 7-day expiry)
+3. **Controller** sets `res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'none' })` and returns `{ success: true, data: { user, token } }`
+4. **Frontend** `useAuth.jsx`'s `login()` function stores user in state, reacts to auth context change
 
-**State Management:**
-- **Server side:** No global state beyond `node-cache` for LLM plans and Passport session (sessionless — JWT, no server-side session store)
-- **Client side:** React local state (`useState`/`useEffect`), `useAuth` React context for user session, `@tanstack/react-query` for server state (API data caching/refetching)
+### Caching Strategy
+
+- **In-memory plan cache**: `node-cache` (TTL: 1 hour, max keys: 1000) in `backend/src/services/llm.service.js:48` — caches weekly and daily plans by `plan_{type}_{userId}_{date}` key
+- **Database persistence**: Plans are also upserted to PostgreSQL tables for persistence across server restarts
+- **Cache-first, DB-fallback**: Plan GET endpoints check in-memory cache first, then fall back to database queries
+- **Per-user mutex locks**: `llm.service.js:54-62` implements a Map-based mutex system to prevent TOCTOU race conditions on cache read-modify-write operations
 
 ## Key Abstractions
 
-**Express Router (backend):**
-- Purpose: Define route handlers with chained middleware
-- Examples: `backend/src/routes/activity.routes.js`, `backend/src/routes/dailyMealPlan.routes.js`
-- Pattern: `Router()` → `router.use(authMiddleware)` → `router.get('/path', controller.handler)` → `export default router`
+**Error Class Hierarchy (`backend/src/utils/errors.js`):**
+- `AppError` (extends `Error`) — base with `name`, `message`, `statusCode`, `isOperational`
+- `ValidationError` → 400 Bad Request
+- `AuthenticationError` → 401 Unauthorized
+- `NotFoundError` → 404 Not Found
 
-**Standard Response Format:**
-- Purpose: Consistent API response envelope
-- Tools: `backend/src/utils/response.js`
-- Pattern: `successResponse(res, data, statusCode)` → `{ success: true, data }` / `errorResponse(res, message, statusCode, code)` → `{ success: false, error: { message, code } }`
+**Response Helpers (`backend/src/utils/response.js`):**
+- `successResponse(res, data, statusCode=200)` — `{ success: true, data }`
+- `errorResponse(res, message, statusCode=500, code)` — `{ success: false, error: { message, code } }`
 
-**Custom Error Classes:**
-- Purpose: Typed errors with HTTP status codes
-- Examples: `ValidationError` (400), `AuthenticationError` (401), `NotFoundError` (404), `AppError` (generic)
-- Location: `backend/src/utils/errors.js`
-- Pattern: Extends `AppError` which extends `Error`, sets `statusCode` and `name`
+**HTTP Client (`frontend/src/shared/lib/http.js`):**
+- `apiFetch(path, options)` — base fetch wrapper with `credentials: 'include'`, JSON parsing, error normalization
+- `apiGet(path)`, `apiPost(path, body)`, `apiDelete(path)` — convenience wrappers
 
-**LLM Service Dependency Injection:**
-- Purpose: Decouple LLM service from data fetching — callers pass getter functions
-- Pattern: `generateWeeklyPlan({ getProfile, getActivityHistory, getActivities, getTopActivities, ... })`
-- Examples: `backend/src/services/llm.service.js:433`
+**Auth Context (`frontend/src/features/auth/hooks/useAuth.jsx`):**
+- `AuthProvider` — React context with `user`, `loading`, `login`, `register`, `logout`, `isAuthenticated`
+- `useAuth()` — context consumer hook
 
-**Feature Module Index (frontend):**
-- Purpose: Barrel file for consumption by Router
-- Examples: `frontend/src/features/activities/index.js`, `frontend/src/features/food-log/index.js`
-- Pattern: Re-exports main page component and/or API functions
-
-**HTTP Client (frontend):**
-- Purpose: Centralized fetch wrapper with `credentials: 'include'` for httpOnly cookies
-- Location: `frontend/src/shared/lib/http.js`
-- Pattern: `apiGet(path)`, `apiPost(path, body)`, `apiDelete(path)` — all return parsed JSON
+**LLM Service Abstractions (`backend/src/services/llm.service.js`):**
+- `buildPrompt(filename, variables)` — template variable substitution
+- `callLlmApi(systemPrompt)` — OpenRouter call with 3-model fallback chain
+- `validatePlanStructure(plan, weekStart, availableDays)` — response structure validation
+- `validateAndFixPlan(plan, dbActivities)` — fuzzy name matching and correction
+- `fuzzyMatchActivityName(name, dbActivities)` — exact → contains → Levenshtein matching
+- `generateWeeklyPlan(deps)` — full generation with retry + correction loop
+- `swapActivity(deps, activityId, dayIndex)` — per-activity replacement
+- `getCachedPlan/setCachedPlan/clearCachedPlan` — cache management
+- `acquireLock(key, timeout)` — per-user mutex for TOCTOU prevention
 
 ## Entry Points
 
 **Backend Server:**
 - Location: `backend/src/server.js`
-- Triggers: `node src/server.js`, `npm run dev` (backend workspace)
-- Responsibilities: Loads env, creates Express app, starts HTTP listener on `PORT` (default 3001), connects DB pool, registers global error handlers
+- Triggers: `node src/server.js` (or `npm run dev`)
+- Responsibilities: Load `.env`, create Express app, connect to PostgreSQL, handle uncaught exceptions/unhandled rejections
 
 **Backend App:**
 - Location: `backend/src/app.js`
-- Triggers: Imported by `server.js`, exported for testing (used by supertest)
-- Responsibilities: Configures Express with middleware stack, mounts all route groups, serves SPA static files, SPA catch-all, 404 handler, global error handler
+- Responsibilities: Configure all middleware (helmet, CORS, compression, morgan, body parser, cookie parser, passport), attach rate limiters, mount all route groups, serve React SPA static files, SPA catch-all, 404 handler, global error handler
 
 **Frontend Entry:**
 - Location: `frontend/src/main.jsx`
-- Triggers: Vite dev server, `index.html`
-- Responsibilities: DOM mounting of React app, StrictMode wrapper
+- Triggers: Vite dev server or production build
+- Responsibilities: Mount React app to DOM
 
 **Frontend App:**
 - Location: `frontend/src/app/App.jsx`
-- Responsibilities: Renders `<Providers>` (QueryClient + AuthProvider) and `<Router>` children
+- Responsibilities: Render `<Providers>` → `<Router>`
 
 **Frontend Router:**
 - Location: `frontend/src/app/Router.jsx`
-- Responsibilities: Client-side routing with `react-router-dom`, auth guards (`ProtectedRoute`, `PublicRoute`), profile guard, responsive layout with navigation, dashboard overview page
+- Responsibilities: Define all routes (login, register, profile, food-log, activities, progress, dashboard), implement `ProtectedRoute`, `PublicRoute`, `ProfileGuard` wrappers, render `ResponsiveLayout` with desktop and mobile navigation
+
+## API Route Map
+
+| Prefix | File | Auth | Rate Limit |
+|--------|------|------|------------|
+| `GET /api/health` | `app.js:113` | No | Global |
+| `/api/docs` | `routes/docs.routes.js` | No | None |
+| `/api/auth` | `routes/auth.routes.js` | Some | 10/15min (login/register) |
+| `/api/auth/google` | `app.js:152-172` | No | None |
+| `/api/profile` | `routes/profile.routes.js` | Required | 60/15min |
+| `/api/food` | `routes/food.routes.js` | Required | 60/15min |
+| `/api/activities` | `routes/activity.routes.js` | Required | 20/15min |
+| `/api/weekly-plans` | `routes/weeklyPlan.routes.js` | Required | Per-endpoint |
+| `/api/daily-meal-plans` | `routes/dailyMealPlan.routes.js` | Required | Per-endpoint |
+| `/api/progress` | `routes/progress.routes.js` | Required | Global |
 
 ## Architectural Constraints
 
-- **Threading:** Single-threaded Node.js event loop. All async I/O uses async/await with Promises.
-- **Global state:** `node-cache` instance in `backend/src/services/llm.service.js:48` — single in-memory cache shared across all users. Per-user mutex (`locks` Map at line 52) prevents TOCTOU race on cache read-modify-write for swap/regenerate operations.
-- **ESM modules:** All source files use ES module syntax (`import`/`export`). CommonJS (`require`) not used.
-- **Database connections:** Single `pg.Pool` (max 10 connections) created at startup in `backend/src/config/database.js`. No connection pooling per request.
-- **No TypeScript in source:** Backend is pure JavaScript (`.js`). Frontend uses `.jsx` and optional `@ts-check`. TypeScript config exists for linting only (`tsconfig.json`).
-- **Missing files on disk (git-only):** Many backend files exist in git history but are not present in the working directory. They were restored as empty stubs in commit `d1ce6ec`. The working tree only has 13 `backend/src/` files vs 40+ in git.
+- **Threading:** Single-threaded event loop (Node.js). No worker threads. Async I/O throughout.
+- **Global state:** In-memory singletons in `llm.service.js`: `planCache` (NodeCache), `locks` (Map for mutexes), `promptCache` (Map), `openaiClient` (OpenAI SDK), `migrationFailCooldown` (Map in `weeklyPlan.controller.js`).
+- **Circular imports:** Not detected. Dependency flows unidirectionally: routes → controllers → services → repositories.
+- **LLM dependency:** Weekly plans, daily meal plans, and activity plans all depend on OpenRouter API availability. Fallback plans (`generateFallbackPlan`/`generateFallbackActivityPlan`) provide degraded functionality when LLM is unavailable.
+- **Database dependency:** Every API route except health check and docs ultimately depends on PostgreSQL availability.
 
 ## Anti-Patterns
 
-### Missing Repository/Utils/Middleware files on disk
+### Service-to-Controller Dependency Inversion
 
-**What happens:** The working directory (`backend/src/`) is missing entire subdirectories (`repositories/`, `utils/`) and multiple files (`config/passport.js`, `middlewares/auth.middleware.js`, multiple controllers, routes, services). These files exist in git history but are absent from the working tree. The `Routes` in `app.js` reference routes that have no corresponding file on disk (e.g., `auth.routes.js`, `profile.routes.js`, `food.routes.js`).
+**What happens:** `weeklyPlan.controller.js` directly imports repositories (`activity.repository.js`, `weeklyPlan.repository.js`, `profile.repository.js`) and the database pool instead of always going through services. Similarly, `dailyMealPlan.controller.js` and `activityPlan.controller.js` also import repositories directly for DB lookups.
 
-**Why it's wrong:** Any attempt to start the backend with `npm run dev` will fail with `ERR_MODULE_NOT_FOUND` because import paths referenced in `app.js` resolve to files that don't exist on disk.
+**Why it's wrong:** Breaks the strict layer separation. Controllers should delegate complex data fetching to services.
 
-**Do this instead:** Run `git checkout` to restore the missing files. The backend requires all files tracked in git to function. Alternatively, update the working tree to match the committed state.
+**Do this instead:** Follow the `auth.controller.js` pattern — keep controllers focused on HTTP handling and delegate all data access to services. Multiple services can be composed if needed.
 
-### Duplicate nested backend directory in git
+### Controllers with Heavy Business Logic
 
-**What happens:** The git tree has duplicate backend source under `backend/backend/src/` (e.g., `backend/backend/src/utils/errors.js`) alongside `backend/src/utils/errors.js`. This happened during prior restores/snapshots.
+**What happens:** `weeklyPlan.controller.js` (507 lines) contains substantial business logic including `attemptMigration`, `inferAvailableDays`, and `toggleComplete` functions that would be more appropriate in a service layer.
 
-**Why it's wrong:** Confuses the source of truth. The `backend/backend/` path is a historical artifact, not the intended source location.
+**Why it's wrong:** Makes controllers harder to test and violates single responsibility.
 
-**Do this instead:** Only use `backend/src/` as the source. The nested path should be removed from git or ignored.
+**Do this instead:** Keep controllers to ~50 lines max by extracting business logic into services.
 
-### In-memory cache without persistence
+### Direct `pool.query` in Controllers
 
-**What happens:** `node-cache` in `llm.service.js` caches generated plans with a 1-hour TTL. Cache is lost on server restart.
+**What happens:** `weeklyPlan.controller.js:92-98` executes raw `pool.query()` directly instead of going through a repository, and `dailyMealPlan.controller.js:105-127` directly manages transactions.
 
-**Why it's wrong:** Plans regenerated on every server restart (until DB cache fallback was added in commit `ea67d0a`).
+**Why it's wrong:** Bypasses the repository abstraction, making the code harder to mock in tests and duplicating error handling.
 
-**Do this instead:** The current approach uses DB as persistent cache, which mitigates this. Keep the in-memory cache as a hot cache layer.
+**Do this instead:** Always use repository functions for database access. Repository methods already accept optional `clientOverride` for transaction support.
 
 ## Error Handling
 
-**Strategy:** Centralized error handler with custom error classes and consistent response format.
+**Strategy:** Centralized error handling via the global Express error handler at `backend/src/app.js:200-210`. Controllers use `try/catch` to translate known error types (`ValidationError` → 400, `AuthenticationError` → 401, `NotFoundError` → 404) and forward unknown errors to `next(err)`.
 
 **Patterns:**
-- Controllers wrap logic in `try/catch`, calling `next(err)` to delegate to global error handler (`backend/src/app.js:200-210`)
-- Specific error classes (`ValidationError`, `AuthenticationError`, `NotFoundError`) are caught in controllers and returned directly with status codes
-- Global error handler converts unknown errors to `500 HTTP_SERVER_ERROR` responses, converting camelCase error names to UPPER_SNAKE_CASE
-- LLM service has its own error types (`LlmEmptyResponse`, `LlmParseError`, `LlmConfigError`, `LlmAllFailed`, `SwapFallbackError`)
-- Rate limiters return 429 with `RATE_LIMITED` code and structured response body
-
-**Error response format:**
-```json
-{ "success": false, "error": { "message": "...", "code": "UPPER_SNAKE_CASE" } }
-```
+- Custom `AppError` class hierarchy with `name`, `message`, `statusCode`, `isOperational`
+- Controller-level `try/catch` with specific error type checking
+- Repository-level `try/catch` wrapping all DB errors in `AppError('DatabaseError', ...)`
+- Global error handler converts camelCase error names to `UPPER_SNAKE_CASE` codes
+- `errorResponse()` helper produces consistent JSON error format `{ success: false, error: { message, code } }`
+- `dbErrors.normalizeDbError()` maps PostgreSQL error codes to human-readable codes
 
 ## Cross-Cutting Concerns
 
 **Logging:**
-- HTTP request logging via `morgan('dev')` middleware (`backend/src/app.js:92`)
-- Service-level logging via `console.log`/`console.error` throughout
-- Database pool errors logged via pool `error` event (`backend/src/config/database.js:30-37`)
-- LLM service logs model failures, validation errors, and fallback triggers
+- `morgan('dev')` middleware for HTTP request logging
+- `console.log`/`console.warn`/`console.error` throughout services and controllers for debugging
+- No structured logging library (e.g., winston, pino)
+- Database pool errors logged in `config/database.js:28-35`
 
 **Validation:**
-- Input validation at controller level (`express-validator` in routes, manual checks in controllers)
-- LLM output validated structurally (`validatePlanStructure`) and semantically (`validateAndFixPlan` with fuzzy matching)
-- Rate limiters validate request headers (`validate: { xForwardedForHeader: false }`)
+- `express-validator` is listed as a dependency but **not currently used** — most validation is manual within controllers and services
+- Business-logic validation in services (`profile.service.js:102-138`, `food.service.js:36-50`, `llm.service.js:162-191`)
+- Zod schemas in frontend (`LoginForm.jsx:9-12`, `RegisterForm.jsx`)
+- No shared validation schemas between frontend and backend
 
 **Authentication:**
-- JWT-based authentication via httpOnly cookies (not localStorage/headers)
-- Google OAuth as secondary auth option via Passport.js
-- Auth middleware (`authenticateToken`) applied per-route-group in route files
-- Rate limiting specifically on login/register endpoints (10/min)
-
-**Rate Limiting:**
-- Global: 600/min across all requests (`backend/src/app.js:66-72`)
-- Per-route: Auth (10/min), Profile (60/min), Food (60/min), Activities (20/min), Weekly Plans (50/min generate, 30/min regenerate, 10/min swap, 60/min toggle), Daily Meal Plans (20/min)
-- Per-user: Weekly plan and meal plan limiters keyed by `req.user.userId`
-- Test mode: All limits raised to ~1000/min and windows shortened to 1s for test speed
+- JWT-based with httpOnly cookies (not `Authorization` header)
+- `authenticateToken` middleware reads `req.cookies.token`, verifies with `HS256` algorithm
+- Token includes `{ userId, email }`, expires in 7 days
+- Google OAuth via Passport — also sets JWT cookie on successful callback
+- Password hashing via `bcryptjs` with 10 salt rounds (D-05)
+- Timing-safe login: dummy bcrypt compare on invalid emails to prevent email enumeration
 
 ---
 
