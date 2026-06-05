@@ -131,7 +131,7 @@ export default function ProfileForm({ onSaveSuccess, isOverlay = false }) {
     <div className="space-y-6 max-w-6xl mx-auto">
       {!isOverlay && (
         <div>
-          <h1 className="font-display font-extrabold text-3xl text-slate-800 tracking-tight">
+          <h1 className="font-display font-extrabold text-3xl tracking-tight" style={{ color: '#fff' }}>
             Biometrics & TDEE Profile
           </h1>
           <p className="text-slate-500 text-sm mt-1 leading-relaxed">
@@ -372,7 +372,8 @@ export default function ProfileForm({ onSaveSuccess, isOverlay = false }) {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 active:scale-[0.98] transition-all cursor-pointer shadow-sm disabled:bg-slate-300 disabled:cursor-not-allowed disabled:active:scale-100"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-semibold bg-red-700 hover:bg-red-800 active:scale-[0.98] transition-all cursor-pointer shadow-sm disabled:bg-slate-300 disabled:cursor-not-allowed disabled:active:scale-100"
+              style={{ color: '#fff' }}
             >
               {isSubmitting ? (
                 <>
@@ -388,12 +389,12 @@ export default function ProfileForm({ onSaveSuccess, isOverlay = false }) {
 
         {/* Live Analysis Display Side Hub */}
         <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
-          <div className="bg-slate-900 text-white p-6 sm:p-7 rounded-2xl border border-slate-800 shadow-elevated relative overflow-hidden">
-            <div className="absolute right-0 top-0 p-8 text-slate-800/45 pointer-events-none">
+          <div className="p-6 sm:p-7 rounded-2xl border border-[#2d2d2d] shadow-elevated relative overflow-hidden" style={{ background: '#121212' }}>
+            <div className="absolute right-0 top-0 p-8 text-[#222] pointer-events-none">
               <Award className="w-36 h-36" />
             </div>
             <div className="relative z-10 space-y-2">
-              <h2 className="font-display font-bold text-lg tracking-tight flex items-center gap-2">
+              <h2 className="font-display font-bold text-lg tracking-tight flex items-center gap-2" style={{ color: '#fff' }}>
                 Biometric Evaluator
               </h2>
               <p className="text-xs text-slate-400">

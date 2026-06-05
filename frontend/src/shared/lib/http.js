@@ -1,5 +1,23 @@
+/**
+ * http.js — Shared HTTP client for all API calls.
+ *
+ * Why: Centralising fetch logic here means every feature module gets
+ * cookie-based auth (credentials: 'include'), consistent error shaping,
+ * and graceful handling of non-JSON responses (rate-limiter plain-text, etc.)
+ * without each feature needing to handle these edge cases itself.
+ */
+
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+/**
+ * Base fetch wrapper. Automatically includes credentials and serialises
+ * JSON errors into thrown `Error` instances with `.retryAfter` and `.code`.
+ *
+ * @param {string} path       - API path, e.g. '/api/profile'.
+ * @param {RequestInit} [options] - Standard fetch options (method, body, headers, …).
+ * @returns {Promise<any>}    - Parsed JSON response body.
+ * @throws {Error}            - On non-2xx responses; error may have `.retryAfter` and `.code`.
+ */
 export async function apiFetch(path, options = {}) {
   const headers = {
     'Content-Type': 'application/json',
@@ -36,10 +54,23 @@ export async function apiFetch(path, options = {}) {
   return data;
 }
 
+/**
+ * Convenience wrapper for GET requests.
+ *
+ * @param {string} path - API path.
+ * @returns {Promise<any>}
+ */
 export async function apiGet(path) {
   return apiFetch(path, { method: 'GET' });
 }
 
+/**
+ * Convenience wrapper for POST requests.
+ *
+ * @param {string}      path - API path.
+ * @param {object|null} body - Request payload; serialised to JSON automatically.
+ * @returns {Promise<any>}
+ */
 export async function apiPost(path, body) {
   return apiFetch(path, {
     method: 'POST',
@@ -47,6 +78,12 @@ export async function apiPost(path, body) {
   });
 }
 
+/**
+ * Convenience wrapper for DELETE requests.
+ *
+ * @param {string} path - API path.
+ * @returns {Promise<any>}
+ */
 export async function apiDelete(path) {
   return apiFetch(path, { method: 'DELETE' });
 }

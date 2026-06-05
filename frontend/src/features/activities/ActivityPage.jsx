@@ -58,7 +58,7 @@ export default function ActivityPage() {
       {/* Title block */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
-          <h1 className="font-display font-extrabold text-3xl text-slate-800 tracking-tight">
+          <h1 className="font-display font-extrabold text-3xl tracking-tight" style={{ color: '#fff' }}>
             Activity Tracker & Workout Recommendations
           </h1>
           <p className="text-slate-500 text-sm mt-1 leading-relaxed">

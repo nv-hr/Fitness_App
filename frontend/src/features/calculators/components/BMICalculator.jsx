@@ -155,7 +155,7 @@ export default function BMICalculator() {
   return (
     <div className="space-y-6 max-w-5xl mx-auto animate-fade-in">
       <div>
-        <h1 className="font-display font-extrabold text-3xl text-white tracking-tight">
+        <h1 className="font-display font-extrabold text-3xl tracking-tight" style={{ color: '#fff' }}>
           BMI Calculator
         </h1>
         <p className="text-slate-400 text-sm mt-1">
@@ -280,11 +280,12 @@ export default function BMICalculator() {
 
             {calculatedResults && status ? (
               <div className="space-y-5 mt-4 animate-fade-in flex-1 flex flex-col justify-center">
-                <div className="text-center py-5 bg-[#121212] rounded-xl border border-[#2d2d2d]">
-                  <p className="text-xs text-slate-400 uppercase tracking-widest font-semibold">Your BMI Score</p>
-                  <p className="text-4xl font-display font-black text-white mt-1 font-mono">
-                    {calculatedResults.bmi.toFixed(1)}
-                  </p>
+                <div className="text-center p-6 bg-slate-900 rounded-xl border border-slate-700 relative overflow-hidden" style={{ background: '#1a1a1a' }}>
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent" />
+                <p className="text-sm font-semibold text-slate-400 mb-2 relative z-10">Your BMI Is</p>
+                <div className="font-display font-bold text-5xl text-emerald-400 tracking-tight relative z-10">
+                  {calculatedResults.bmi.toFixed(1)}
+                </div>
                   <span className={`inline-block mt-2 px-3.5 py-1 rounded-full text-xs font-bold ${status.bg} ${status.color} border ${status.border}`}>
                     {status.label}
                   </span>
@@ -294,11 +295,11 @@ export default function BMICalculator() {
                 </div>
 
                 <div className={`p-4 rounded-xl border ${status.bg} ${status.border} text-xs leading-relaxed`}>
-                  <p className={`font-bold uppercase tracking-wider flex items-center gap-1.5 ${status.color} mb-1`}>
-                    <Heart className="w-3.5 h-3.5" />
+                  <p className={`font-extrabold text-sm uppercase tracking-wider flex items-center gap-1.5 text-white mb-2 pb-1 border-b ${status.border}`}>
+                    <Heart className={`w-4 h-4 ${status.color}`} />
                     Health Guidance
                   </p>
-                  <p className="text-slate-300 font-medium">
+                  <p className="text-white font-medium">
                     {status.desc}
                   </p>
                 </div>

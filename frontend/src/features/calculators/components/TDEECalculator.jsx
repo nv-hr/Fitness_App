@@ -105,7 +105,7 @@ export default function TDEECalculator() {
   return (
     <div className="space-y-6 max-w-5xl mx-auto animate-fade-in">
       <div>
-        <h1 className="font-display font-extrabold text-3xl text-white tracking-tight">
+        <h1 className="font-display font-extrabold text-3xl tracking-tight" style={{ color: '#fff' }}>
           TDEE Calculator
         </h1>
         <p className="text-slate-400 text-sm mt-1">
@@ -265,15 +265,15 @@ export default function TDEECalculator() {
 
                 {/* Scenarios */}
                 <div className="space-y-2 pt-2 border-t border-[#2d2d2d]">
-                  <span className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold block mb-1">Target Scenarios:</span>
+                  <span className="text-xs text-white uppercase tracking-widest font-bold block mb-2 border-b border-[#2d2d2d] pb-2">Target Scenarios:</span>
                   
                   {/* Loss */}
                   <div className="flex justify-between items-center bg-[#121212] px-4 py-2.5 rounded-xl border border-[#2d2d2d]">
                     <div>
-                      <p className="text-xs font-bold text-slate-200">Weight Loss</p>
-                      <p className="text-[10px] text-slate-400">-500 kcal deficit</p>
+                      <p className="text-xs font-bold text-white">Weight Loss</p>
+                      <p className="text-[10px] text-slate-600">-500 kcal deficit</p>
                     </div>
-                    <p className="text-sm font-black font-mono text-emerald-400">
+                    <p className="text-sm font-black font-mono" style={{ color: '#4ade80' }}>
                       {Math.max(1200, Math.round(calculatedResults.tdee - 500))} kcal
                     </p>
                   </div>
@@ -281,10 +281,10 @@ export default function TDEECalculator() {
                   {/* Maintain */}
                   <div className="flex justify-between items-center bg-[#121212] px-4 py-2.5 rounded-xl border border-[#2d2d2d]">
                     <div>
-                      <p className="text-xs font-bold text-slate-200">Maintenance</p>
-                      <p className="text-[10px] text-slate-400">Keep current weight</p>
+                      <p className="text-xs font-bold text-white">Maintenance</p>
+                      <p className="text-[10px] text-slate-600">Keep current weight</p>
                     </div>
-                    <p className="text-sm font-black font-mono text-slate-300">
+                    <p className="text-sm font-black font-mono text-white">
                       {Math.round(calculatedResults.tdee)} kcal
                     </p>
                   </div>
@@ -292,10 +292,10 @@ export default function TDEECalculator() {
                   {/* Gain */}
                   <div className="flex justify-between items-center bg-[#121212] px-4 py-2.5 rounded-xl border border-[#2d2d2d]">
                     <div>
-                      <p className="text-xs font-bold text-slate-200">Muscle Gain</p>
-                      <p className="text-[10px] text-slate-400">+300 kcal surplus</p>
+                      <p className="text-xs font-bold text-white">Muscle Gain</p>
+                      <p className="text-[10px] text-slate-600">+300 kcal surplus</p>
                     </div>
-                    <p className="text-sm font-black font-mono text-red-400">
+                    <p className="text-sm font-black font-mono" style={{ color: '#f87171' }}>
                       {Math.round(calculatedResults.tdee + 300)} kcal
                     </p>
                   </div>

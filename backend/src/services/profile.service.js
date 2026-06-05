@@ -19,15 +19,15 @@ export function calculateBmi(weightKg, heightCm) {
 }
 
 /**
- * Get BMI category using Asian-Pacific cutoffs (per D-14).
- * underweight < 18.5, normal 18.5-22.9, overweight 23-24.9, obese >= 25
+ * Get BMI category using WHO standard cutoffs.
+ * underweight < 18.5, normal 18.5-24.9, overweight 25-29.9, obese >= 30
  * @param {number} bmi
  * @returns {string}
  */
 export function getBmiCategory(bmi) {
   if (bmi < 18.5) return 'underweight';
-  if (bmi <= 22.9) return 'normal';
-  if (bmi <= 24.9) return 'overweight';
+  if (bmi <= 24.9) return 'normal';
+  if (bmi <= 29.9) return 'overweight';
   return 'obese';
 }
 

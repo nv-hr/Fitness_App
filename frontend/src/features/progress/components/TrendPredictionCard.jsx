@@ -1,21 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
+import { TrendingDown, TrendingUp, Minus, CalendarCheck, Loader2, AlertCircle, Target } from 'lucide-react';
 import { getWeightHistory } from '../api/weightApi.js';
 import { useTrendPrediction } from '../hooks/useTrendPrediction.js';
 
-const DOT_COLORS = {
-  green: '#065f46',
-  amber: '#d97706',
-  red: '#dc2626',
-  neutral: '#666',
+/**
+ * Status colour tokens — kept in one place so the three uses (icon, badge, text)
+ * stay in sync without prop-drilling a colour string.
+ */
+const STATUS_CONFIG = {
+  green: {
+    icon: TrendingDown,
+    badgeBg: 'bg-emerald-950/60 border-emerald-700/30',
+    badgeText: 'text-emerald-400',
+    dotBg: 'bg-emerald-500',
+  },
+  amber: {
+    icon: TrendingUp,
+    badgeBg: 'bg-amber-950/60 border-amber-700/30',
+    badgeText: 'text-amber-400',
+    dotBg: 'bg-amber-500',
+  },
+  red: {
+    icon: TrendingUp,
+    badgeBg: 'bg-red-950/60 border-red-700/30',
+    badgeText: 'text-red-400',
+    dotBg: 'bg-red-500',
+  },
+  neutral: {
+    icon: Minus,
+    badgeBg: 'bg-slate-700/40 border-slate-600/30',
+    badgeText: 'text-slate-400',
+    dotBg: 'bg-slate-500',
+  },
 };
 
-const LABEL_COLORS = {
-  green: '#065f46',
-  amber: '#d97706',
-  red: '#dc2626',
-};
-
+/**
+ * TrendPredictionCard
+ *
+ * Renders the computed weight-loss/gain rate and estimated goal-completion date.
+ * Why inline styles were replaced: they used hard-coded light-mode colours
+ * (#374151, #666, #fafafa) that were invisible / clashing in the dark theme.
+ */
 export default function TrendPredictionCard({ profile, refreshKey }) {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,215 +64,119 @@ export default function TrendPredictionCard({ profile, refreshKey }) {
           setLoading(false);
         }
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = false; };
   }, [refreshKey]);
 
   const prediction = useTrendPrediction(entries, profile);
 
-  // --- Render states ---
+  /** Shared card wrapper */
+  const CardShell = ({ children }) => (
+    <div className="bg-[#1a1a1a] border border-[#2d2d2d] rounded-2xl p-6 shadow-lux">
+      <h3 className="font-display font-bold text-lg text-white flex items-center gap-2 mb-5">
+        <span className="w-1.5 h-4 bg-emerald-600 rounded-full inline-block" />
+        Trend Prediction
+      </h3>
+      {children}
+    </div>
+  );
 
-  const cardStyle = {
-    border: '1px solid #e5e7eb',
-    borderRadius: '8px',
-    padding: '1rem',
-    background: '#fafafa',
-  };
-
-  const headingStyle = {
-    margin: '0 0 0.75rem 0',
-    fontSize: '1rem',
-    fontWeight: 600,
-  };
-
-  // Loading state
   if (loading && entries.length === 0) {
     return (
-      <div style={cardStyle}>
-        <h3 style={headingStyle}>Trend Prediction</h3>
-        <div style={{ padding: '1rem', textAlign: 'center', color: '#999' }}>
-          Calculating trend...
+      <CardShell>
+        <div className="flex items-center justify-center gap-2 py-8 text-slate-500 text-sm">
+          <Loader2 className="w-5 h-5 animate-spin" /> Calculating trend…
         </div>
-      </div>
+      </CardShell>
     );
   }
 
-  // Error state
   if (error && entries.length === 0) {
     return (
-      <div style={cardStyle}>
-        <h3 style={headingStyle}>Trend Prediction</h3>
-        <p style={{ color: 'red', fontSize: '0.875rem' }}>{error}</p>
-      </div>
+      <CardShell>
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-red-950/50 border border-red-500/30 text-red-400 text-sm">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          {error}
+        </div>
+      </CardShell>
     );
   }
 
-  // Empty / Insufficient data state
   if (entries.length === 0 || prediction.insufficientData) {
     return (
-      <div style={cardStyle}>
-        <h3 style={headingStyle}>Trend Prediction</h3>
-        <p
-          style={{
-            color: '#666',
-            fontStyle: 'italic',
-            textAlign: 'center',
-            padding: '1rem',
-          }}
-        >
-          Log more weight entries to see your trend.
+      <CardShell>
+        <p className="text-center text-sm text-slate-500 italic py-4">
+          Log more weight entries to see your trend prediction.
         </p>
-      </div>
+      </CardShell>
     );
   }
 
-  // Has data
+  // Build display values
   const rateText =
     prediction.direction === 'stable'
-      ? 'Stable'
+      ? 'Stable weight'
       : prediction.direction === 'losing'
-        ? `Losing ${Math.abs(prediction.rateKgPerWeek).toFixed(1)} kg/week`
-        : `Gaining ${Math.abs(prediction.rateKgPerWeek).toFixed(1)} kg/week`;
+      ? `Losing ${Math.abs(prediction.rateKgPerWeek).toFixed(1)} kg / week`
+      : `Gaining ${Math.abs(prediction.rateKgPerWeek).toFixed(1)} kg / week`;
 
-  const dotColor = DOT_COLORS[prediction.colorStatus] || '#666';
-  const labelColor = LABEL_COLORS[prediction.colorStatus] || '#666';
+  const cfg = STATUS_CONFIG[prediction.colorStatus] || STATUS_CONFIG.neutral;
+  const TrendIcon = cfg.icon;
 
-  // Determine if we're in the "stable" (maintain) special state
-  const isStable = prediction.direction === 'stable';
-
-  // Confidence text
-  let confidenceText = '';
-  if (prediction.confidence !== null) {
-    if (prediction.confidence >= 0.7) {
-      confidenceText = '(strong fit)';
-    } else if (prediction.confidence >= 0.4) {
-      confidenceText = '(moderate fit)';
-    } else {
-      confidenceText = '(weak fit)';
-    }
-  }
+  const confidenceLabel =
+    prediction.confidence !== null
+      ? prediction.confidence >= 0.7
+        ? 'Strong fit'
+        : prediction.confidence >= 0.4
+        ? 'Moderate fit'
+        : 'Weak fit'
+      : null;
 
   return (
-    <div style={cardStyle}>
-      <h3 style={headingStyle}>Trend Prediction</h3>
-
-      {/* No goal set: rate string only, no dot, no label, no date */}
-      {prediction.noGoalSet ? (
-        <>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '0.75rem',
-            }}
-          >
-            <span style={{ fontSize: '0.875rem', color: '#374151' }}>
-              {rateText}
-            </span>
-          </div>
-        </>
-      ) : /* Stable (maintain goal with near-zero slope) */
-      isStable ? (
-        <>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '0.75rem',
-            }}
-          >
-            <span style={{ fontSize: '0.875rem', color: '#374151' }}>
-              <span
-                style={{
-                  display: 'inline-block',
-                  width: '10px',
-                  height: '10px',
-                  borderRadius: '50%',
-                  marginRight: '0.5rem',
-                  background: '#666',
-                }}
-              />
-              {rateText}
-            </span>
-          </div>
-          {confidenceText && (
-            <p
-              style={{
-                fontSize: '0.8rem',
-                color: '#666',
-                marginTop: '0.25rem',
-              }}
-            >
-              Confidence: {prediction.confidence?.toFixed(2)} {confidenceText}
-            </p>
-          )}
-        </>
-      ) : (
-        /* Normal data state: has prediction, has goal, not stable */
-        <>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '0.75rem',
-            }}
-          >
-            <span style={{ fontSize: '0.875rem', color: '#374151' }}>
-              <span
-                style={{
-                  display: 'inline-block',
-                  width: '10px',
-                  height: '10px',
-                  borderRadius: '50%',
-                  marginRight: '0.5rem',
-                  background: dotColor,
-                }}
-              />
-              {rateText}
-            </span>
-            {prediction.statusLabel && (
-              <span
-                style={{
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  color: labelColor,
-                }}
-              >
-                {prediction.statusLabel}
-              </span>
-            )}
+    <CardShell>
+      <div className="space-y-4">
+        {/* Rate row */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${cfg.dotBg} text-white`}>
+              <TrendIcon className="w-4 h-4" />
+            </div>
+            <span className="text-base font-semibold text-white">{rateText}</span>
           </div>
 
-          {prediction.estimatedDate && (
-            <p
-              style={{
-                fontSize: '0.875rem',
-                color: '#374151',
-                marginTop: '0.25rem',
-              }}
-            >
-              Estimated completion:{' '}
-              {format(prediction.estimatedDate, 'MMM d, yyyy')}
-            </p>
+          {/* Status badge (only when goal is set and not stable) */}
+          {!prediction.noGoalSet && !prediction.isStable && prediction.statusLabel && (
+            <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${cfg.badgeBg} ${cfg.badgeText}`}>
+              {prediction.statusLabel}
+            </span>
           )}
+        </div>
 
-          {confidenceText && (
-            <p
-              style={{
-                fontSize: '0.8rem',
-                color: '#666',
-                marginTop: '0.25rem',
-              }}
-            >
-              Confidence: {prediction.confidence?.toFixed(2)} {confidenceText}
-            </p>
-          )}
-        </>
-      )}
-    </div>
+        {/* Estimated goal date */}
+        {prediction.estimatedDate && !prediction.noGoalSet && (
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-[#212121] border border-[#333]">
+            <CalendarCheck className="w-4 h-4 text-slate-500 flex-shrink-0" />
+            <div>
+              <p className="text-xs text-slate-500">Estimated goal reached</p>
+              <p className="text-sm font-semibold text-white">{format(prediction.estimatedDate, 'MMMM d, yyyy')}</p>
+            </div>
+          </div>
+        )}
+
+        {/* No goal set nudge */}
+        {prediction.noGoalSet && (
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-[#212121] border border-[#333] text-slate-500 text-xs">
+            <Target className="w-4 h-4 flex-shrink-0" />
+            Set a target weight in your profile to see an estimated completion date.
+          </div>
+        )}
+
+        {/* Confidence indicator */}
+        {confidenceLabel && (
+          <p className="text-xs text-slate-600">
+            R² = {prediction.confidence?.toFixed(2)} — {confidenceLabel}
+          </p>
+        )}
+      </div>
+    </CardShell>
   );
 }

@@ -1,18 +1,62 @@
 import { Flame, Clock, Dumbbell, PlusCircle, CheckCircle2 } from 'lucide-react';
 
+const translateToEnglish = (text) => {
+  if (!text) return text;
+  let translated = text;
+  const dict = {
+    'Lari': 'Running',
+    'Jalan Cepat': 'Brisk Walking',
+    'Berenang': 'Swimming',
+    'Bersepeda': 'Cycling',
+    'Latihan Kekuatan Ringan': 'Light Strength Training',
+    'Latihan Kekuatan': 'Strength Training',
+    'Pemanasan': 'Warm Up',
+    'Pendinginan': 'Cool Down',
+    'Senam aerobik': 'Aerobics',
+    'Yoga tingkat pemula': 'Beginner Yoga',
+    'Peregangan': 'Stretching',
+    'Lompat tali': 'Jump rope',
+    'Bersepeda santai': 'Leisurely cycling',
+    'Berenang gaya bebas': 'Freestyle swimming',
+    'Lari cepat': 'Sprinting',
+    'Jalan kaki': 'Walking',
+    'Tidak ada peralatan khusus': 'No special equipment',
+    'Sepatu lari': 'Running shoes',
+    'Sepeda': 'Bicycle',
+    'Pakaian renang': 'Swimsuit',
+    'Matras': 'Mat',
+    'Dumbbell atau botol air': 'Dumbbells or water bottles',
+    'Dumbbell': 'Dumbbell',
+    'Tali skipping': 'Jump rope',
+    'Botol air': 'Water bottle',
+    'Tidak ada peralatan': 'No Equipment'
+  };
+  
+  Object.keys(dict).forEach(key => {
+    // case insensitive replace
+    const regex = new RegExp(key, 'gi');
+    translated = translated.replace(regex, dict[key]);
+  });
+  return translated;
+};
+
 export default function ActivityCard({ activity, onLogClick, isLogging }) {
-  const equips = activity.equipment_needed && activity.equipment_needed.length > 0
+  const equipsText = activity.equipment_needed && activity.equipment_needed.length > 0
     ? activity.equipment_needed.join(', ')
     : 'No Equipment';
+  
+  const equips = translateToEnglish(equipsText);
+  const name = translateToEnglish(activity.name);
+  const desc = translateToEnglish(activity.description);
 
   return (
     <div className="bg-slate-50/60 p-4.5 rounded-2xl border border-slate-200/50 hover:border-emerald-200 hover:bg-slate-50 transition-all duration-200 shadow-xs relative overflow-hidden group mb-4">
       <div className="space-y-1.5 relative z-10">
         <h4 className="font-display font-bold text-base text-slate-800 tracking-tight group-hover:text-emerald-700 transition-colors">
-          {activity.name}
+          {name}
         </h4>
         <p className="text-xs text-slate-500 leading-relaxed max-w-xl">
-          {activity.description}
+          {desc}
         </p>
 
         {/* Info badges layout */}

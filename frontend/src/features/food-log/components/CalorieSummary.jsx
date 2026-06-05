@@ -60,7 +60,7 @@ export default function CalorieSummary({ totalConsumed, calorieTarget, remaining
 
       {/* Visual meter progress bar */}
       <div className="space-y-2">
-        <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden relative border border-slate-200/10">
+        <div className="h-3 w-full rounded-full overflow-hidden relative" style={{ background: '#2a2a2a' }}>
           <div
             className={`h-full rounded-full bg-gradient-to-r ${barGradient} transition-all duration-500`}
             style={{ width: `${progressPercent}%` }}
@@ -88,9 +88,9 @@ export default function CalorieSummary({ totalConsumed, calorieTarget, remaining
 
       {/* Extreme Deficit Protection Alarm Banner */}
       {isExtremeDeficit && totalConsumed > 0 && (
-        <div className="mt-4 flex gap-2.5 p-3 rounded-xl bg-orange-50 border border-orange-100 text-xs text-orange-850 items-start">
-          <ShieldAlert className="w-4 h-4 flex-shrink-0 text-orange-500 mt-0.5" />
-          <p className="font-semibold leading-relaxed">
+        <div className="mt-4 flex gap-2.5 p-3 rounded-xl items-start" style={{ background: 'rgba(120, 53, 15, 0.3)', border: '1px solid rgba(217, 119, 6, 0.3)' }}>
+          <ShieldAlert className="w-4 h-4 flex-shrink-0 text-amber-500 mt-0.5" />
+          <p className="font-semibold leading-relaxed text-xs text-amber-300">
             Nutrition Warning: Your calorie intake is extremely low (&lt;1200 kcal). Please ensure you get adequate macronutrients to prevent your metabolic rate from slowing down drastically!
           </p>
         </div>
