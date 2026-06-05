@@ -9,20 +9,20 @@ export default function ActivitySummary({ summary }) {
   const hasActivity = totalActiveMinutes > 0 || totalCaloriesBurned > 0;
 
   // Design parameters based on Net vs Target
-  let netColor = 'text-emerald-600 bg-emerald-50 border-emerald-100';
-  let netIcon = <ShieldCheck className="w-5 h-5 text-emerald-500" />;
+  let netColor = 'text-red-400 bg-red-950/40 border-red-900/30';
+  let netIcon = <ShieldCheck className="w-5 h-5 text-red-500" />;
   let netStatusTitle = 'Healthy Deficit Monitored';
-  let cardBg = 'bg-white border-slate-205 border-slate-200/50 shadow-lux';
+  let cardBg = 'bg-[#1a1a1a] border-[#2d2d2d] shadow-lux';
 
   if (netVsTarget !== null && netVsTarget !== undefined) {
     if (netVsTarget > 0) {
-      netColor = 'text-rose-600 bg-rose-50 border-rose-100';
-      netIcon = <AlertTriangle className="w-5 h-5 text-rose-500" />;
+      netColor = 'text-amber-400 bg-amber-950/40 border-amber-900/30';
+      netIcon = <AlertTriangle className="w-5 h-5 text-amber-500" />;
       netStatusTitle = 'Suggested: Add Workout';
-      cardBg = 'bg-rose-50/20 border-rose-100/55 shadow-lux';
+      cardBg = 'bg-[#1a1a1a] border-[#2d2d2d] shadow-lux';
     } else if (netVsTarget < 0) {
-      netColor = 'text-emerald-700 bg-emerald-50 border-emerald-100';
-      netIcon = <ShieldCheck className="w-5 h-5 text-emerald-500" />;
+      netColor = 'text-red-400 bg-red-950/40 border-red-900/30';
+      netIcon = <ShieldCheck className="w-5 h-5 text-red-500" />;
       netStatusTitle = 'Deficit Goal Met (Good!)';
     }
   }

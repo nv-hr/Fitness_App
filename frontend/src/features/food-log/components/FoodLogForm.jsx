@@ -146,15 +146,15 @@ export default function FoodLogForm() {
   return (
     <div className="space-y-6">
       {error && (
-        <div className="flex gap-2.5 p-3.5 rounded-xl bg-rose-50 text-rose-700 border border-rose-100 text-sm items-center shadow-xs">
-          <ShieldAlert className="w-5 h-5 flex-shrink-0 text-rose-500" />
+        <div className="flex gap-2.5 p-3.5 rounded-xl text-sm items-center" style={{ background: 'rgba(153,27,27,0.25)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}>
+          <ShieldAlert className="w-5 h-5 flex-shrink-0" style={{ color: '#f87171' }} />
           <span className="font-medium">{error}</span>
         </div>
       )}
 
       {successMsg && (
-        <div className="flex gap-2.5 p-3.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-100 text-sm items-center shadow-xs">
-          <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-emerald-500" />
+        <div className="flex gap-2.5 p-3.5 rounded-xl text-sm items-center" style={{ background: 'rgba(6,78,59,0.25)', border: '1px solid rgba(52,211,153,0.3)', color: '#6ee7b7' }}>
+          <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: '#34d399' }} />
           <span className="font-medium">{successMsg}</span>
         </div>
       )}
@@ -165,9 +165,9 @@ export default function FoodLogForm() {
       />
 
       {showCustomForm && (
-        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200/60 shadow-sm">
-          <h3 className="font-display font-semibold text-sm text-slate-800 mb-4 flex items-center gap-1.5 border-b border-slate-200/50 pb-2">
-            <Plus className="w-4 h-4 text-emerald-500" />
+        <div className="p-5 rounded-2xl border shadow-sm" style={{ background: '#151515', borderColor: '#2a2a2a' }}>
+          <h3 className="font-display font-semibold text-sm text-white mb-4 flex items-center gap-1.5 border-b pb-2" style={{ borderColor: '#2a2a2a' }}>
+            <Plus className="w-4 h-4 text-red-500" />
             Add New Custom Food
           </h3>
           <CustomFoodForm
@@ -179,16 +179,16 @@ export default function FoodLogForm() {
 
       {/* Editor/Confirmation sub-panel when a search item is chosen */}
       {selectedFood && (
-        <div className="bg-slate-50 p-5 rounded-2xl border border-emerald-150/40 shadow-sm relative overflow-hidden space-y-4">
-          <div className="absolute top-0 right-0 p-8 text-emerald-500/10 pointer-events-none">
+        <div className="p-5 rounded-2xl border relative overflow-hidden space-y-4" style={{ background: '#161616', borderColor: '#2a2a2a' }}>
+          <div className="absolute top-0 right-0 p-8 pointer-events-none" style={{ color: 'rgba(185,28,28,0.06)' }}>
             <Sparkles className="w-16 h-16" />
           </div>
 
           <div className="relative z-10">
-            <h3 className="text-base font-bold text-slate-800 flex items-center justify-between">
+            <h3 className="text-base font-bold text-white flex items-center justify-between">
               <span>{selectedFood.name}</span>
               {selectedFood.calories_per_100g && (
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-100 text-emerald-600 font-mono">
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-md font-mono" style={{ background: 'rgba(185,28,28,0.15)', border: '1px solid rgba(185,28,28,0.25)', color: '#f87171' }}>
                   {selectedFood.calories_per_100g} kcal / 100g
                 </span>
               )}
@@ -198,11 +198,11 @@ export default function FoodLogForm() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Portion grams */}
             <div>
-              <label htmlFor="portion" className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
+              <label htmlFor="portion" className="block text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#666' }}>
                 Portion Eaten (grams)
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" style={{ color: '#555' }}>
                   <Scale className="w-4 h-4" />
                 </div>
                 <input
@@ -213,21 +213,23 @@ export default function FoodLogForm() {
                   min="1"
                   max="5000"
                   placeholder="e.g. 150"
-                  className="block w-full pl-9 pr-3 py-2 text-sm bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all font-mono"
+                  className="block w-full pl-9 pr-3 py-2 text-sm rounded-lg font-mono focus:outline-none transition-all"
+                  style={{ background: '#222', border: '1px solid #333', color: '#fff' }}
                 />
               </div>
             </div>
 
             {/* Meal type selection */}
             <div>
-              <label htmlFor="mealType" className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
+              <label htmlFor="mealType" className="block text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#666' }}>
                 Meal Category
               </label>
               <select
                 id="mealType"
                 value={mealType}
                 onChange={(e) => setMealType(e.target.value)}
-                className="block w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all cursor-pointer font-sans"
+                className="block w-full px-3 py-2 text-sm rounded-lg focus:outline-none transition-all cursor-pointer"
+                style={{ background: '#222', border: '1px solid #333', color: '#fff' }}
               >
                 <option value="breakfast">Breakfast</option>
                 <option value="lunch">Lunch</option>
@@ -239,9 +241,9 @@ export default function FoodLogForm() {
 
           {/* Calorie preview */}
           {previewCalories !== null && (
-            <div className="flex justify-between items-center bg-white px-3 py-2 rounded-lg border border-slate-200/50">
-              <span className="text-xs font-semibold text-slate-500">Estimated Calories:</span>
-              <span className="text-xs font-bold text-slate-800 font-mono bg-amber-50 text-amber-700 px-2.5 py-0.5 rounded border border-amber-100">
+            <div className="flex justify-between items-center px-3 py-2 rounded-lg" style={{ background: '#1e1e1e', border: '1px solid #2a2a2a' }}>
+              <span className="text-xs font-semibold" style={{ color: '#666' }}>Estimated Calories:</span>
+              <span className="text-xs font-bold font-mono px-2.5 py-0.5 rounded" style={{ background: 'rgba(180,83,9,0.2)', border: '1px solid rgba(217,119,6,0.3)', color: '#fbbf24' }}>
                 {parseInt(portion, 10 || 0)}g = ~{previewCalories} kcal
               </span>
             </div>
@@ -250,13 +252,19 @@ export default function FoodLogForm() {
           <div className="flex gap-2">
             <button
               onClick={() => setSelectedFood(null)}
-              className="flex-1 py-2 px-4 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-650 text-xs font-semibold cursor-pointer text-center"
+              className="flex-1 py-2 px-4 rounded-xl text-xs font-semibold cursor-pointer text-center transition-all"
+              style={{ border: '1px solid #333', color: '#888', background: 'transparent' }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#222'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
             >
               Cancel
             </button>
             <button
               onClick={handleLogFood}
-              className="flex-2 flex items-center justify-center gap-1.5 py-2 px-4 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 transition-all cursor-pointer shadow-sm"
+              className="flex-2 flex items-center justify-center gap-1.5 py-2 px-4 rounded-xl text-xs font-bold text-white transition-all cursor-pointer shadow-sm"
+              style={{ background: '#b91c1c' }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#dc2626'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#b91c1c'; }}
             >
               Log Intake
             </button>
@@ -264,11 +272,11 @@ export default function FoodLogForm() {
         </div>
       )}
 
-      <div className="border-t border-slate-100 pt-6">
+      <div className="border-t pt-6" style={{ borderColor: '#222' }}>
         <FoodLogTable logs={logs} recentFoods={recentFoods} onQuickAdd={handleQuickAdd} />
       </div>
 
-      <div className="border-t border-slate-100 pt-6">
+      <div className="border-t pt-6" style={{ borderColor: '#222' }}>
         <CalorieHistory history={history} />
       </div>
     </div>

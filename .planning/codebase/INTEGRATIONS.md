@@ -1,154 +1,209 @@
+---
+focus: tech
+mapped: 2026-06-02
+---
+
 # External Integrations
 
 **Analysis Date:** 2026-06-02
 
 ## APIs & External Services
 
-**LLM / AI:**
-- **OpenRouter** - Primary LLM provider for AI-generated weekly workout plans, daily meal plans, and activity swaps.
-  - SDK/Client: `openai` npm package ^6.39.1 (OpenAI-compatible API)
-  - Auth: `OPENROUTER_API_KEY` env var
-  - Base URL: `OPENROUTER_BASE_URL` env var (defaults to `https://openrouter.ai/api/v1`)
-  - Model: `LLM_MODEL` env var (defaults to `openrouter/owl-alpha`), with `LLM_FALLBACK_MODEL` and `LLM_FALLBACK_MODEL_2` fallbacks
-  - Implementation: `backend/src/services/llm.service.js` (lines 20-35)
-  - Rate limiting: Per-user rate limiters via `express-rate-limit` for plan generation, day regeneration, swaps, and toggles
-  - Fallback: Template-based fallback plan when API calls fail (in-memory `node-cache` with 1-hour TTL)
+### LLM / AI (OpenRouter)
 
-- **Google Gemini AI** - Secondary AI provider.
-  - SDK/Client: `@google/genai` npm package ^2.4.0 (listed in root `package.json`)
-  - Auth: `GEMINI_API_KEY` env var
-  - Status: SDK is installed but currently not actively used in backend source code. Available for future features.
+**Provider:** OpenRouter.ai (API-compatible with OpenAI SDK)
+**SDK:** `openai` ^6.39.1 (`backend/src/services/llm.service.js`)
+**Auth:** `OPENROUTER_API_KEY` environment variable
 
-**Google OAuth:**
-- **Provider:** Google Identity Platform (OAuth 2.0)
-  - SDK: `passport-google-oauth20` ^2.0.0
-  - Auth: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL` env vars
-  - Implementation: Integrated via Passport.js in `backend/src/app.js` (lines 152-172)
-  - Scopes: `profile`, `email`
-  - Flow: Redirect to Google consent → callback sets httpOnly JWT cookie → redirect to frontend
-  - Failure: Redirect to `FRONTEND_URL/login?error=google_auth_failed`
+**Purpose:**
+- Generate personalized weekly activity plans via `generateWeeklyPlan()` in `backend/src/services/llm.service.js`
+- Generate weekly meal plans via `generateMealPlan()` in `backend/src/services/mealPlan.service.js`
+- Generate daily meal plans via `backend/src/services/dailyMealPlan.service.js`
+- Swap single activities in an existing plan via `swapActivity()` in `backend/src/services/llm.service.js`
+- Correct/retry failed LLM responses with correction prompts
 
-**Google Fonts:**
-- **Provider:** Google Fonts API
-  - Fonts loaded: Plus Jakarta Sans (body), Outfit (headings), JetBrains Mono (monospace)
-  - URL: `https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap`
-  - Implementation: `frontend/src/index.css` (line 1), loaded at build time
+**Configuration:**
+- Base URL: `OPENROUTER_BASE_URL` (default: `https://openrouter.ai/api/v1`)
+- Primary model: `LLM_MODEL` (default: `openrouter/owl-alpha`)
+- Fallback models: `LLM_FALLBACK_MODEL`, `LLM_FALLBACK_MODEL_2`
+- Timeout: 30s, maxRetries: 0 (manual retry with fallback chain)
+- Temperature: 0.2, maxTokens: 2000
+- Custom headers: `HTTP-Referer` (frontend URL), `X-OpenRouter-Title` ("Fitness_App")
+
+**Prompt Templates** (stored in `backend/prompts/`):
+- `weekly-plan-prompt.md` — Weekly activity plan generation
+- `meal-plan-prompt.md` — Weekly meal plan generation
+- `daily-meal-plan-prompt.md` — Per-day meal plan generation
+- `activity-swap-prompt.md` — Single activity swap
+- `correction-prompt.md` — Validation error correction
+- `meal-correction-prompt.md` — Meal plan validation correction
+- `system-prompt.md` — Daily activity plan system prompt
+
+**Error Handling:**
+- Three-model fallback chain (primary → fallback → fallback2 → throw)
+- Two retry attempts with structural and name validation
+- Template-based fallback plan generation when all LLM calls fail
+- In-memory caching via `node-cache` (TTL: 1h, maxKeys: 1000)
+
+### Google OAuth 2.0
+
+**Provider:** Google Identity Platform
+**SDK:** `passport-google-oauth20` ^2.0.0 (`backend/src/config/passport.js`)
+**Auth:** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` environment variables
+
+**Purpose:**
+- Authenticate users via Google accounts
+- Creates user account on first login (OAuth implicitly grants PDP consent)
+
+**Endpoints:**
+- `GET /api/auth/google` — Initiate OAuth (scope: `profile`, `email`)
+- `GET /api/auth/google/callback` — OAuth callback handler (redirects to frontend with JWT cookie)
+
+**Configuration:**
+- Callback URL: `GOOGLE_CALLBACK_URL` (default: `http://localhost:3001/api/auth/google/callback`)
+- Graceful degradation: Passport strategy only initializes if `GOOGLE_CLIENT_ID` is set; logs warning otherwise
+
+**Data Flow:**
+1. User clicks "Login with Google" → redirected to Google consent screen
+2. Google redirects to `/api/auth/google/callback`
+3. Passport validates token, calls `handleGoogleOAuth()` in `backend/src/services/auth.service.js`
+4. User found by `google_id` OR created (with `password_hash: null`, `pdp_consent: true`)
+5. JWT token generated, set as httpOnly cookie, user redirected to frontend
 
 ## Data Storage
 
-**Databases:**
-- **PostgreSQL** via Supabase
-  - Connection: `DATABASE_URL` env var (postgres:// scheme)
-  - Client: `pg` npm package ^8.21.0 (`Pool` from `pg`)
-  - Configuration: `backend/src/config/database.js`
-    - Connection pool: `max: 10`, `connectionTimeoutMillis: 8000`, `idleTimeoutMillis: 30000`
-    - SSL: `rejectUnauthorized: false` (required for Supabase session mode pooler)
-    - Port preference: Auto-replaces `:5432` with `:6543` (Supabase session mode)
-    - Test isolation: `DATABASE_URL_TEST` env var for integration test schema isolation (documented in `backend/src/config/database.js` comments)
-  - Schema: SQL migration scripts at `backend/db/schema.sql` and `backend/db/seed.sql` (referenced in `scripts/db-init.js`)
+### Database
 
-**File Storage:**
-- Local filesystem only - No cloud file storage integration detected. Backend serves React static files from `frontend/dist/`.
+**Provider:** Supabase PostgreSQL (managed)
+**Client:** `pg` ^8.21.0 with `Pool` (`backend/src/config/database.js`)
+**Connection:** `DATABASE_URL` environment variable
 
-**Caching:**
-- **node-cache** ^5.1.2 - In-memory cache for LLM-generated plans
-  - Purpose: Cache weekly activity plans and daily meal plans by `userId_weekStart` / `userId_planDate`
-  - Configuration: `stdTTL: 3600` (1 hour), `checkperiod: 600`, `maxKeys: 1000`
-  - Implementation: `backend/src/services/llm.service.js` (line 48)
-  - Per-user mutex locks via `Map` for TOCTOU race prevention on cache operations
-  - Cache keys: `plan_activity_{userId}_{weekStart}` and `plan_meal_{userId}_{planDate}`
+**Connection Configuration:**
+- **Connection mode:** Session pooler (port 6543) — explicitly converted from transaction mode (port 5432) via `buildSessionUrl()` helper
+- **SSL:** Disabled (`ssl: false`) due to session pooler compatibility
+- **Pool settings:** max 10 connections, 8s connection timeout, 30s idle timeout
+- **Pool error handling:** Logs error code and stack trace on pool errors
+
+**Test Database:**
+- `DATABASE_URL_TEST` — Separate test URL with `search_path=fitness_test` schema isolation (per D-01 integration test convention)
+- Uses `options=-c%20search_path%3Dfitness_test` query parameter for namespace isolation
+
+**Schema Migration:**
+- Migration files expected in `backend/db/` (referenced in `scripts/db-init.js`):
+  - `backend/db/drop_user_activity_log.sql`
+  - `backend/db/schema.sql`
+  - `backend/db/seed.sql`
+- Migration command: `npm run db:migrate` (runs psql with DATABASE_URL)
+- Note: SQL files not present in repository (generated/migrated externally)
+
+**Repositories** (data access layer in `backend/src/repositories/`):
+- `user.repository.js` — User CRUD (by email, id, google_id)
+- `profile.repository.js` — User profile CRUD
+- `food.repository.js` — Food item search and CRUD
+- `activity.repository.js` — Activity pool queries
+- `mealPlan.repository.js` — Meal plan upsert and lookup
+- `dailyMealPlan.repository.js` — Per-day meal plan storage
+- `weeklyPlan.repository.js` — Weekly plan upsert and lookup
+- `activityPlan.repository.js` — Activity plan persistence
+- `weightLog.repository.js` — Weight tracking logs
+
+### Caching
+
+**Type:** In-memory (local to process)
+**Library:** `node-cache` ^5.1.2
+**Location:** `backend/src/services/llm.service.js`
+**Usage:**
+- LLM-generated weekly activity plans (TTL: 3600s, checkperiod: 600s, maxKeys: 1000)
+- LLM-generated meal plans (same cache instance, keyed with `plan_meal_` prefix)
+- Per-user mutex locks for TOCTOU race prevention on cache reads/writes
+
+**What is NOT cached:**
+- User profiles, food data, activity pools — always query the database
+
+### File Storage
+
+**Type:** Local filesystem only
+**Frontend static build:** Served by Express from `frontend/dist/` (in production/served mode)
 
 ## Authentication & Identity
 
-**Auth Provider:**
-- Custom JWT-based authentication (primary)
-  - Implementation: `backend/src/services/auth.service.js`
-  - Algorithm: HS256 (HMAC-SHA256), 7-day expiry
-  - Token delivery: httpOnly cookie named `token`
-  - Cookie config: `httpOnly: true`, `secure: true`, `sameSite: 'none'`, 7-day maxAge
-  - Password hashing: bcryptjs, 10 salt rounds, with timing-safe comparison
-  - Email enumeration protection: Dummy bcrypt compare on unknown users
-  - Endpoints: `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
+### Auth Provider
 
-- Google OAuth (secondary)
-  - Implementation: `passport-google-oauth20` via Passport.js middleware
-  - OAuth users get `passwordHash: null` and `googleId` set in database
-  - OAuth implies PDP consent
-  - Middleware configured in `backend/src/app.js` (Passport initialization at line 101)
+**Local:** Email + password with bcryptjs hashing (10 rounds)
+- JWT generation (`HS256`, 7-day expiry) in `backend/src/services/auth.service.js`
+- Token delivered via httpOnly cookie (`secure: true`, `sameSite: 'none'`, 7-day maxAge)
+- No `Authorization` header — reads token from `req.cookies.token` only
+
+**Google OAuth 2.0:**
+- Passport-based implementation in `backend/src/config/passport.js`
+
+**Session:** Sessionless API (JWT-only, `session: false` in passport strategies)
+
+### Security Measures
+
+- **Rate limiting:** Global (600/min) + per-route limits (auth: 10/min, profile: 60/min, food: 60/min, activities: 20/min)
+- **Per-user rate limiting:** Weekly plan generation (50/min), day regeneration (30/min), activity swap (10/min), meal plan (20/min)
+- **Brute force protection:** Timing-safe password comparison (dummy bcrypt call even for unknown emails)
+- **JWT algorithm pinning:** Only HS256 accepted (prevents algorithm confusion attacks)
+- **CORS:** Restricted to `FRONTEND_URL` origin with `credentials: true`
+- **HTTP headers:** `helmet` middleware for security headers
+- **Input validation:** `express-validator` for request body validation
+- **PDP consent:** Required for registration, auto-granted via OAuth
 
 ## Monitoring & Observability
 
-**Error Tracking:**
-- None detected. No Sentry, DataDog, or similar error tracking SDKs installed.
+**Logging:**
+- `morgan('dev')` — HTTP request logging (standard Express middleware)
+- `console.log/error/warn` — Application-level logging throughout services
 
-**Logs:**
-- **morgan** ^1.10.0 - HTTP request logging (`dev` format)
-- **console.log/error/warn** - Application-level logging throughout backend
-  - Structured console.error with error codes and stack traces in database pool error handler (`backend/src/config/database.js` lines 30-38)
-- No centralized logging service integration detected.
+**Error Tracking:** Not detected (no Sentry, DataDog, or similar)
+
+**Health Check:**
+- `GET /api/health` — Returns `{ status: 'ok', timestamp: '...' }` with database connection test on startup
+
+## API Documentation
+
+**Self-documenting endpoint:**
+- `GET /api/docs` — Returns complete API documentation as JSON at `backend/src/routes/docs.routes.js`
+- Documents all endpoints with methods, paths, auth requirements, rate limits, request/response shapes
+- No OpenAPI/Swagger spec detected
 
 ## CI/CD & Deployment
 
-**Hosting:**
-- Designed for single-service deployment (backend serves `frontend/dist/` as static files)
-- SPA catch-all: Non-API GET requests serve `index.html`
-- Cloud Run target implied by `.env.example` comments ("AI Studio automatically injects... Cloud Run service URL")
-- No Dockerfile in repository (`.dockerignore` exists but `Dockerfile` is gitignored/not committed)
+**Hosting:** Not explicitly configured (no Dockerfile found, no cloud platform config)
 
-**CI Pipeline:**
-- None detected. No GitHub Actions, CircleCI, or similar CI configuration found.
+**CI Pipeline:** Not detected (no `.github/` directory, no CI config files)
+
+**Containerization:** `.dockerignore` exists but no `Dockerfile` present — Docker infrastructure is scaffolded but not complete
 
 ## Environment Configuration
 
-**Required env vars:**
-- `DATABASE_URL` - PostgreSQL connection string (Supabase)
-- `JWT_SECRET` - Secret key for JWT signing
-- `OPENROUTER_API_KEY` - OpenRouter API key for LLM features
+### Required env vars (no defaults — app will fail or degrade without these):
+| Variable | Purpose | Degradation |
+|----------|---------|-------------|
+| `DATABASE_URL` | PostgreSQL connection | Server fails to start (logs error) |
+| `JWT_SECRET` | JWT signing | Auth operations fail |
+| `OPENROUTER_API_KEY` | LLM plan generation | LLM features return fallback templates (logs fatal error) |
 
-**Optional env vars:**
-- `GEMINI_API_KEY` - Google Gemini AI key (SDK installed but not actively used)
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_CALLBACK_URL` - Google OAuth
-- `LLM_MODEL`, `LLM_FALLBACK_MODEL`, `LLM_FALLBACK_MODEL_2` - LLM model selection
-- `OPENROUTER_BASE_URL` - Custom OpenRouter base URL
-- `FRONTEND_URL` - CORS origin (defaults to `http://localhost:5173`)
-- `PORT` - Server port (defaults to 3001)
-- `VITE_API_PROXY_TARGET` - Dev proxy target (defaults to `http://localhost:3001`)
-- `NODE_ENV` - Environment mode
-- `DATABASE_URL_TEST` - Test schema isolation
+### Optional env vars (have safe defaults):
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `PORT` | 3001 | Backend server port |
+| `FRONTEND_URL` | `http://localhost:3000` | CORS origin, OAuth redirect |
+| `GOOGLE_CLIENT_ID` | — (feature disabled) | Google OAuth |
+| `GOOGLE_CLIENT_SECRET` | — (feature disabled) | Google OAuth |
+| `GOOGLE_CALLBACK_URL` | `http://localhost:3001/api/auth/google/callback` | Google OAuth |
+| `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | LLM API base |
+| `LLM_MODEL` | `openrouter/owl-alpha` | Primary LLM model |
 
-**Secrets location:**
-- `.env` file in project root (gitignored via `.gitignore`)
-- `.env.example` documents the required variables (committed)
+**Secrets location:** `.env` file (root of project, gitignored)
 
 ## Webhooks & Callbacks
 
 **Incoming:**
-- `GET /api/auth/google/callback` - Google OAuth callback endpoint (handles `code` and `state` query params)
-  - Implementation: `backend/src/app.js` lines 156-172
-  - On success: Sets JWT cookie, redirects to `FRONTEND_URL`
-  - On failure: Redirects to `FRONTEND_URL/login?error=google_auth_failed`
+- `GET /api/auth/google/callback` — Google OAuth 2.0 redirect callback (maps to `authController.googleCallback`)
 
-**Outgoing:**
-- None detected. The app does not register webhooks with external services.
-
-## Rate Limiting Architecture
-
-The app uses a layered rate-limiting strategy via `express-rate-limit`:
-
-| Layer | Scope | Limit | Implementation |
-|-------|-------|-------|----------------|
-| Global | All `/api/` routes | 600 per 60s (all IPs share one bucket) | `backend/src/app.js` lines 65-73 |
-| General API | `/api/` | 300 per 60s | `backend/src/app.js` line 104-105 |
-| Auth | `/api/auth/login`, `/api/auth/register` | 10 per 60s | `backend/src/app.js` lines 108-110 |
-| Profile | `/api/profile` | 60 per 60s | `backend/src/app.js` lines 126-127 |
-| Food | `/api/food` | 60 per 60s | `backend/src/app.js` lines 131-132 |
-| Activities | `/api/activities` | 20 per 60s | `backend/src/app.js` lines 136-137 |
-| Weekly Plan Generate | POST `/api/weekly-plans/generate` | 50 per 60s | `backend/src/middlewares/weeklyPlanRateLimiter.js` |
-| Weekly Plan Regenerate | POST `/api/weekly-plans/regenerate-day` | 30 per 60s | `backend/src/middlewares/weeklyPlanRateLimiter.js` |
-| Weekly Plan Swap | POST `/api/weekly-plans/swap` | 10 per 60s | `backend/src/middlewares/weeklyPlanRateLimiter.js` |
-| Daily Meal Generate | POST `/api/daily-meal-plans/generate` | 20 per 60s | `backend/src/middlewares/dailyMealPlanRateLimiter.js` |
-
-All rate limiters use per-user key generation (`user_{userId}`) and test-mode acceleration (lower window/higher max when `NODE_ENV=test`).
+**Outgoing:** None detected
 
 ---
 

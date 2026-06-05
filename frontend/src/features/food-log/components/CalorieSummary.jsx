@@ -5,25 +5,22 @@ export default function CalorieSummary({ totalConsumed, calorieTarget, remaining
   const isOverTarget = calorieTarget > 0 && totalConsumed > calorieTarget;
   
   // Decide badge styling and progress bar coloring
-  let cardBg = 'bg-white border-slate-200/50 shadow-lux';
-  let barGradient = 'from-emerald-500 to-teal-400';
-  let statusText = 'text-slate-600';
+  let cardBg = 'bg-[#1a1a1a] border-[#2d2d2d] shadow-lux';
+  let barGradient = 'from-emerald-500 to-emerald-600';
+  let statusText = 'text-slate-400';
   let statusIcon = <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
 
   if (isOverTarget) {
-    cardBg = 'bg-rose-50/50 border-rose-200/60 shadow-xs';
+    cardBg = 'bg-[#2d1212] border-[#4c1a1a] shadow-xs';
     barGradient = 'from-rose-500 to-orange-400';
-    statusText = 'text-rose-600 font-semibold';
+    statusText = 'text-rose-500 font-semibold';
     statusIcon = <ShieldAlert className="w-4 h-4 text-rose-500" />;
   } else if (isExtremeDeficit && totalConsumed > 0) {
-    cardBg = 'bg-amber-50/60 border-amber-200/60 shadow-xs';
+    cardBg = 'bg-[#2a1e12] border-amber-900/60 shadow-xs';
     barGradient = 'from-amber-500 to-yellow-400';
-    statusText = 'text-amber-700 font-semibold';
+    statusText = 'text-amber-500 font-semibold';
     statusIcon = <ShieldAlert className="w-4 h-4 text-amber-500" />;
-  } else if (totalConsumed > 0) {
-    cardBg = 'bg-emerald-50/25 border-emerald-200/40 shadow-sm';
   }
-
   return (
     <div className={`p-6 rounded-2xl border transition-all duration-300 ${cardBg}`}>
       {/* Top metrics grid */}
@@ -63,7 +60,7 @@ export default function CalorieSummary({ totalConsumed, calorieTarget, remaining
 
       {/* Visual meter progress bar */}
       <div className="space-y-2">
-        <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden relative border border-slate-200/10">
+        <div className="h-3 w-full rounded-full overflow-hidden relative" style={{ background: '#2a2a2a' }}>
           <div
             className={`h-full rounded-full bg-gradient-to-r ${barGradient} transition-all duration-500`}
             style={{ width: `${progressPercent}%` }}
@@ -91,9 +88,9 @@ export default function CalorieSummary({ totalConsumed, calorieTarget, remaining
 
       {/* Extreme Deficit Protection Alarm Banner */}
       {isExtremeDeficit && totalConsumed > 0 && (
-        <div className="mt-4 flex gap-2.5 p-3 rounded-xl bg-orange-50 border border-orange-100 text-xs text-orange-850 items-start">
-          <ShieldAlert className="w-4 h-4 flex-shrink-0 text-orange-500 mt-0.5" />
-          <p className="font-semibold leading-relaxed">
+        <div className="mt-4 flex gap-2.5 p-3 rounded-xl items-start" style={{ background: 'rgba(120, 53, 15, 0.3)', border: '1px solid rgba(217, 119, 6, 0.3)' }}>
+          <ShieldAlert className="w-4 h-4 flex-shrink-0 text-amber-500 mt-0.5" />
+          <p className="font-semibold leading-relaxed text-xs text-amber-300">
             Nutrition Warning: Your calorie intake is extremely low (&lt;1200 kcal). Please ensure you get adequate macronutrients to prevent your metabolic rate from slowing down drastically!
           </p>
         </div>

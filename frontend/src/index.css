@@ -7,8 +7,32 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
   /* Custom subtle borders, elegant gradients & shadows */
-  --shadow-lux: 0 10px 30px -10px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.03);
-  --shadow-elevated: 0 20px 40px -15px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-lux: 0 10px 30px -10px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-elevated: 0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 1px 3px rgba(0, 0, 0, 0.4);
+
+  /* Dark theme overrides for Tailwind v4 color mapping */
+  --color-slate-50: #121212;
+  --color-slate-100: #1e1e1e;
+  --color-slate-200: #2d2d2d;
+  --color-slate-300: #404040;
+  --color-slate-400: #888888;
+  --color-slate-500: #a1a1aa;
+  --color-slate-600: #d4d4d8;
+  --color-slate-700: #e4e4e7;
+  --color-slate-800: #f4f4f5;
+  --color-slate-900: #ffffff;
+  --color-white: #1a1a1a;
+
+  /* Red/Crimson Accent color mapping */
+  --color-emerald-50: #291212;
+  --color-emerald-100: #421818;
+  --color-emerald-200: #5c1e1e;
+  --color-emerald-300: #7c2222;
+  --color-emerald-400: #991b1b;
+  --color-emerald-500: #b91c1c;
+  --color-emerald-600: #dc2626;
+  --color-emerald-700: #ef4444;
+  --color-emerald-800: #f87171;
 }
 
 /* Custom scrollbars and sleek globally applied settings */
@@ -18,10 +42,27 @@ html {
 }
 
 body {
-  background-color: #fafbfc;
-  color: #1e293b;
+  background-color: #121212;
+  color: #e4e4e7;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom styles for inputs to ensure they look excellent in dark mode */
+input, select, textarea {
+  background-color: #1e1e1e !important;
+  color: #ffffff !important;
+  border-color: #2d2d2d !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: #b91c1c !important;
+  box-shadow: 0 0 0 2px rgba(185, 28, 28, 0.2) !important;
+}
+
+/* Force text-white to be actual white, overriding the --color-white theme remap */
+.text-white {
+  color: #ffffff !important;
 }
 
 /* Smooth transit for links/interactive triggers */
@@ -30,3 +71,25 @@ a, button, input, select, textarea {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 200ms;
 }
+
+/* Custom scrollbar styling for sleek dark consistency */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #121212;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2d2d2d;
+  border-radius: 9999px;
+  border: 2px solid #121212;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #404040;
+}
+
+

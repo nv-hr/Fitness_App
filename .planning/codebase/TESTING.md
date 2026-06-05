@@ -4,362 +4,432 @@
 
 ## Test Framework
 
-**Backend Runner:**
-- **Jest** v30.4.2
-- Config: inline in `backend/package.json` under `"jest"` key:
-  ```json
-  "jest": {
-    "setupFiles": ["./jest.setup.js"]
-  }
-  ```
-- ESM support via `--experimental-vm-modules` flag
+### Backend (Jest)
 
-**Frontend Runner:**
-- **Vitest** (bundled with Vite v8)
-- Config: `frontend/vitest.config.js`:
-  ```js
-  import { defineConfig } from 'vitest/config';
-  import react from '@vitejs/plugin-react';
+**Runner:** Jest v30
+- Config: Inline in `backend/package.json` under `"jest"` key
+- Test environment: `node` (no jsdom)
+- Transform: `{}` (ESM native, no transform needed)
+- Setup file: `./jest.setup.js` (referenced but file not found on disk)
 
-  export default defineConfig({
-    plugins: [react()],
-    test: {
-      globals: true,
-      environment: 'jsdom',
-      setupFiles: ['./vitest.setup.js'],
-    },
-  });
-  ```
-- React Testing Library + jest-dom matchers via `frontend/vitest.setup.js`:
-  ```js
-  import '@testing-library/jest-dom';
-  ```
-
-**Run Commands:**
-
-**Backend (Jest):**
+**Run commands:**
 ```bash
-# All tests
-cd backend && node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand
+cd backend
+npm test                                            # All tests (--runInBand)
+npm run test:unit                                   # Pattern: __tests__ and tests/unit
+npm run test:integration                            # Pattern: tests/integration (--runInBand)
 
-# Unit tests only
-cd backend && node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPatterns __tests__ tests/unit
-
-# Integration tests only
-cd backend && node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --testPathPatterns tests/integration
+# Direct jest invocation:
+node --experimental-vm-modules ../node_modules/jest/bin/jest.js --runInBand
 ```
 
-**Frontend (Vitest):**
+**Key notes:**
+- Uses `--experimental-vm-modules` for ESM support in Jest
+- `--runInBand` for integration tests to avoid DB connection races
+- Integration tests have 60s timeout for test schema setup
+
+### Frontend (Vitest)
+
+**Runner:** Vitest (version not specified — no vitest.config file, likely uses defaults from Vite)
+
+**Run commands:**
 ```bash
-cd frontend && npx vitest run     # Run all tests once
-cd frontend && npx vitest          # Watch mode
-cd frontend && npx vitest --coverage  # Coverage report
+cd frontend
+npx vitest run      # Run all tests
+npx vitest          # Watch mode
 ```
+
+**Key notes:**
+- No vitest config file found — defaults inferred from Vite config
+- Uses `@testing-library/react` for component rendering
+- Uses `@testing-library/jest-dom` matchers (`toBeInTheDocument()`)
 
 ## Test File Organization
 
-**Backend (`backend/tests/`):**
+### Location
+
+Test files are **co-located** with source files in `__tests__/` directories:
+
+**Backend:**
 ```
-backend/tests/
-  unit/
-    auth.service.test.js          # Auth service unit tests
-    activity.service.test.js      # Activity service unit tests
-    food.service.test.js          # Food service unit tests
-    llm.service.test.js           # LLM service unit tests (674 lines)
-    profile.service.test.js       # Profile service unit tests
-    dbErrors.test.js              # DB error utils unit tests
-  integration/
-    api.test.js                   # General API integration tests
-    remaining-endpoints.test.js   # Uncovered endpoint integration tests (400 lines)
-    weeklyPlan.e2e.test.js        # Weekly plan E2E integration tests
-    helpers.js                    # Test schema lifecycle + test data seeding
+backend/
+└── src/
+    └── __tests__/                       # Unit tests for utils
+        └── food.utils.test.js
+    └── tests/
+        ├── unit/
+        │   └── llm.service.test.js      # Unit test for LLM service
+        └── integration/
+            ├── remaining-endpoints.test.js  # API endpoint integration tests
+            └── helpers.js                   # Test lifecycle + data seeding
 ```
 
-**Frontend (co-located `__tests__/` directories):**
+**Frontend:**
 ```
-frontend/src/features/activities/components/__tests__/
-  ActivityHistory.test.jsx
-  ActivityLogForm.test.jsx
-  ActivitySummary.test.jsx
-
-frontend/src/features/food-log/components/__tests__/
-  previewCalories.test.js
-
-frontend/src/features/progress/components/__tests__/
-  ProgressPage.test.jsx
-  TrendPredictionCard.test.jsx
-  WeightTrendChart.test.jsx
-
-frontend/src/features/progress/hooks/__tests__/
-  useTrendPrediction.test.js
-
-frontend/src/features/weekly-plan/components/__tests__/
-  DayActivityRow.test.jsx
-
-frontend/src/shared/calendar/__tests__/
-  CalendarGrid.test.jsx
-  CalendarPageLayout.test.jsx
-  DayDetailPanel.test.jsx
-  calendarUtils.test.js
-  useMonthData.test.js
-
-frontend/src/__tests__/
-  api-integration.test.js
-
-frontend/tests/
-  CustomFoodForm.test.js
+frontend/src/
+├── __tests__/
+│   └── api-integration.test.js          # API integration test
+└── shared/calendar/__tests__/
+    ├── calendarUtils.test.js             # Pure function unit tests
+    ├── useMonthData.test.js              # Hook tests with React Testing Library
+    ├── CalendarGrid.test.jsx             # Component render tests
+    ├── CalendarPageLayout.test.jsx       # Component with mocked children
+    └── DayDetailPanel.test.jsx           # Simple render/conditional tests
+├── features/activities/components/__tests__/
+│   ├── ActivitySummary.test.jsx
+│   ├── ActivityLogForm.test.jsx
+│   └── ActivityHistory.test.jsx
+├── features/food-log/components/__tests__/
+│   └── previewCalories.test.js
+├── features/progress/components/__tests__/
+│   ├── ProgressPage.test.jsx
+│   ├── TrendPredictionCard.test.jsx
+│   └── WeightTrendChart.test.jsx
+├── features/progress/hooks/__tests__/
+│   └── useTrendPrediction.test.js
+└── features/weekly-plan/components/__tests__/
+    └── DayActivityRow.test.jsx
 ```
+
+### Naming
+
+| Pattern | Example | Platform |
+|---------|---------|----------|
+| `*.test.js` | `calendarUtils.test.js`, `food.utils.test.js` | Pure JS tests (both) |
+| `*.test.jsx` | `CalendarGrid.test.jsx`, `ActivitySummary.test.jsx` | React component tests (frontend) |
 
 ## Test Structure
 
-**Backend Suite Organization (Jest):**
-```js
+### Backend Unit Tests
+
+```javascript
 import { jest, describe, it, expect, beforeEach, afterEach } from '@jest/globals';
-// ESM imports of units under test
+import { functionUnderTest } from '../../src/services/some.service.js';
 
-describe('validatePlanStructure', () => {
-  function makeValidDay(date) {
-    // helper within describe block
-  }
+describe('functionUnderTest', () => {
+  function helperFactory() { /* test data helpers */ }
 
-  it('valid 7-day plan passes', () => {
-    const result = validatePlanStructure({ days }, '2026-01-05');
+  it('valid input passes', () => {
+    const result = functionUnderTest(input);
     expect(result.valid).toBe(true);
     expect(result.errors).toEqual([]);
   });
 
-  it('missing days array returns error', () => {
-    const result = validatePlanStructure({}, '2026-01-05');
+  it('invalid input returns error', () => {
+    const result = functionUnderTest(badInput);
     expect(result.valid).toBe(false);
-    expect(result.errors[0]).toContain('days');
+    expect(result.errors[0]).toContain('expected message');
   });
 });
 ```
 
-**Frontend Suite Organization (Vitest):**
-```js
-import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import ActivityHistory from '../ActivityHistory.jsx';
+**Common patterns:**
+- Helper functions inside `describe` blocks for test data factories
+- `for` loops to generate test data arrays
+- `expect(result.valid).toBe(true/false)` for validation functions
+- `expect(result.errors.some(e => e.includes('...'))).toBe(true)` for error message checks
+- `.toContain()` for substring assertions on error messages
 
-describe('ActivityHistory', () => {
-  test('renders "Activity History" heading', () => {
-    render(<ActivityHistory history={[]} onDelete={vi.fn()} />);
-    expect(screen.getByText('Activity History')).toBeInTheDocument();
+### Backend Integration Tests
+
+```javascript
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import request from 'supertest';
+import app from '../../src/app.js';
+import { startDatabase, stopDatabase, createTestUser } from './helpers.js';
+
+let agent;
+let testUser;
+
+beforeAll(async () => {
+  await startDatabase();
+  agent = request.agent(app);
+  testUser = await createTestUser(agent);
+}, 60000);
+
+afterAll(async () => {
+  await stopDatabase();
+}, 30000);
+
+describe('GET /api/endpoint', () => {
+  it('should return 200 with expected shape', async () => {
+    const res = await request(app).get('/api/endpoint');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toBeDefined();
   });
 
-  test('calls onDelete with entry id when delete is clicked', () => {
-    const onDelete = vi.fn();
-    render(<ActivityHistory history={mockHistory} onDelete={onDelete} />);
-    fireEvent.click(screen.getByText('2026-01-05').closest('div'));
-    fireEvent.click(screen.getAllByText('Delete')[0]);
-    expect(onDelete).toHaveBeenCalledWith(1);
-  });
-});
-```
-
-**Patterns:**
-- Backend: `describe`/`it` blocks, `@jest/globals` explicit imports
-- Frontend: `describe`/`test` blocks, `vi.fn()` for mocks, `vi.clearAllMocks()` in `beforeEach`
-- Integration tests: `beforeAll`/`afterAll` for setup/teardown, `60s` timeout for DB setup
-- Suites are organized by function/module (unit) or endpoint/resource (integration)
-
-## Mocking
-
-**Backend Framework:** Jest built-in — no `__mocks__/` directories detected. Services that depend on repositories are tested by importing the actual service and providing real function inputs.
-
-**Frontend Framework:** Vitest with `vi.mock()` — module-level mocking of API layer:
-```js
-vi.mock('../../api/weightApi.js');
-import * as weightApi from '../../api/weightApi.js';
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
-
-it('renders heading', () => {
-  weightApi.getWeightHistory.mockReturnValue(new Promise(() => {}));
-  render(React.createElement(ProgressPage));
-  expect(screen.getByText('Progress')).toBeTruthy();
-});
-```
-
-**What to Mock:**
-- Frontend: API calls via `vi.mock('../../api/xxxApi.js')` — mock the data-fetching layer, not the component's internal logic
-- Backend: External services (LLM API calls) — tested indirectly through function inputs rather than file-level mocks
-- Integration: Real database (Supabase test schema), real HTTP with supertest
-
-**What NOT to Mock:**
-- Pure utility functions (tested directly)
-- Validation logic (tested with real inputs)
-- Database in integration tests (real test schema)
-
-## Fixtures and Factories
-
-**Backend integration test helpers** (`backend/tests/integration/helpers.js`):
-
-```js
-// Create a fresh 'fitness_test' schema, runs schema.sql + seed.sql
-export async function startDatabase(timeoutMs = 30000) { ... }
-export async function stopDatabase() { ... }
-
-// Register a test user via the API and return the agent with JWT cookie
-export async function createTestUser(agent) {
-  const email = `test_${Date.now()}_${Math.random().toString(36).slice(2, 8)}@example.com`;
-  const password = 'TestP@ss123';
-  const res = await agent.post('/api/auth/register').send({ email, password, pdpConsent: true });
-  return { agent, email, password, user: res.body.data.user };
-}
-
-// Seed a profile and food-log entry so read endpoints return data
-export async function seedTestData(agent) { ... }
-```
-
-**Backend unit tests** use inline fixtures within `describe` blocks:
-```js
-const dbActivities = [
-  { id: 1, name: 'Morning Running' },
-  { id: 2, name: 'Yoga' },
-  { id: 3, name: 'Cycling' },
-];
-```
-
-**Frontend tests** define mock data at the top of each test file:
-```js
-const mockHistory = [
-  {
-    logged_date: '2026-01-05',
-    total_minutes: 75,
-    total_burned: 450,
-    entries: [
-      { id: 1, activity_name: 'Running', duration_min: 30, intensity: 'moderate', calories_burned: 300 },
-    ],
-  },
-];
-```
-
-## Coverage
-
-**Requirements:** None explicitly enforced in config. No coverage thresholds set in Jest or Vitest config.
-
-**View Coverage:**
-```bash
-# Backend (Jest)
-node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage --runInBand
-
-# Frontend (Vitest)
-npx vitest --coverage
-```
-
-## Test Types
-
-**Unit Tests (`backend/tests/unit/`, frontend `__tests__/`):**
-- Backend: Pure logic testing — LLM service functions (`validatePlanStructure`, `fuzzyMatchActivityName`, `validateAndFixPlan`, `generateFallbackPlan`), auth service (`generateToken`), activity log service (`calculateCaloriesBurned`, `validateActivityLogInput`, `calculateDailyNetCalories`)
-- Frontend: Component rendering and interaction — renders with various props, calls callbacks, shows loading/error/empty states
-
-**Integration Tests (`backend/tests/integration/`):**
-- HTTP-level testing with `supertest` against the full Express app
-- Real database via `startDatabase()` + `stopDatabase()` schema lifecycle
-- Authenticated agents via `request.agent(app)` + `createTestUser()`
-- Covers health endpoint, docs endpoint, daily meal plan CRUD, weekly plan regenerate-day validation
-- Pattern: beforeAll creates a fresh test user with unique email, each `describe` block gets its own `agent`
-
-**E2E Tests:**
-- `backend/tests/integration/weeklyPlan.e2e.test.js` — full flow testing with real database and API
-- No Playwright/Cypress — all tests run as Jest integration tests
-
-## Common Patterns
-
-**Async Testing (Backend):**
-```js
-it('returns 7-day plan when user has history', async () => {
-  const result = await generateFallbackPlan({
-    getTopActivities: async () => [
-      { id: 1, name: 'Running', estimated_calories: 300, duration_min: 30 },
-    ],
-    userId: 1,
-    weekStart: '2026-01-05',
-  });
-  expect(result.days.length).toBe(7);
-  expect(result.days[0].activities.length).toBeGreaterThan(0);
-});
-```
-
-**Error Testing (Backend):**
-```js
-it('missing activityId throws ValidationError', () => {
-  expect(() => {
-    validateActivityLogInput({ durationMin: 30, intensity: 'moderate' });
-  }).toThrow(ValidationError);
-});
-```
-
-**Error Testing (Frontend):**
-```js
-test('renders "No activity logged yet" for empty history', () => {
-  render(<ActivityHistory history={[]} onDelete={vi.fn()} />);
-  expect(screen.getByText('No activity logged yet')).toBeInTheDocument();
-});
-```
-
-**Jest setup** (`backend/jest.setup.js`) — runs before any test modules are imported:
-```js
-process.env.NODE_ENV = 'test';
-if (process.env.DATABASE_URL_TEST) {
-  process.env.DATABASE_URL = process.env.DATABASE_URL_TEST;
-}
-```
-
-**Integration test agent pattern:**
-```js
-describe('Daily Meal Plan Endpoints', () => {
-  let dmpAgent;
-
-  beforeAll(async () => {
-    dmpAgent = request.agent(app);
-    const email = `dmp_get_${Date.now()}@example.com`;
-    await dmpAgent
-      .post('/api/auth/register')
-      .send({ email, password: 'TestP@ss123', pdpConsent: true });
-  });
-
-  it('should reject request without auth → 401', async () => {
-    const res = await request(app).get('/api/daily-meal-plans');
+  it('should reject without auth → 401', async () => {
+    const res = await request(app).post('/api/auth-required');
     expect(res.status).toBe(401);
     expect(res.body.success).toBe(false);
   });
 });
 ```
 
-**Integration test response assertion pattern:**
-```js
-expect(res.status).toBe(400);
-expect(res.body.success).toBe(false);
-expect(res.body.error.code).toBe('VALIDATION_ERROR');
-expect(res.body.error.message).toMatch(/mealTypes/i);
-```
+**Integration test helpers** (`backend/tests/integration/helpers.js`):
+- `startDatabase()` — creates fresh `fitness_test` schema, runs `schema.sql` + `seed.sql`
+- `stopDatabase()` — drops `fitness_test` schema
+- `createTestUser(agent)` — registers unique test user via API, returns user + cookie
+- `seedTestData(agent)` — creates profile + food log entry
 
-**Frontend user interaction test pattern:**
-```js
-test('calls onDelete with entry id when delete is clicked', () => {
-  const onDelete = vi.fn();
-  render(<ActivityHistory history={mockHistory} onDelete={onDelete} />);
-  const dateHeader = screen.getByText('2026-01-05');
-  fireEvent.click(dateHeader.closest('div'));
-  fireEvent.click(screen.getAllByText('Delete')[0]);
-  expect(onDelete).toHaveBeenCalledWith(1);
+### Frontend Unit Tests (Pure Functions)
+
+```javascript
+import { describe, test, expect } from 'vitest';
+import { functionUnderTest } from '../module.js';
+
+describe('functionUnderTest', () => {
+  test('returns expected value for valid input', () => {
+    expect(functionUnderTest(input)).toBe(expected);
+  });
+
+  test('returns null for invalid input', () => {
+    expect(functionUnderTest(badInput)).toBeNull();
+  });
 });
 ```
 
-## Test Coverage Gaps
+### Frontend Component Tests
 
-- **Backend controllers**: No dedicated unit tests for `activity.controller.js`, `auth.controller.js`, `dailyMealPlan.controller.js` — only tested indirectly through integration tests
-- **Backend repositories**: No tests detected for `repositories/` — SQL is tested only through integration tests
-- **Backend middlewares**: No tests for `auth.middleware.js` or rate limiters
-- **Frontend auth components**: No tests for `LoginForm.jsx` or `RegisterForm.jsx`
-- **Frontend food-log components**: Minimal test coverage (only `previewCalories.test.js` and `CustomFoodForm.test.js`)
-- **LLM-dependent endpoints**: Happy paths for weekly plan generation, daily meal plan generation, activity swap not covered in automated integration tests (require real LLM API keys) — marked as `NOTE:` in test files
+```javascript
+import { describe, test, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import ComponentName from '../ComponentName.jsx';
+
+describe('ComponentName', () => {
+  test('renders heading text', () => {
+    render(<ComponentName prop="value" />);
+    expect(screen.getByText('Expected Text')).toBeInTheDocument();
+  });
+
+  test('calls callback on click', () => {
+    const onClick = vi.fn();
+    render(<ComponentName onClick={onClick} />);
+    fireEvent.click(screen.getByText('Click me'));
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+});
+```
+
+### Frontend Hook Tests
+
+```javascript
+import { describe, test, expect, vi, beforeEach } from 'vitest';
+import { renderHook, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createElement } from 'react';
+import { useMonthData } from '../hooks/useMonthData.js';
+
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  return function Wrapper({ children }) {
+    return createElement(QueryClientProvider, { client: queryClient }, children);
+  };
+}
+
+describe('useMonthData', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test('returns loading initially', () => {
+    const { result } = renderHook(() => useMonthData(mockDate, vi.fn()), {
+      wrapper: createWrapper(),
+    });
+    expect(result.current.loading).toBe(true);
+  });
+});
+```
+
+## Mocking
+
+### Backend
+
+- **No mocking framework** detected in unit tests — tests import and test pure functions directly
+- Integration tests use actual database (test schema with seed data)
+- `supertest` creates real HTTP requests against the Express app
+- Async functions (like `getTopActivities`) are passed as mock arguments to service functions
+
+### Frontend
+
+**Implicit mocking pattern** (modules mocked before import):
+```javascript
+vi.mock('../ModuleName.js');
+import { moduleFunction } from '../ModuleName.js';
+```
+
+**Explicit mock implementations:**
+```javascript
+vi.mock('../calendarUtils.js', () => ({
+  getWeekStartsForMonth: vi.fn(),
+  buildMonthGrid: vi.fn().mockReturnValue([]),
+  computeDayStatus: vi.fn(),
+  DAY_STATUS: { INCOMPLETE: 'incomplete', COMPLETED: 'completed', PAST_INCOMPLETE: 'pastIncomplete' },
+}));
+```
+
+**Mock function patterns:**
+```javascript
+const fn = vi.fn();
+const fn = vi.fn().mockResolvedValue(data);
+const fn = vi.fn().mockReturnValue(value);
+const fn = vi.fn().mockImplementation(() => value);
+```
+
+**Mock child components** (for composite tests):
+```javascript
+vi.mock('../MonthNav.jsx', () => ({
+  default: function MockMonthNav({ currentMonth }) {
+    return <div data-testid="month-nav">MonthNav</div>;
+  },
+}));
+```
+
+**What to mock:**
+- External API modules (`vi.mock('../../api/weightApi.js')`)
+- Utility modules (`vi.mock('../calendarUtils.js')`)
+- Child React components
+- Hooks (`vi.mock('../../shared/hooks/useResponsive.js')`)
+
+**What NOT to mock:**
+- Pure utility functions (test them directly)
+- React built-ins
+
+## Fixtures and Factories
+
+**Inline test data** — no separate fixture files detected.
+
+```javascript
+// Calendar test data (backend tests)
+function makeValidDay(date) {
+  return {
+    date,
+    activities: [{ activity_id: 1, name: 'Running', duration_min: 30, intensity: 'moderate' }],
+  };
+}
+
+// Food test data (frontend tests)
+const mockFoods = [
+  { id: 1, name: 'Chicken breast, raw, skinless', calories_per_100g: 165, category: 'meat' },
+  { id: 2, name: 'White rice, cooked', calories_per_100g: 130, category: 'grains' },
+];
+
+// Calendar test data (frontend tests)
+const daysWithPlans = {
+  '2026-06-15': { date: '2026-06-15', completed: true },
+  '2026-06-16': { date: '2026-06-16', completed: false },
+};
+```
+
+**Integration test data:** Created via API calls to register/login + create profile, then used across test suites.
+
+## Coverage
+
+- **No coverage target configured** in either Jest or Vitest configs
+- Coverage directory (`coverage/`) is in `.gitignore`
+- No coverage thresholds detected
+- Coverage can be generated with standard Jest/Vitest flags but no npm scripts exist for it
+- Some tests use soft-skip pattern for integration tests (backend unavailable = test silently passes)
+
+## Test Types
+
+### Unit Tests (Backend)
+- **Scope:** Pure functions in services and utils (validation, calculation, format helpers)
+- **Approach:** Import function, call with inputs, assert outputs
+- **Files:** `backend/tests/unit/llm.service.test.js`, `backend/src/__tests__/food.utils.test.js`
+
+### Unit Tests (Frontend)
+- **Scope:** Pure utility functions, React component rendering
+- **Approach:** Import function / render component, interact via fireEvent, assert with RTL queries
+- **Files:** All `__tests__/*.test.jsx`, pure function `.test.js` files
+
+### Integration Tests (Backend)
+- **Scope:** HTTP endpoint behavior — status codes, response shapes, auth rejection, validation errors
+- **Approach:** Fresh Supabase test schema per run, `supertest` agent with cookie persistence
+- **Files:** `backend/tests/integration/remaining-endpoints.test.js`
+
+### Integration Tests (Frontend)
+- **Scope:** Full HTTP round-trip through frontend API layer to backend
+- **Approach** (in `frontend/src/__tests__/api-integration.test.js`):
+  - Forks backend as child process
+  - Uses raw `fetch()` with cookie extraction/forwarding
+  - Soft-skip pattern: tests pass silently if backend unavailable
+  - Tests all 4 feature API modules (auth, profile, food, activities)
+
+### E2E Tests
+- Not detected as standalone tests; noted as "covered in" comment references in integration tests
+
+## Common Patterns
+
+### Async Testing
+```javascript
+// Frontend — waitFor pattern
+await waitFor(() => {
+  expect(result.current.loading).toBe(false);
+});
+
+// Frontend — delayed promise pattern
+let resolvePromise;
+const fetchWeekFn = vi.fn().mockReturnValue(new Promise(resolve => {
+  resolvePromise = resolve;
+}));
+resolvePromise(data);
+
+// Backend — async generator pattern (integration)
+const result = await generateFallbackPlan({ getTopActivities: async () => [...], ... });
+```
+
+### Error Testing
+```javascript
+// Backend — expect throw
+expect(() => {
+  validateActivityLogInput({ activityId: 1, durationMin: 0, intensity: 'moderate' });
+}).toThrow(ValidationError);
+
+// Frontend — Error state rendering
+test('shows error banner when error is provided', () => {
+  render(<Component error={new Error('Network error')} />);
+  expect(screen.getByText(/Failed to load/)).toBeInTheDocument();
+});
+
+// Backend integration — error code assertion
+expect(res.body.error.code).toBe('VALIDATION_ERROR');
+```
+
+### Auth Rejection Testing Pattern
+Backend integration tests consistently test every protected endpoint with the "no auth" case:
+```javascript
+it('should reject request without auth → 401', async () => {
+  const res = await request(app).post('/api/endpoint').send({ ... });
+  expect(res.status).toBe(401);
+  expect(res.body.success).toBe(false);
+});
+```
+
+### Validation Error Testing Pattern
+Backend integration tests validate input rejection consistently:
+```javascript
+it('should reject missing field → 400 VALIDATION_ERROR', async () => {
+  const res = await agent.post('/api/endpoint').send({});
+  expect(res.status).toBe(400);
+  expect(res.body.success).toBe(false);
+  expect(res.body.error.code).toBe('VALIDATION_ERROR');
+});
+```
+
+## Required Setup for Running Tests
+
+**Backend integration tests require:**
+1. Supabase project running with `DATABASE_URL` in `.env`
+2. `.env` file with `JWT_SECRET`
+3. Schema and seed SQL files at `backend/db/schema.sql` and `backend/db/seed.sql`
+
+**Frontend integration tests require:**
+1. Backend running on port 3001 (or the test forks it automatically)
+2. Database access (same requirements as backend)
 
 ---
 

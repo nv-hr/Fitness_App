@@ -43,10 +43,10 @@ export default function FoodLogPage() {
       {/* Header section with page title */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
-          <h1 className="font-display font-extrabold text-3xl text-slate-850 tracking-tight text-slate-800">
-            Food & Diet Journal
+          <h1 className="font-display font-extrabold text-3xl tracking-tight" style={{ color: '#fff' }}>
+            Daily Food Log
           </h1>
-          <p className="text-slate-500 text-sm mt-1 leading-relaxed">
+          <p className="text-[#666] text-sm mt-1 leading-relaxed">
             Log your actual calorie intake or access an AI curated meal plan personalized to your biometrics.
           </p>
         </div>
@@ -67,13 +67,13 @@ export default function FoodLogPage() {
       )}
 
       {/* Tactile Segmented Sliding Navigation Bar */}
-      <div className="bg-slate-100/80 backdrop-blur-xs p-1 rounded-2xl flex max-w-md border border-slate-200/20">
+      <div style={{ background: '#1e1e1e', border: '1px solid #2a2a2a' }} className="p-1 rounded-2xl flex max-w-md">
         <button
           onClick={() => setActiveTab('plan')}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
             activeTab === 'plan'
-              ? 'bg-white text-emerald-600 shadow-sm'
-              : 'text-slate-500 hover:text-slate-800'
+              ? 'bg-[#2d2d2d] text-red-400 shadow-sm'
+              : 'text-[#555] hover:text-[#aaa]'
           }`}
         >
           <Calendar className="w-4 h-4" />
@@ -83,8 +83,8 @@ export default function FoodLogPage() {
           onClick={() => setActiveTab('log')}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
             activeTab === 'log'
-              ? 'bg-white text-emerald-600 shadow-sm'
-              : 'text-slate-500 hover:text-slate-800'
+              ? 'bg-[#2d2d2d] text-red-400 shadow-sm'
+              : 'text-[#555] hover:text-[#aaa]'
           }`}
         >
           <Apple className="w-4 h-4" />
@@ -98,9 +98,9 @@ export default function FoodLogPage() {
       )}
 
       {activeTab === 'log' && (
-        <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/50 shadow-lux">
-          <h2 className="font-display font-bold text-lg text-slate-800 border-b border-slate-100 pb-3 mb-6 flex items-center gap-2">
-            <span className="w-1.5 h-4 bg-emerald-500 rounded-full inline-block"></span>
+        <div className="bg-[#1a1a1a] p-6 sm:p-8 rounded-2xl border border-[#2a2a2a] shadow-lux">
+          <h2 className="font-display font-bold text-lg text-white border-b border-[#2a2a2a] pb-3 mb-6 flex items-center gap-2">
+            <span className="w-1.5 h-4 bg-red-600 rounded-full inline-block"></span>
             Log New Meals
           </h2>
           <FoodLogForm />
