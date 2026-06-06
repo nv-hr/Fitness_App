@@ -87,3 +87,67 @@ export async function apiPost(path, body) {
 export async function apiDelete(path) {
   return apiFetch(path, { method: 'DELETE' });
 }
+
+/**
+ * Stream responses using Server-Sent Events (SSE).
+ *
+ * @param {string} path - API path.
+ * @param {object} body - Request payload.
+ * @param {Function} onChunk - Callback for intermediate text tokens.
+ * @param {Function} onDone - Callback for the final completed plan object.
+ * @param {Function} onError - Callback for any errors encountered.
+ */
+export async function fetchSseStream(path, body, onChunk, onDone, onError) {
+  try {
+    const response = await fetch(`${API_BASE}${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      let errMsg = 'Request failed';
+      try {
+        const errJson = await response.json();
+        errMsg = errJson.error?.message || errMsg;
+      } catch {}
+      throw new Error(errMsg);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data: ')) continue;
+        const dataStr = trimmed.slice(6);
+        try {
+          const parsed = JSON.parse(dataStr);
+          if (parsed.type === 'chunk') {
+            onChunk(parsed.content);
+          } else if (parsed.type === 'done') {
+            onDone(parsed.plan);
+          } else if (parsed.type === 'error') {
+            throw new Error(parsed.message);
+          }
+        } catch (e) {
+          onError(e);
+        }
+      }
+    }
+  } catch (err) {
+    onError(err);
+  }
+}

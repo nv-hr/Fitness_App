@@ -16,6 +16,9 @@ import {
   swapActivity,
   toggleActivityComplete,
   regenerateDay,
+  generateWeeklyPlanStream,
+  swapActivityStream,
+  regenerateDayStream,
 } from '../api/activityCalendarApi.js';
 import { useCountdownTimer } from '../../../shared/hooks/useCountdownTimer.js';
 
@@ -49,6 +52,7 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
   const [dayPlan, setDayPlan] = useState(null);
   const [planLoading, setPlanLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [generatingStatus, setGeneratingStatus] = useState('');
   const [swappingActivityId, setSwappingActivityId] = useState(null);
   const [completedActivities, setCompletedActivities] = useState(() => new Set());
   const [toast, setToast] = useState(null);
@@ -137,110 +141,133 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
     const selStr = format(selectedDay, 'yyyy-MM-dd');
 
     if (selStr === todayStr && !planLoading && !dayPlan && !generating && genRetryAfter === null) {
-      (async () => {
-        setGenerating(true);
-        try {
-          const weekStart = format(startOfWeek(selectedDay, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-          await generateWeeklyPlan(weekStart, 4);
-          const planRes = await getWeeklyPlan(weekStart);
-          const plan = planRes.data?.plan;
+      setGenerating(true);
+      setGeneratingStatus('Auto-formulating week plan...');
+      const weekStart = format(startOfWeek(selectedDay, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+
+      generateWeeklyPlanStream(
+        weekStart,
+        4,
+        (chunk) => {
+          setGeneratingStatus(`Auto-formulating: ${chunk}`);
+        },
+        (plan) => {
           if (plan?.days) {
             const found = plan.days.find((d) => d.date === todayStr);
             if (found) setDayPlan(found);
           }
-        } catch (err) {
+          setGenerating(false);
+          setGeneratingStatus('');
+        },
+        (err) => {
           if (err.retryAfter || err.code === 'RATE_LIMITED') {
             setGenRetryAfter(err.retryAfter || 150);
           }
-        } finally {
           setGenerating(false);
+          setGeneratingStatus('');
         }
-      })();
+      );
     }
   }, [selectedDay, planLoading, dayPlan, generating, genRetryAfter, setGenRetryAfter]);
 
   // ── Manual full-week regeneration ───────────────────────────────────────────
 
-  const handleGenerateWeek = useCallback(async () => {
-    try {
-      setGenerating(true);
-      setGenRetryAfter(null);
+  const handleGenerateWeek = useCallback(() => {
+    setGenerating(true);
+    setGeneratingStatus('Connecting to AI...');
+    setGenRetryAfter(null);
 
-      const targetDay = selectedDay || new Date();
-      const weekStart = format(startOfWeek(targetDay, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+    const targetDay = selectedDay || new Date();
+    const weekStart = format(startOfWeek(targetDay, { weekStartsOn: 1 }), 'yyyy-MM-dd');
 
-      // regenerateDay at index 0 forces the LLM to build a fresh 7-day plan
-      const resRegen = await regenerateDay(weekStart, 0, 4);
-      const plan = resRegen.data?.plan;
+    regenerateDayStream(
+      weekStart,
+      0,
+      4,
+      (chunk) => {
+        setGeneratingStatus(`Generating: ${chunk}`);
+      },
+      async (plan) => {
+        if (plan && Array.isArray(plan.days)) {
+          // Silent database sync: double-toggle on today's first activity
+          const todayStr = format(new Date(), 'yyyy-MM-dd');
+          const todayIdx = plan.days.findIndex((d) => d.date === todayStr);
+          const todayDay = todayIdx !== -1 ? plan.days[todayIdx] : null;
 
-      if (plan && Array.isArray(plan.days)) {
-        // Silent database sync: double-toggle on today's first activity
-        const todayStr = format(new Date(), 'yyyy-MM-dd');
-        const todayIdx = plan.days.findIndex((d) => d.date === todayStr);
-        const todayDay = todayIdx !== -1 ? plan.days[todayIdx] : null;
+          if (todayDay?.activities?.length > 0) {
+            const first = todayDay.activities[0];
+            try {
+              await toggleActivityComplete(weekStart, todayIdx, first.activity_id, !first.completed);
+              await toggleActivityComplete(weekStart, todayIdx, first.activity_id, !!first.completed);
+            } catch (e) {
+              console.warn('Silent sync toggle failed:', e);
+            }
+          }
 
-        if (todayDay?.activities?.length > 0) {
-          const first = todayDay.activities[0];
-          try {
-            await toggleActivityComplete(weekStart, todayIdx, first.activity_id, !first.completed);
-            await toggleActivityComplete(weekStart, todayIdx, first.activity_id, !!first.completed);
-          } catch (e) {
-            console.warn('Silent sync toggle failed:', e);
+          if (selectedDay) {
+            const dateStr = format(selectedDay, 'yyyy-MM-dd');
+            const found = plan.days.find((d) => d.date === dateStr);
+            if (found) {
+              setDayPlan(found);
+              const completed = new Set(
+                found.activities?.filter((a) => a.completed).map((a) => a.activity_id)
+              );
+              setCompletedActivities(completed);
+            }
           }
         }
-
-        if (selectedDay) {
-          const dateStr = format(selectedDay, 'yyyy-MM-dd');
-          const found = plan.days.find((d) => d.date === dateStr);
-          if (found) {
-            setDayPlan(found);
-            const completed = new Set(
-              found.activities?.filter((a) => a.completed).map((a) => a.activity_id)
-            );
-            setCompletedActivities(completed);
-          }
+        window.dispatchEvent(new CustomEvent('health-system-update'));
+        setGenerating(false);
+        setGeneratingStatus('');
+      },
+      (err) => {
+        if (err.retryAfter || err.code === 'RATE_LIMITED') {
+          setGenRetryAfter(err.retryAfter || 150);
+        } else {
+          setToast({ message: err.message || 'Failed to generate plan' });
         }
+        setGenerating(false);
+        setGeneratingStatus('');
       }
-      window.dispatchEvent(new CustomEvent('health-system-update'));
-    } catch (err) {
-      if (err.retryAfter || err.code === 'RATE_LIMITED') {
-        setGenRetryAfter(err.retryAfter || 150);
-      } else {
-        setToast({ message: err.message || 'Failed to generate plan' });
-      }
-    } finally {
-      setGenerating(false);
-    }
+    );
   }, [selectedDay, setGenRetryAfter]);
 
   // ── Swap a single activity ──────────────────────────────────────────────────
 
-  const handleSwap = useCallback(async (activityId, dayIndex) => {
+  const handleSwap = useCallback((activityId, dayIndex) => {
     if (swapRetryAfter > 0 || !selectedDay) return;
 
     const weekStart = format(startOfWeek(selectedDay, { weekStartsOn: 1 }), 'yyyy-MM-dd');
 
-    try {
-      setSwappingActivityId(activityId);
-      const res = await swapActivity(weekStart, activityId, dayIndex);
-      if (res.data?.plan) {
-        const dateStr = format(selectedDay, 'yyyy-MM-dd');
-        const found = res.data.plan.days.find((d) => d.date === dateStr);
-        if (found) setDayPlan(found);
+    setSwappingActivityId(activityId);
+    swapActivityStream(
+      weekStart,
+      activityId,
+      dayIndex,
+      (chunk) => {
+        // No action needed for intermediate swap chunks
+      },
+      (plan) => {
+        if (plan?.days) {
+          const dateStr = format(selectedDay, 'yyyy-MM-dd');
+          const found = plan.days.find((d) => d.date === dateStr);
+          if (found) setDayPlan(found);
+        }
+        window.dispatchEvent(new CustomEvent('health-system-update'));
+        setSwappingActivityId(null);
+      },
+      (err) => {
+        if (err.retryAfter || err.code === 'RATE_LIMITED') {
+          setSwapRetryAfter(err.retryAfter || 300);
+          setToast({ message: `Daily workout swap limit reached. Please wait ${err.retryAfter || 300}s.` });
+        } else if (err.code === 'NOT_FOUND_ERROR') {
+          setToast({ message: 'Activity not found in active plan.' });
+        } else {
+          setToast({ message: 'Unable to swap activity.' });
+        }
+        setSwappingActivityId(null);
       }
-      window.dispatchEvent(new CustomEvent('health-system-update'));
-    } catch (err) {
-      if (err.retryAfter || err.code === 'RATE_LIMITED') {
-        setSwapRetryAfter(err.retryAfter || 300);
-        setToast({ message: `Daily workout swap limit reached. Please wait ${err.retryAfter || 300}s.` });
-      } else if (err.code === 'NOT_FOUND_ERROR') {
-        setToast({ message: 'Activity not found in active plan.' });
-      } else {
-        setToast({ message: 'Unable to swap activity.' });
-      }
-    } finally {
-      setSwappingActivityId(null);
-    }
+    );
   }, [selectedDay, swapRetryAfter, setSwapRetryAfter]);
 
   // ── Optimistic toggle of activity completion ────────────────────────────────
@@ -280,6 +307,7 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
     dayPlan,
     planLoading,
     generating,
+    generatingStatus,
     genRetryAfter,
     swappingActivityId,
     swapRetryAfter,
