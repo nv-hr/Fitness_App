@@ -114,12 +114,12 @@ app.use('/api/profile', profileLimiter);
 app.use('/api/profile', profileRoutes);
 
 // Food API routes — higher rate limit for search-as-you-type (T-04-08)
-const foodLimiter = createRateLimiter({ max: 60, message: 'Too many food requests' });
+const foodLimiter = createRateLimiter({ max: 200, message: 'Too many food requests' });
 app.use('/api/food', foodLimiter);
 app.use('/api/food', foodRoutes);
 
 // Activity API routes — rate limiter for ORDER BY RAND() queries (T-05-07)
-const activityLimiter = createRateLimiter({ max: 20, message: 'Too many activity requests' });
+const activityLimiter = createRateLimiter({ max: 100, message: 'Too many activity requests' });
 app.use('/api/activities', activityLimiter);
 app.use('/api/activities', activityRoutes);
 
