@@ -7,6 +7,7 @@ import { getCalorieTarget, calculateTdee } from '../services/profile.service.js'
 import * as activityRepo from '../repositories/activity.repository.js';
 import { getCachedPlan, setCachedPlan } from '../services/llm.service.js';
 import { findByUserAndWeek, upsertPlan } from '../repositories/weeklyPlan.repository.js';
+import { pool } from '../config/database.js';
 
 function isDateWithinTimezoneRange(dateStr) {
   const today = new Date();
@@ -78,22 +79,42 @@ async function logActivity(req, res, next) {
       loggedDate: logDate,
     });
 
+    // Best-effort: sync the log into the weekly plan.
+    // Wrapped in a transaction with FOR UPDATE to prevent lost-update
+    // races when two rapid log requests both read→mutate→write the same JSONB row.
     try {
       const weekStart = getMonday(new Date(logDate));
-      const plan = await findByUserAndWeek(req.user.userId, weekStart);
-      if (plan?.plan_data?.days) {
-        const day = plan.plan_data.days.find(d => d.date === logDate);
-        if (day?.activities) {
-          const actIdx = day.activities.findIndex(a => a.activity_id === activityId);
-          if (actIdx !== -1) {
-            day.activities[actIdx].completed = true;
-            const allCompleted = day.activities.length > 0 && day.activities.every(a => a.completed === true);
-            if (allCompleted) day.completed = true;
-            else delete day.completed;
-            await upsertPlan(req.user.userId, weekStart, plan.plan_data, plan.status);
-            setCachedPlan(req.user.userId, weekStart, plan.plan_data);
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        // Lock the row so concurrent logActivity calls are serialised here
+        const plan = await findByUserAndWeek(req.user.userId, weekStart, client, true);
+        if (plan?.plan_data?.days) {
+          const day = plan.plan_data.days.find(d => d.date === logDate);
+          if (day?.activities) {
+            const actIdx = day.activities.findIndex(a => a.activity_id === activityId);
+            if (actIdx !== -1) {
+              day.activities[actIdx].completed = true;
+              const allCompleted = day.activities.length > 0 && day.activities.every(a => a.completed === true);
+              if (allCompleted) day.completed = true;
+              else delete day.completed;
+              await upsertPlan(req.user.userId, weekStart, plan.plan_data, plan.status, client);
+              await client.query('COMMIT');
+              setCachedPlan(req.user.userId, weekStart, plan.plan_data);
+            } else {
+              await client.query('ROLLBACK');
+            }
+          } else {
+            await client.query('ROLLBACK');
           }
+        } else {
+          await client.query('ROLLBACK');
         }
+      } catch (innerErr) {
+        await client.query('ROLLBACK');
+        throw innerErr;
+      } finally {
+        client.release();
       }
     } catch (err) {
       console.error('Failed to sync activity log to weekly plan:', err.message);

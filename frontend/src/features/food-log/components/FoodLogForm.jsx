@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { format } from 'date-fns';
 import { getDailyLogs, getLogHistory, getRecentFoods, logFood } from '../api/foodLogApi.js';
 import FoodSearch from './FoodSearch.jsx';
@@ -23,6 +23,42 @@ export default function FoodLogForm() {
 
   const today = format(new Date(), 'yyyy-MM-dd');
 
+  const refreshInFlight = useRef(false);
+  const pendingRefresh = useRef(false);
+
+  /**
+   * Serialised refresh with a one-item queue.
+   * If a refresh is already running, we mark pendingRefresh and let the
+   * current fetch trigger one more after it completes. This prevents
+   * concurrent stale-overwrite races while still catching rapid logs.
+   */
+  const refreshData = useCallback(async () => {
+    if (refreshInFlight.current) {
+      pendingRefresh.current = true;
+      return;
+    }
+    refreshInFlight.current = true;
+    try {
+      const [logsRes, historyRes, recentRes] = await Promise.all([
+        getDailyLogs(today),
+        getLogHistory(7),
+        getRecentFoods(),
+      ]);
+      setLogs(logsRes.data || []);
+      setHistory(historyRes.data || []);
+      setRecentFoods(recentRes.data || []);
+    } catch {
+      // Silently fail — user can refresh manually
+    } finally {
+      refreshInFlight.current = false;
+      if (pendingRefresh.current) {
+        pendingRefresh.current = false;
+        // Micro-delay to allow React to flush state before next fetch
+        setTimeout(() => refreshData(), 50);
+      }
+    }
+  }, [today]);
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -43,30 +79,10 @@ export default function FoodLogForm() {
     loadData();
   }, [today]);
 
-  useEffect(() => {
-    const handleUpdate = () => {
-      refreshData();
-    };
-    window.addEventListener('health-system-update', handleUpdate);
-    return () => {
-      window.removeEventListener('health-system-update', handleUpdate);
-    };
-  }, [today]);
-
-  async function refreshData() {
-    try {
-      const [logsRes, historyRes, recentRes] = await Promise.all([
-        getDailyLogs(today),
-        getLogHistory(7),
-        getRecentFoods(),
-      ]);
-      setLogs(logsRes.data || []);
-      setHistory(historyRes.data || []);
-      setRecentFoods(recentRes.data || []);
-    } catch {
-      // Silently fail — user can refresh
-    }
-  }
+  // NOTE: Intentionally NOT listening to 'health-system-update' here.
+  // The parent FoodLogPage already handles summary refresh via refreshTrigger.
+  // Listening here too would create a duplicate concurrent refresh that races
+  // against the one already called inside handleLogFood, causing stale overwrites.
 
   const handleFoodSelect = (food) => {
     setSelectedFood(food);
