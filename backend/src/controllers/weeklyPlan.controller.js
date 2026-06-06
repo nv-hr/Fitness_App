@@ -211,6 +211,10 @@ async function regenerateDayHandler(req, res, next) {
 
     const result = await regenerateDay(deps, dayIndex);
 
+    if (result.plan && Array.isArray(result.plan.days)) {
+      await upsertPlan(userId, targetWeekStart, result.plan, result.status || 'active');
+    }
+
     return successResponse(res, result);
   } catch (err) {
     next(err);
@@ -600,6 +604,10 @@ async function regenerateDayStream(req, res, next) {
     }
 
     const result = await regenerateDay(deps, dayIndex);
+
+    if (result.plan && Array.isArray(result.plan.days)) {
+      await upsertPlan(userId, targetWeekStart, result.plan, result.status || 'active');
+    }
 
     res.write(`data: ${JSON.stringify({ type: 'done', plan: result.plan })}\n\n`);
     res.end();
