@@ -30,6 +30,7 @@ export default function ActivityCalendarSection({ onDaySelect, onMonthChange, da
     dayPlan,
     planLoading,
     generating,
+    generatingStatus,
     genRetryAfter,
     swappingActivityId,
     swapRetryAfter,
@@ -152,7 +153,7 @@ export default function ActivityCalendarSection({ onDaySelect, onMonthChange, da
         buttonLabel="Recreate Weekly Plan"
         onGenerate={handleGenerateWeek}
         generating={generating}
-        generatingLabel="Designing..."
+        generatingLabel={generatingStatus || "Designing..."}
         retryAfter={genRetryAfter}
       />
 

@@ -1,4 +1,4 @@
-import { buildPrompt, callLlmApi, getCachedPlan, setCachedPlan } from './llm.service.js';
+import { buildPrompt, callLlmApi, getCachedPlan, setCachedPlan, callLlmStream } from './llm.service.js';
 import { findByUserAndDate, upsertPlan } from '../repositories/dailyMealPlan.repository.js';
 import { AppError } from '../utils/errors.js';
 import { fuzzyMatchFoodName, recalculateDayCalories } from './mealPlan.service.js';
@@ -269,7 +269,17 @@ export async function generateDailyMealPlan(deps) {
   while (attempt < maxAttempts) {
     attempt++;
     try {
-      plan = await callLlmApi(prompt);
+      if (deps.onChunk) {
+        const rawText = await callLlmStream(prompt, deps.onChunk, 'Generate my daily meal plan based on my profile and history.');
+        const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);
+        }
+        plan = JSON.parse(jsonMatch[0]);
+      } else {
+        plan = await callLlmApi(prompt);
+      }
     } catch (err) {
       console.error(`[DailyMealPlan] LLM API call attempt ${attempt} failed:`, err.message);
       if (attempt >= maxAttempts) {

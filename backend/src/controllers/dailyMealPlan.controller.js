@@ -229,10 +229,97 @@ async function regenerateCategoryHandler(req, res, next) {
   }
 }
 
+async function generateStream(req, res, next) {
+  const userId = req.user.userId;
+  let planDate = req.body.date;
+  if (planDate && !isValidDateString(planDate)) {
+    return errorResponse(res, 'Invalid date format (use YYYY-MM-DD)', 400, 'VALIDATION_ERROR');
+  }
+  planDate = planDate || getTodayString();
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const onChunk = (chunk) => {
+    res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
+  };
+
+  try {
+    const existing = await findByUserAndDate(userId, planDate);
+    if (existing && existing.plan_data && existing.status !== 'fallback') {
+      setCachedPlan(userId, planDate, structuredClone(existing.plan_data), 'meal');
+      res.write(`data: ${JSON.stringify({ type: 'done', plan: existing.plan_data })}\n\n`);
+      res.end();
+      return;
+    }
+
+    const result = await generateDailyMealPlan({
+      getProfile: (id) => getProfile(id),
+      getAllFoods: (id) => searchFoods(id, '', 200),
+      getLogHistory: (id, days) => getLogHistory(id, days),
+      userId,
+      planDate,
+      onChunk,
+    });
+
+    res.write(`data: ${JSON.stringify({ type: 'done', plan: result.plan })}\n\n`);
+    res.end();
+  } catch (err) {
+    res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
+    res.end();
+  }
+}
+
+async function regenerateCategoryStream(req, res, next) {
+  const userId = req.user.userId;
+  const { date: planDate, mealType } = req.body;
+
+  if (planDate && !isValidDateString(planDate)) {
+    return errorResponse(res, 'Invalid date format (use YYYY-MM-DD)', 400, 'VALIDATION_ERROR');
+  }
+  const targetDate = planDate || getTodayString();
+  
+  const validMealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
+  if (!validMealTypes.includes(mealType)) {
+    return errorResponse(res, `Invalid mealType "${mealType}"`, 400, 'VALIDATION_ERROR');
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const onChunk = (chunk) => {
+    res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
+  };
+
+  try {
+    const result = await regenerateCategory({
+      userId,
+      planDate: targetDate,
+      mealType,
+      getProfile: (id) => getProfile(id),
+      getAllFoods: (id) => searchFoods(id, '', 200),
+      getLogHistory: (id, days) => getLogHistory(id, days),
+      onChunk,
+    });
+
+    res.write(`data: ${JSON.stringify({ type: 'done', plan: result.plan })}\n\n`);
+    res.end();
+  } catch (err) {
+    res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
+    res.end();
+  }
+}
+
 export default {
   get,
   generate,
   logMeals,
   toggleItemLogged,
   regenerateCategory: regenerateCategoryHandler,
+  generateStream,
+  regenerateCategoryStream,
 };

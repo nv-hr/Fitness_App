@@ -17,8 +17,8 @@ Built with React 19, Express 5, and Supabase PostgreSQL.
 - **Progress Dashboard** — Centralized `/progress` view with weight entry form, trend chart, history table, and goal status.
 - **Weight Trend Chart** — Recharts LineChart with 30/60/90 day date range filter, goal reference line, and all-state handling (empty/loading/insufficient/normal).
 - **Trend Prediction** — OLS linear regression estimates target completion date with color-coded status (green/amber/red).
-- **LLM Weekly Activity Plans** — AI-generated variable-day (4-6) activity plans powered by OpenRouter, personalized to your profile, fitness goal, and history.
-- **LLM Daily Meal Plans** — AI-generated 1-day meal recommendations with auto-calculated portions to meet your calorie target.
+- **LLM Weekly Activity Plans** — AI-generated variable-day (4-6) activity plans streamed in real-time (SSE), powered by OpenRouter, personalized to your profile, fitness goal, and history.
+- **LLM Daily Meal Plans** — AI-generated 1-day meal recommendations streamed in real-time (SSE) with auto-calculated portions to meet your calorie target.
 - **Auto-Logging** — Generated activities and meals auto-save to their respective logs with one-click completion toggle and batch-log support.
 - **Per-Activity Swap** — Swap individual activities or meal items with LLM-generated replacements without regenerating the entire plan.
 

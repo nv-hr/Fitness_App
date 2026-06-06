@@ -1148,6 +1148,117 @@
               ]
             }
           }
+        },
+        {
+          "name": "POST /api/weekly-plans/generate-stream",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weekStart\": \"{{week_start}}\",\n  \"availableDays\": 4\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/weekly-plans/generate-stream",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "weekly-plans",
+                "generate-stream"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/weekly-plans/regenerate-day-stream",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weekStart\": \"{{week_start}}\",\n  \"dayIndex\": 2,\n  \"availableDays\": 4\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/weekly-plans/regenerate-day-stream",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "weekly-plans",
+                "regenerate-day-stream"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/weekly-plans/swap-stream",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weekStart\": \"{{week_start}}\",\n  \"dayIndex\": 2,\n  \"activityId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/weekly-plans/swap-stream",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "weekly-plans",
+                "swap-stream"
+              ]
+            }
+          }
         }
       ]
     },
@@ -1355,6 +1466,121 @@
               ]
             }
           }
+        },
+        {
+          "name": "POST /api/daily-meal-plans/generate-stream",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"{{today}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/daily-meal-plans/generate-stream",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "daily-meal-plans",
+                "generate-stream"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/daily-meal-plans/regenerate-category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Category regenerated', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"{{today}}\",\n  \"mealType\": \"lunch\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/daily-meal-plans/regenerate-category",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "daily-meal-plans",
+                "regenerate-category"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/daily-meal-plans/regenerate-category-stream",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"{{today}}\",\n  \"mealType\": \"lunch\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/daily-meal-plans/regenerate-category-stream",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "daily-meal-plans",
+                "regenerate-category-stream"
+              ]
+            }
+          }
         }
       ]
     },
@@ -1472,6 +1698,131 @@
                 "progress",
                 "weight",
                 "1"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Activity Plans",
+      "item": [
+        {
+          "name": "GET /api/activity-plans?date=",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns activity plan', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/activity-plans?date={{today}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "activity-plans"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{today}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/activity-plans/generate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Activity plan generated', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.data.plan).to.have.property('activities');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"{{today}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/activity-plans/generate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "activity-plans",
+                "generate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /api/activity-plans/log",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Activities logged', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"{{today}}\",\n  \"activityIndexes\": [0]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/activity-plans/log",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "activity-plans",
+                "log"
               ]
             }
           }

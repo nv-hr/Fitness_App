@@ -159,6 +159,50 @@ export async function callLlmApi(systemPrompt) {
   throw new AppError('LlmAllFailed', 'All LLM models failed', 502);
 }
 
+export async function callLlmStream(systemPrompt, onChunk, userPrompt = 'Generate my weekly fitness plan based on my profile and history.') {
+  const client = getClient();
+  if (!client) {
+    throw new AppError('LlmConfigError', 'OPENROUTER_API_KEY not configured', 503);
+  }
+
+  const models = [
+    { key: 'model', label: 'Primary' },
+    { key: 'fallbackModel', label: 'Fallback' },
+    { key: 'fallbackModel2', label: 'Secondary fallback' },
+  ];
+
+  for (const { key, label } of models) {
+    const model = CONFIG[key];
+    if (!model) continue;
+    try {
+      const responseStream = await client.chat.completions.create({
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: CONFIG.temperature,
+        max_tokens: CONFIG.maxTokens,
+        stream: true,
+      });
+
+      let fullText = '';
+      for await (const chunk of responseStream) {
+        const text = chunk.choices[0]?.delta?.content || '';
+        if (text) {
+          fullText += text;
+          onChunk(text);
+        }
+      }
+      return fullText;
+    } catch (err) {
+      console.warn(`[LLM Stream] ${label} model ${model} failed: ${err.message}`);
+    }
+  }
+
+  throw new AppError('LlmAllFailed', 'All LLM models failed', 502);
+}
+
 export function validateActivities(activities, prefix, allowEmpty = false) {
   const errors = [];
   if (!Array.isArray(activities)) {
@@ -468,7 +512,17 @@ export async function generateWeeklyPlan(deps) {
       skipInitialCall = false;
     } else {
       try {
-        plan = await callLlmApi(prompt);
+        if (deps.onChunk) {
+          const rawText = await callLlmStream(prompt, deps.onChunk);
+          const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+          const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+          if (!jsonMatch) {
+            throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);
+          }
+          plan = JSON.parse(jsonMatch[0]);
+        } else {
+          plan = await callLlmApi(prompt);
+        }
       } catch (err) {
         console.error(`[LLM] API call attempt ${attempt} failed:`, err.message);
         if (attempt >= maxAttempts) {
@@ -486,7 +540,18 @@ export async function generateWeeklyPlan(deps) {
       if (attempt < maxAttempts) {
         const correctionPrompt = prompt + '\n\n' + buildCorrectionPrompt(structureCheck.errors);
         try {
-          plan = await callLlmApi(correctionPrompt);
+          if (deps.onChunk) {
+            deps.onChunk('\n\n[Correcting plan structure...]\n\n');
+            const rawText = await callLlmStream(correctionPrompt, deps.onChunk);
+            const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+            const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) {
+              throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);
+            }
+            plan = JSON.parse(jsonMatch[0]);
+          } else {
+            plan = await callLlmApi(correctionPrompt);
+          }
           // Correction succeeded — re-validate the corrected plan on next iteration
           skipInitialCall = true;
           continue;
@@ -506,7 +571,18 @@ export async function generateWeeklyPlan(deps) {
       if (attempt < maxAttempts) {
         const correctionPrompt = prompt + '\n\n' + buildCorrectionPrompt(nameCheck.errors);
         try {
-          plan = await callLlmApi(correctionPrompt);
+          if (deps.onChunk) {
+            deps.onChunk('\n\n[Correcting activity names...]\n\n');
+            const rawText = await callLlmStream(correctionPrompt, deps.onChunk);
+            const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+            const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) {
+              throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);
+            }
+            plan = JSON.parse(jsonMatch[0]);
+          } else {
+            plan = await callLlmApi(correctionPrompt);
+          }
           // Correction succeeded — re-validate the corrected plan on next iteration
           skipInitialCall = true;
           continue;
@@ -716,7 +792,17 @@ export async function swapActivity(deps, activityId, dayIndex, skipLock = false)
     // 7. Call LLM with fallback
     let replacement
     try {
-      replacement = await callLlmApi(prompt)
+      if (deps.onChunk) {
+        const rawText = await callLlmStream(prompt, deps.onChunk, 'Swap a fitness activity');
+        const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);
+        }
+        replacement = JSON.parse(jsonMatch[0]);
+      } else {
+        replacement = await callLlmApi(prompt)
+      }
     } catch (err) {
       console.warn(`[LLM] Swap LLM call failed: ${err.message}, falling back to random activity`)
       replacement = null

@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from '../../../shared/lib/http.js';
+import { apiGet, apiPost, fetchSseStream } from '../../../shared/lib/http.js';
 
 export async function getWeeklyPlan(weekStart) {
   const params = weekStart ? `?weekStart=${encodeURIComponent(weekStart)}` : '';
@@ -12,8 +12,19 @@ export async function generateWeeklyPlan(weekStart, availableDays) {
   });
 }
 
+export function generateWeeklyPlanStream(weekStart, availableDays, onChunk, onDone, onError) {
+  return fetchSseStream('/api/weekly-plans/generate-stream', {
+    weekStart,
+    ...(availableDays != null && { availableDays }),
+  }, onChunk, onDone, onError);
+}
+
 export async function swapActivity(weekStart, activityId, dayIndex) {
   return apiPost('/api/weekly-plans/swap', { weekStart, activityId, dayIndex });
+}
+
+export function swapActivityStream(weekStart, activityId, dayIndex, onChunk, onDone, onError) {
+  return fetchSseStream('/api/weekly-plans/swap-stream', { weekStart, activityId, dayIndex }, onChunk, onDone, onError);
 }
 
 /**
@@ -36,5 +47,13 @@ export async function regenerateDay(weekStart, dayIndex, availableDays) {
     dayIndex,
     ...(availableDays != null && { availableDays }),
   });
+}
+
+export function regenerateDayStream(weekStart, dayIndex, availableDays, onChunk, onDone, onError) {
+  return fetchSseStream('/api/weekly-plans/regenerate-day-stream', {
+    weekStart,
+    dayIndex,
+    ...(availableDays != null && { availableDays }),
+  }, onChunk, onDone, onError);
 }
 

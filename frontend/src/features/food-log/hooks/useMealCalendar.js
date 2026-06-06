@@ -16,6 +16,8 @@ import {
   logMeals,
   toggleItemLogged,
   regenerateCategory,
+  generateDailyMealPlanStream,
+  regenerateCategoryStream,
 } from '../api/dailyMealPlanApi.js';
 import { useCountdownTimer } from '../../../shared/hooks/useCountdownTimer.js';
 
@@ -116,19 +118,26 @@ export function useMealCalendar(onDaySelect) {
     const selStr = format(selectedDay, 'yyyy-MM-dd');
 
     if (selStr === todayStr && !planLoading && !dayPlan && !generating && genRetryAfter === null) {
-      (async () => {
-        setGenerating(true);
-        try {
-          const res = await generateDailyMealPlan(todayStr);
-          if (res.data?.plan) setDayPlan(res.data.plan);
-        } catch (err) {
+      setGenerating(true);
+      setGeneratingStatus('Auto-formulating meals...');
+      generateDailyMealPlanStream(
+        todayStr,
+        (chunk) => {
+          setGeneratingStatus(`Auto-formulating: ${chunk}`);
+        },
+        (plan) => {
+          if (plan) setDayPlan(plan);
+          setGenerating(false);
+          setGeneratingStatus('');
+        },
+        (err) => {
           if (err.retryAfter || err.code === 'RATE_LIMITED') {
             setGenRetryAfter(err.retryAfter || 150);
           }
-        } finally {
           setGenerating(false);
+          setGeneratingStatus('');
         }
-      })();
+      );
     }
   }, [selectedDay, planLoading, dayPlan, generating, genRetryAfter, setGenRetryAfter]);
 
@@ -154,8 +163,27 @@ export function useMealCalendar(onDaySelect) {
 
       if (!activeTodayPlan?.meals?.length) {
         setGeneratingStatus('Formulating...');
-        const res = await generateDailyMealPlan(dateStr);
-        if (res.data?.plan) setDayPlan(res.data.plan);
+        generateDailyMealPlanStream(
+          dateStr,
+          (chunk) => {
+            setGeneratingStatus(`Formulating: ${chunk}`);
+          },
+          (plan) => {
+            if (plan) setDayPlan(plan);
+            setGenerating(false);
+            setGeneratingStatus('');
+            window.dispatchEvent(new CustomEvent('health-system-update'));
+          },
+          (err) => {
+            if (err.retryAfter || err.code === 'RATE_LIMITED') {
+              setGenRetryAfter(err.retryAfter || 150);
+            } else {
+              setToast({ message: err.message || 'Failed to generate meal plan' });
+            }
+            setGenerating(false);
+            setGeneratingStatus('');
+          }
+        );
       } else {
         // Existing plan: regenerate each category sequentially with cache-busting toggles
         const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
@@ -175,21 +203,37 @@ export function useMealCalendar(onDaySelect) {
             }
           }
 
-          const res = await regenerateCategory(dateStr, mealType);
-          if (res.data?.plan) {
-            updatedPlan = res.data.plan;
-            setDayPlan(updatedPlan);
-          }
+          // Await sequentially via a promise wrapper for category stream
+          await new Promise((resolve, reject) => {
+            regenerateCategoryStream(
+              dateStr,
+              mealType,
+              (chunk) => {
+                setGeneratingStatus(`Recreating ${mealType}: ${chunk}`);
+              },
+              (plan) => {
+                if (plan) {
+                  updatedPlan = plan;
+                  setDayPlan(updatedPlan);
+                }
+                resolve();
+              },
+              (err) => {
+                reject(err);
+              }
+            );
+          });
         }
+        setGenerating(false);
+        setGeneratingStatus('');
+        window.dispatchEvent(new CustomEvent('health-system-update'));
       }
-      window.dispatchEvent(new CustomEvent('health-system-update'));
     } catch (err) {
       if (err.retryAfter || err.code === 'RATE_LIMITED') {
         setGenRetryAfter(err.retryAfter || 150);
       } else {
         setToast({ message: err.message || 'Failed to generate meal plan' });
       }
-    } finally {
       setGenerating(false);
       setGeneratingStatus('');
     }
@@ -263,10 +307,27 @@ export function useMealCalendar(onDaySelect) {
         }
       }
 
-      const res = await regenerateCategory(dateStr, mealType);
-      if (res.data?.plan) setDayPlan(res.data.plan);
+      setGeneratingStatus(`Recreating ${mealType}...`);
+      await new Promise((resolve, reject) => {
+        regenerateCategoryStream(
+          dateStr,
+          mealType,
+          (chunk) => {
+            setGeneratingStatus(`Recreating ${mealType}: ${chunk}`);
+          },
+          (plan) => {
+            if (plan) setDayPlan(plan);
+            resolve();
+          },
+          (err) => {
+            reject(err);
+          }
+        );
+      });
+      setGeneratingStatus('');
       window.dispatchEvent(new CustomEvent('health-system-update'));
     } catch (err) {
+      setGeneratingStatus('');
       if (err.retryAfter || err.code === 'RATE_LIMITED') {
         setSwapRetryAfter(err.retryAfter || 300);
         setToast({ message: `AI regeneration limit reached. Please wait ${err.retryAfter || 300} seconds.` });

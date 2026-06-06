@@ -54,11 +54,12 @@ The API uses httpOnly JWT cookie authentication (per D-01).
 | Food      | 200 per 15 minutes | All `/api/food` routes              |
 | Activities| 60 per 15 minutes  | All `/api/activities` routes        |
 | Progress  | 50 per 15 minutes  | All `/api/progress/` routes         |
-| Weekly Plans Generate | 50 per 15 minutes | POST /api/weekly-plans/generate|
-| Weekly Plans Regenerate-Day | 30 per 30 minutes | POST /api/weekly-plans/regenerate-day|
-| Weekly Plans Swap | 10 per 5 minutes | POST /api/weekly-plans/swap|
-| Weekly Plans Toggle-Complete | 60 per 1 minute | POST /api/weekly-plans/toggle-complete|
-| Daily Meal Plans| 50 per 15 minutes | POST /api/daily-meal-plans/generate|
+| Weekly Plans Generate | 50 per 1 minute | POST /api/weekly-plans/generate, POST /api/weekly-plans/generate-stream |
+| Weekly Plans Regenerate-Day | 30 per 1 minute | POST /api/weekly-plans/regenerate-day, POST /api/weekly-plans/regenerate-day-stream |
+| Weekly Plans Swap | 10 per 1 minute | POST /api/weekly-plans/swap, POST /api/weekly-plans/swap-stream |
+| Weekly Plans Toggle-Complete | 60 per 1 minute | POST /api/weekly-plans/toggle-complete |
+| Daily Meal Plans | 20 per 1 minute | All `/api/daily-meal-plans` LLM routes (/generate, /generate-stream, /regenerate-category, /regenerate-category-stream) |
+| Activity Plans | 50 per 15 minutes | All `/api/activity-plans` routes |
 
 Rate-limited requests return a 429 status with `RATE_LIMITED` error code.
 
@@ -826,20 +827,21 @@ All activity endpoints require authentication. Rate limit: Activities (60 per 15
 
 ### 7. Weekly Plans (LLM) — `/api/weekly-plans`
 
-All weekly plan endpoints require authentication. Rate limit: Weekly Plans Generate (50 per 15 minutes), Regenerate-Day (30 per 30 minutes), Swap (10 per 5 minutes), Toggle-Complete (60 per 1 minute).
+All weekly plan endpoints require authentication. Rate limiters: Generate (50 per 1 minute), Regenerate-Day (30 per 1 minute), Swap (10 per 1 minute), Toggle-Complete (60 per 1 minute).
 
 #### POST /api/weekly-plans/generate
 
 - **Auth:** Required
-- **Rate Limit:** Weekly Plans Generate (50 per 15 minutes)
-- **Description:** Generate a 7-day weekly activity plan using LLM (OpenRouter). The plan is personalized based on the user's profile, fitness goal, activity history (past 30 days), and available activities. Results are cached in-memory and persisted to the database.
+- **Rate Limit:** Weekly Plans Generate (50 per 1 minute)
+- **Description:** Generate a weekly activity plan using LLM (OpenRouter). Results are cached in-memory and persisted to the database.
 - **Request Body:**
   ```json
   {
-    "weekStart": "2026-05-25"
+    "weekStart": "2026-05-25",
+    "availableDays": 4
   }
   ```
-- **Notes:** `weekStart` is optional. If omitted, defaults to the current ISO week's Monday. Automatically normalized to the Monday of the specified week.
+- **Notes:** `weekStart` is optional. Defaults to the current ISO week's Monday. `availableDays` must be an integer between 4 and 6 (defaults to 4).
 - **Response 200:**
   ```json
   {
@@ -850,13 +852,16 @@ All weekly plan endpoints require authentication. Rate limit: Weekly Plans Gener
           {
             "day": 0,
             "label": "Monday",
+            "date": "2026-05-25",
             "activities": [
               {
+                "activity_id": 1,
                 "name": "Brisk Walking",
                 "durationMin": 30,
                 "intensity": "moderate",
                 "caloriesBurned": 165,
-                "category": "Cardio"
+                "category": "Cardio",
+                "completed": false
               }
             ],
             "totalCaloriesBurned": 165,
@@ -872,105 +877,91 @@ All weekly plan endpoints require authentication. Rate limit: Weekly Plans Gener
     }
   }
   ```
-- **Error Codes:** `VALIDATION_ERROR` (400), `RATE_LIMITED` (429), `AUTHENTICATION_ERROR` (401)
+
+#### POST /api/weekly-plans/generate-stream
+
+- **Auth:** Required
+- **Rate Limit:** Weekly Plans Generate (50 per 1 minute)
+- **Description:** Generate a weekly activity plan (Server-Sent Events stream).
+- **Request Body:** Same as `POST /api/weekly-plans/generate`
+- **Response:** `text/event-stream` returning Server-Sent Events in the format:
+  ```
+  data: {"type": "chunk", "content": "..."}
+  
+  data: {"type": "done", "plan": {...}}
+  
+  data: {"type": "error", "message": "..."}
+  ```
 
 ---
 
 #### GET /api/weekly-plans
 
-
 - **Auth:** Required
 - **Rate Limit:** Global
-- **Description:** Retrieve the current weekly plan. Checks in-memory cache first (node-cache, fast, no DB query), then falls back to the database.
+- **Description:** Retrieve the current weekly plan. Checks in-memory cache first, then falls back to the database.
 - **Query Parameters:**
   - `weekStart` (optional): Format `YYYY-MM-DD`. Defaults to the current ISO week's Monday.
-- **Response 200 (cached):**
-  ```json
-  {
-    "success": true,
-    "data": {
-      "plan": {
-        "days": [ ... ],
-        "weekStart": "2026-05-25",
-        "weekLabel": "May 25 - May 31",
-        "status": "active",
-        "generated_at": "2026-05-31T12:00:00.000Z"
-      },
-      "fromCache": true
-    }
-  }
-  ```
-- **Response 200 (no plan):**
-  ```json
-  {
-    "success": true,
-    "data": {
-      "plan": null,
-      "fromCache": false
-    }
-  }
-  ```
-- **Error Codes:** `VALIDATION_ERROR` (400), `AUTHENTICATION_ERROR` (401)
-
-#### POST /api/weekly-plans/regenerate-day
-
-- **Auth:** Required
-- **Rate Limit:** Weekly Plans Regenerate-Day (30 per 30 minutes)
-- **Description:** Regenerate a single day within an existing weekly plan. The LLM generates a full new plan but only the specified day is merged into the cached plan; other days remain unchanged. Tracks per-day retry timestamps for independent rate limit display.
-- **Request Body:**
-  ```json
-  {
-    "weekStart": "2026-05-25",
-    "dayIndex": 2
-  }
-  ```
-- **Constraints:**
-  - `weekStart`: Optional. Defaults to current week's Monday.
-  - `dayIndex`: Required. Integer between 0 (Monday) and 6 (Sunday).
 - **Response 200:**
   ```json
   {
     "success": true,
     "data": {
-      "plan": { "days": [ ... ] },
-      "regeneratedDay": 2,
-      "fromCache": false
+      "plan": { ... },
+      "fromCache": true
     }
   }
   ```
-- **Error Codes:** `VALIDATION_ERROR` (400), `RATE_LIMITED` (429), `AUTHENTICATION_ERROR` (401)
 
----
-
-#### POST /api/weekly-plans/toggle-complete
+#### POST /api/weekly-plans/regenerate-day
 
 - **Auth:** Required
-- **Rate Limit:** Dedicated toggle-complete limiter
-- **Description:** Toggle the completion status of a weekly plan activity for a given day. Uses server-authoritative toggle to prevent race conditions. Returns updated plan with the toggled day's activities.
+- **Rate Limit:** Weekly Plans Regenerate-Day (30 per 1 minute)
+- **Description:** Regenerate a single day within an existing weekly plan.
 - **Request Body:**
   ```json
   {
     "weekStart": "2026-05-25",
     "dayIndex": 2,
-    "activityName": "Brisk Walking"
+    "availableDays": 4
   }
   ```
+- **Constraints:**
+  - `weekStart`: Optional.
+  - `dayIndex`: Required. Integer between 0 (Monday) and 6 (Sunday).
+  - `availableDays`: Optional. Integer between 4 and 6.
 - **Response 200:**
   ```json
   {
     "success": true,
     "data": {
-      "plan": { "days": [ ... ] }
+      "plan": { ... },
+      "regeneratedDay": 2,
+      "fromCache": false
     }
   }
   ```
-- **Error Codes:** `VALIDATION_ERROR` (400), `RATE_LIMITED` (429), `AUTHENTICATION_ERROR` (401)
+
+#### POST /api/weekly-plans/regenerate-day-stream
+
+- **Auth:** Required
+- **Rate Limit:** Weekly Plans Regenerate-Day (30 per 1 minute)
+- **Description:** Regenerate a single day within an existing weekly plan (Server-Sent Events stream).
+- **Request Body:** Same as `POST /api/weekly-plans/regenerate-day`
+- **Response:** `text/event-stream` returning Server-Sent Events in the format:
+  ```
+  data: {"type": "chunk", "content": "..."}
+  
+  data: {"type": "done", "plan": {...}}
+  
+  data: {"type": "error", "message": "..."}
+  ```
 
 #### POST /api/weekly-plans/swap
 
 - **Auth:** Required
-- **Rate Limit:** Dedicated swap limiter
-- **Description:** Swap a single activity in a weekly plan day with an LLM-generated replacement. Replaces only the specified activity in-place without regenerating the full day. Has independent rate limit tracking.
+- **Rate Limit:** Weekly Plans Swap (10 per 1 minute)
+- **Description:** Swap a single activity in a weekly plan day with an LLM-generated replacement. Only works for the current day.
 - **Request Body:**
   ```json
   {
@@ -985,32 +976,70 @@ All weekly plan endpoints require authentication. Rate limit: Weekly Plans Gener
   {
     "success": true,
     "data": {
-      "plan": { "days": [ ... ] }
+      "plan": { ... }
     }
   }
   ```
-- **Error Codes:** `VALIDATION_ERROR` (400), `RATE_LIMITED` (429), `AUTHENTICATION_ERROR` (401)
+
+#### POST /api/weekly-plans/swap-stream
+
+- **Auth:** Required
+- **Rate Limit:** Weekly Plans Swap (10 per 1 minute)
+- **Description:** Swap a single activity in a weekly plan day with an LLM-generated replacement (Server-Sent Events stream). Only works for the current day.
+- **Request Body:**
+  ```json
+  {
+    "weekStart": "2026-05-25",
+    "dayIndex": 2,
+    "activityId": 1
+  }
+  ```
+- **Response:** `text/event-stream` returning Server-Sent Events in the format:
+  ```
+  data: {"type": "chunk", "content": "..."}
+  
+  data: {"type": "done", "plan": {...}}
+  
+  data: {"type": "error", "message": "..."}
+  ```
+
+#### POST /api/weekly-plans/toggle-complete
+
+- **Auth:** Required
+- **Rate Limit:** Weekly Plans Toggle-Complete (60 per 1 minute)
+- **Description:** Toggle the completion status of a weekly plan activity for a given day.
+- **Request Body:**
+  ```json
+  {
+    "weekStart": "2026-05-25",
+    "dayIndex": 2,
+    "activityName": "Brisk Walking"
+  }
+  ```
+- **Response 200:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "plan": { ... }
+    }
+  }
+  ```
 
 ---
 
 ### 8. Daily Meal Plans — `/api/daily-meal-plans`
 
-All daily meal plan endpoints require authentication.
-
-**Rate Limiters:**
-
-| Group              | Limit              | Applied To                              |
-|--------------------|--------------------|-----------------------------------------|
-| Daily Meal Generate | 50 per 15 minutes | `POST /api/daily-meal-plans/generate`  |
+All daily meal plan endpoints require authentication. Rate limit: 20 per 1 minute for LLM routes.
 
 #### GET /api/daily-meal-plans
 
 - **Auth:** Required
 - **Rate Limit:** Global
-- **Description:** Retrieve the current daily meal plan. Checks in-memory cache first, then falls back to the `daily_meal_plans` database table.
+- **Description:** Retrieve the daily meal plan. Checks cache first, then the `daily_meal_plans` database table.
 - **Query Parameters:**
   - `date` (optional): Format `YYYY-MM-DD`. Defaults to today.
-- **Response 200 (cached):**
+- **Response 200:**
   ```json
   {
     "success": true,
@@ -1029,60 +1058,55 @@ All daily meal plan endpoints require authentication.
         ],
         "total_calories": 1950,
         "calorie_target": 2000,
-        "generated_at": "2026-05-31T12:00:00.000Z",
-        "llm_model": "deepseek/deepseek-chat:free"
+        "generated_at": "2026-05-31T12:00:00.000Z"
       },
       "fromCache": true
     }
   }
   ```
-- **Response 200 (no plan):**
-  ```json
-  {
-    "success": true,
-    "data": {
-      "plan": null,
-      "fromCache": false
-    }
-  }
-  ```
-- **Error Codes:** `VALIDATION_ERROR` (400), `AUTHENTICATION_ERROR` (401)
 
 #### POST /api/daily-meal-plans/generate
 
 - **Auth:** Required
-- **Rate Limit:** Daily Meal Generate (50 per 15 minutes)
-- **Description:** Generate a 1-day meal plan using LLM (OpenRouter). Contains 4 meals (breakfast, lunch, dinner, snack) with items selected from the existing food database. Portions auto-calculated to meet the user's calorie target.
+- **Rate Limit:** Daily Meal Plans (20 per 1 minute)
+- **Description:** Generate a 1-day meal plan using LLM.
 - **Request Body:**
   ```json
   {
     "date": "2026-05-31"
   }
   ```
-- **Notes:** `date` is optional. Defaults to today.
 - **Response 200:**
   ```json
   {
     "success": true,
     "data": {
-      "plan": {
-        "date": "2026-05-31",
-        "meals": [ ... ],
-        "total_calories": 1950,
-        "calorie_target": 2000,
-        "generated_at": "2026-05-31T12:00:00.000Z"
-      },
+      "plan": { ... },
       "fromCache": false
     }
   }
   ```
-- **Error Codes:** `VALIDATION_ERROR` (400), `RATE_LIMITED` (429), `AUTHENTICATION_ERROR` (401)
 
-#### POST /api/daily-meal-plans/log
+#### POST /api/daily-meal-plans/generate-stream
 
 - **Auth:** Required
-- **Rate Limit:** Global
-- **Description:** Log all meal items from the current daily meal plan to the food log. Uses an explicit database transaction for atomicity. Items with `logged: true` are skipped (idempotent).
+- **Rate Limit:** Daily Meal Plans (20 per 1 minute)
+- **Description:** Generate a 1-day meal plan (Server-Sent Events stream).
+- **Request Body:** Same as `POST /api/daily-meal-plans/generate`
+- **Response:** `text/event-stream` returning Server-Sent Events in the format:
+  ```
+  data: {"type": "chunk", "content": "..."}
+  
+  data: {"type": "done", "plan": {...}}
+  
+  data: {"type": "error", "message": "..."}
+  ```
+
+#### POST /api/daily-meal-plans/regenerate-category
+
+- **Auth:** Required
+- **Rate Limit:** Daily Meal Plans (20 per 1 minute)
+- **Description:** Regenerate a specific meal category in the current meal plan.
 - **Request Body:**
   ```json
   {
@@ -1090,7 +1114,43 @@ All daily meal plan endpoints require authentication.
     "mealType": "lunch"
   }
   ```
-- **Notes:** `date` defaults to today. `mealType` is optional; if omitted, all meals for the day are logged.
+- **Response 200:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "plan": { ... }
+    }
+  }
+  ```
+
+#### POST /api/daily-meal-plans/regenerate-category-stream
+
+- **Auth:** Required
+- **Rate Limit:** Daily Meal Plans (20 per 1 minute)
+- **Description:** Regenerate a specific meal category in the current meal plan (Server-Sent Events stream).
+- **Request Body:** Same as `POST /api/daily-meal-plans/regenerate-category`
+- **Response:** `text/event-stream` returning Server-Sent Events in the format:
+  ```
+  data: {"type": "chunk", "content": "..."}
+  
+  data: {"type": "done", "plan": {...}}
+  
+  data: {"type": "error", "message": "..."}
+  ```
+
+#### POST /api/daily-meal-plans/log
+
+- **Auth:** Required
+- **Rate Limit:** Global
+- **Description:** Log all or specific meal items from the daily meal plan to the food log.
+- **Request Body:**
+  ```json
+  {
+    "date": "2026-05-31",
+    "mealType": "lunch"
+  }
+  ```
 - **Response 200:**
   ```json
   {
@@ -1101,13 +1161,12 @@ All daily meal plan endpoints require authentication.
     }
   }
   ```
-- **Error Codes:** `VALIDATION_ERROR` (400), `NOT_FOUND` (404), `AUTHENTICATION_ERROR` (401)
 
 #### POST /api/daily-meal-plans/toggle-item
 
 - **Auth:** Required
 - **Rate Limit:** Global
-- **Description:** Toggle the logged status of an individual meal item. When toggled from false→true, the item is logged to the food log. When toggled from true→false, the food log entry is deleted. Idempotent.
+- **Description:** Toggle the logged status of a specific meal item.
 - **Request Body:**
   ```json
   {
@@ -1126,31 +1185,6 @@ All daily meal plan endpoints require authentication.
     }
   }
   ```
-- **Error Codes:** `VALIDATION_ERROR` (400), `NOT_FOUND` (404), `AUTHENTICATION_ERROR` (401)
-
-#### POST /api/daily-meal-plans/swap-item
-
-- **Auth:** Required
-- **Rate Limit:** Global
-- **Description:** Swap a single meal item in a daily plan with an LLM-generated replacement. Replaces only the specified item without regenerating the full meal or day.
-- **Request Body:**
-  ```json
-  {
-    "date": "2026-05-31",
-    "mealType": "lunch",
-    "itemIndex": 0
-  }
-  ```
-- **Response 200:**
-  ```json
-  {
-    "success": true,
-    "data": {
-      "plan": { "meals": [ ... ] }
-    }
-  }
-  ```
-- **Error Codes:** `VALIDATION_ERROR` (400), `AUTHENTICATION_ERROR` (401)
 
 ---
 
@@ -1162,20 +1196,29 @@ All progress endpoints require authentication. Rate limit: Progress (50 per 15 m
 
 - **Auth:** Required
 - **Rate Limit:** Progress
-- **Description:** Log or update a weight entry for a specific date. Uses upsert — if a weight log already exists for the given date, it is updated. Also syncs the weight to the user's profile.
-- **Constraints:**
-  - weightKg: Required, number between 2-300.
-  - loggedDate: Required, format YYYY-MM-DD.
-  - notes: Optional string.
+- **Description:** Log or update a weight entry for a specific date. Updates the user's profile weight too.
 - **Request Body:**
   ```json
-  { "weightKg": 70.5, "loggedDate": "2026-05-28", "notes": "Morning weigh-in" }
+  {
+    "weightKg": 70.5,
+    "loggedDate": "2026-05-28",
+    "notes": "Morning weigh-in"
+  }
   ```
 - **Response 201:**
   ```json
-  { "success": true, "data": { "entry": { "id": "uuid", "user_id": "uuid", "weight_kg": 70.5, "logged_date": "2026-05-28", "source": "manual", "notes": "Morning weigh-in" } } }
+  {
+    "success": true,
+    "data": {
+      "entry": {
+        "id": "uuid",
+        "weight_kg": 70.5,
+        "logged_date": "2026-05-28",
+        "notes": "Morning weigh-in"
+      }
+    }
+  }
   ```
-- **Error Codes:** VALIDATION_ERROR (400), AUTHENTICATION_ERROR (401)
 
 #### GET /api/progress/weight
 
@@ -1183,22 +1226,111 @@ All progress endpoints require authentication. Rate limit: Progress (50 per 15 m
 - **Rate Limit:** Progress
 - **Description:** Retrieve weight history entries sorted by date descending.
 - **Query Parameters:**
-  - limit (optional): Maximum entries to return. Defaults to 50.
+  - `limit` (optional): Maximum entries to return. Defaults to 50.
 - **Response 200:**
   ```json
-  { "success": true, "data": { "entries": [ { "id": "uuid", "user_id": "uuid", "weight_kg": 70.5, "logged_date": "2026-05-28", "source": "manual", "notes": "Morning weigh-in" } ] } }
+  {
+    "success": true,
+    "data": {
+      "entries": [ ... ]
+    }
+  }
   ```
-- **Error Codes:** AUTHENTICATION_ERROR (401)
 
 #### DELETE /api/progress/weight/:id
 
 - **Auth:** Required
 - **Rate Limit:** Progress
-- **Description:** Delete a specific weight log entry. Only the owning user can delete their own logs.
+- **Description:** Delete a specific weight log entry.
 - **Path Parameters:**
-  - id: UUID of the weight log entry.
+  - `id`: UUID of the entry.
 - **Response 200:**
   ```json
-  { "success": true, "data": { "deleted": true } }
+  {
+    "success": true,
+    "data": {
+      "deleted": true
+    }
+  }
   ```
-- **Error Codes:** VALIDATION_ERROR (400) — invalid id, NOT_FOUND (404), AUTHENTICATION_ERROR (401)
+
+---
+
+### 10. Activity Plans (LLM) — `/api/activity-plans`
+
+All daily activity recommendation plan endpoints require authentication. Rate limit: Activity Plans (50 per 15 minutes).
+
+#### GET /api/activity-plans
+
+- **Auth:** Required
+- **Rate Limit:** Global
+- **Description:** Retrieve the daily activity recommendation plan for a date.
+- **Query Parameters:**
+  - `date` (optional): Format `YYYY-MM-DD`. Defaults to today.
+- **Response 200:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "plan": {
+        "date": "2026-05-31",
+        "activities": [
+          {
+            "activity_id": 1,
+            "activity_name": "Brisk Walking",
+            "duration_min": 30,
+            "intensity": "moderate",
+            "calories_burned": 165,
+            "logged": false
+          }
+        ]
+      },
+      "fromCache": true
+    }
+  }
+  ```
+
+#### POST /api/activity-plans/generate
+
+- **Auth:** Required
+- **Rate Limit:** Activity Plans (50 per 15 minutes)
+- **Description:** Generate daily activity recommendations.
+- **Request Body:**
+  ```json
+  {
+    "date": "2026-05-31"
+  }
+  ```
+- **Response 200:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "plan": { ... },
+      "fromCache": false
+    }
+  }
+  ```
+
+#### POST /api/activity-plans/log
+
+- **Auth:** Required
+- **Rate Limit:** Global
+- **Description:** Batch-log selected activities from the daily plan to logs.
+- **Request Body:**
+  ```json
+  {
+    "date": "2026-05-31",
+    "activityIndexes": [0]
+  }
+  ```
+- **Response 200:**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "logged": 1,
+      "activities": [ ... ]
+    }
+  }
+  ```

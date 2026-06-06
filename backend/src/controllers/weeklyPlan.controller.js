@@ -498,10 +498,226 @@ async function toggleComplete(req, res, next) {
   }
 }
 
+async function generateStream(req, res, next) {
+  const userId = req.user.userId;
+  let weekStart = req.body.weekStart;
+
+  if (weekStart && !isValidDateString(weekStart)) {
+    return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
+  }
+  weekStart = getMonday(weekStart ? new Date(weekStart) : new Date());
+
+  let availableDays = req.body.availableDays;
+  if (availableDays !== undefined && availableDays !== null) {
+    if (!Number.isInteger(availableDays) || availableDays < 4 || availableDays > 6) {
+      return errorResponse(res, 'availableDays must be an integer between 4 and 6', 400, 'VALIDATION_ERROR');
+    }
+  } else {
+    availableDays = 4;
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const onChunk = (chunk) => {
+    res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
+  };
+
+  try {
+    const existingPlan = await findByUserAndWeek(userId, weekStart);
+    if (existingPlan && existingPlan.plan_data && Array.isArray(existingPlan.plan_data.days) && !isOldFormat(existingPlan.plan_data)) {
+      setCachedPlan(userId, weekStart, existingPlan.plan_data);
+      res.write(`data: ${JSON.stringify({ type: 'done', plan: existingPlan.plan_data })}\n\n`);
+      res.end();
+      return;
+    }
+
+    const result = await generateWeeklyPlan({
+      getProfile: (id) => findProfileByUserId(id),
+      getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
+      getActivities: () => getAllActivities(),
+      getTopActivities: (id, limit) => getTopActivities(id, limit),
+      userId,
+      weekStart,
+      availableDays,
+      onChunk,
+    });
+
+    if (result.plan && Array.isArray(result.plan.days)) {
+      await upsertPlan(userId, weekStart, result.plan, result.status || 'active');
+    }
+
+    res.write(`data: ${JSON.stringify({ type: 'done', plan: result.plan })}\n\n`);
+    res.end();
+  } catch (err) {
+    res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
+    res.end();
+  }
+}
+
+async function regenerateDayStream(req, res, next) {
+  const userId = req.user.userId;
+  const { weekStart, dayIndex, availableDays } = req.body;
+
+  if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {
+    return errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR');
+  }
+
+  let targetWeekStart = weekStart;
+  if (targetWeekStart && !isValidDateString(targetWeekStart)) {
+    return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
+  }
+  targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const onChunk = (chunk) => {
+    res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
+  };
+
+  try {
+    const deps = {
+      getProfile: (id) => findProfileByUserId(id),
+      getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
+      getActivities: () => getAllActivities(),
+      getTopActivities: (id, limit) => getTopActivities(id, limit),
+      userId,
+      weekStart: targetWeekStart,
+      onChunk,
+    };
+    if (availableDays !== undefined && availableDays !== null) {
+      if (!Number.isInteger(availableDays) || availableDays < 4 || availableDays > 6) {
+        res.write(`data: ${JSON.stringify({ type: 'error', message: 'availableDays must be an integer between 4 and 6' })}\n\n`);
+        res.end();
+        return;
+      }
+      deps.availableDays = availableDays;
+    }
+
+    const result = await regenerateDay(deps, dayIndex);
+
+    res.write(`data: ${JSON.stringify({ type: 'done', plan: result.plan })}\n\n`);
+    res.end();
+  } catch (err) {
+    res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
+    res.end();
+  }
+}
+
+async function swapStream(req, res, next) {
+  const userId = req.user.userId;
+  const { activityId, dayIndex, weekStart } = req.body;
+
+  if (activityId === undefined || activityId === null) {
+    return errorResponse(res, 'activityId is required', 400, 'VALIDATION_ERROR');
+  }
+  if (typeof activityId !== 'number' || activityId < 1) {
+    return errorResponse(res, 'activityId must be a positive integer', 400, 'VALIDATION_ERROR');
+  }
+  if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {
+    return errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR');
+  }
+
+  let targetWeekStart = weekStart;
+  if (targetWeekStart && !isValidDateString(targetWeekStart)) {
+    return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
+  }
+  targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const dayDate = getMonday(new Date());
+  const dayOffset = dayIndex;
+  const targetDate = new Date(dayDate);
+  targetDate.setDate(targetDate.getDate() + dayOffset);
+  const targetDateStr = targetDate.toISOString().split('T')[0];
+  if (targetDateStr !== todayStr) {
+    return errorResponse(res, 'Can only swap activities for today', 400, 'VALIDATION_ERROR');
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const onChunk = (chunk) => {
+    res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
+  };
+
+  const lockKey = `swap_${userId}_${targetWeekStart}`;
+  const release = await acquireLock(lockKey);
+  try {
+    let planForSwap = getCachedPlan(userId, targetWeekStart);
+    if (!planForSwap || !Array.isArray(planForSwap.days)) {
+      const dbPlan = await findByUserAndWeek(userId, targetWeekStart);
+      if (dbPlan && dbPlan.plan_data && Array.isArray(dbPlan.plan_data.days)) {
+        planForSwap = dbPlan.plan_data;
+        setCachedPlan(userId, targetWeekStart, planForSwap);
+      }
+    }
+
+    const deps = {
+      getProfile: (id) => findProfileByUserId(id),
+      getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
+      getActivities: () => getAllActivities(),
+      getTopActivities: (id, limit) => getTopActivities(id, limit),
+      getRandomActivity: (tags) => getRandomActivities(tags, 1),
+      userId,
+      weekStart: targetWeekStart,
+      onChunk,
+    };
+
+    if (planForSwap && isOldFormat(planForSwap)) {
+      clearCachedPlan(userId, targetWeekStart);
+      const inferredDays = inferAvailableDays(planForSwap);
+      const migrationDeps = {
+        getProfile: (id) => findProfileByUserId(id),
+        getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
+        getActivities: () => getAllActivities(),
+        getTopActivities: (id, limit) => getTopActivities(id, limit),
+        userId,
+        weekStart: targetWeekStart,
+        availableDays: inferredDays,
+        onChunk,
+      };
+      const migrationResult = await generateWeeklyPlan(migrationDeps);
+      if (!migrationResult.plan || !Array.isArray(migrationResult.plan.days) || migrationResult.plan.days.length === 0) {
+        migrationFailCooldown.set(`${userId}_${targetWeekStart}`, Date.now());
+        throw new AppError('MigrationError', 'Failed to migrate old-format plan. Cannot proceed with swap.', 500);
+      }
+      await upsertPlan(userId, targetWeekStart, migrationResult.plan, 'active');
+    }
+
+    const updatedCached = getCachedPlan(userId, targetWeekStart);
+    if (updatedCached && Array.isArray(updatedCached.days)) {
+      const activityDays = updatedCached.days.filter(d => d.rest_day === false).length;
+      if (activityDays > 0) deps.availableDays = activityDays;
+    }
+
+    const result = await swapActivity(deps, activityId, dayIndex, true);
+    await upsertPlan(userId, targetWeekStart, result.plan, 'active');
+
+    res.write(`data: ${JSON.stringify({ type: 'done', plan: result.plan })}\n\n`);
+    res.end();
+  } catch (err) {
+    res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
+    res.end();
+  } finally {
+    release();
+  }
+}
+
 export default {
   get,
   generate,
   regenerateDay: regenerateDayHandler,
   swap: swapHandler,
   toggleComplete,
+  generateStream,
+  regenerateDayStream,
+  swapStream,
 };
