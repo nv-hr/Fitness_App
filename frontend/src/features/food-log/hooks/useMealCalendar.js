@@ -50,7 +50,7 @@ import { useCountdownTimer } from '../../../shared/hooks/useCountdownTimer.js';
 export function useMealCalendar(onDaySelect) {
   const [selectedDay, setSelectedDay] = useState(() => startOfToday());
   const [dayPlan, setDayPlan] = useState(null);
-  const [planLoading, setPlanLoading] = useState(false);
+  const [planLoading, setPlanLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [generatingStatus, setGeneratingStatus] = useState('');
   const [loggingMeal, setLoggingMeal] = useState(null);
