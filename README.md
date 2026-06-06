@@ -44,16 +44,16 @@ Built with React 19, Express 5, and Supabase PostgreSQL.
 ### 1. Configure environment
 
 ```bash
-cp backend/.env.example backend/.env
+cp .env.example .env
 ```
 
-Edit `backend/.env` with your settings:
+Edit `.env` with your settings:
 
 | Variable               | Description                            |
 |------------------------|----------------------------------------|
 | `NODE_ENV`             | `development`                          |
 | `PORT`                 | Backend port (default: `3001`)         |
-| `FRONTEND_URL`         | Frontend origin (dev: `http://localhost:5173`) |
+| `FRONTEND_URL`         | Frontend origin (dev: `http://localhost:3000`) |
 | `JWT_SECRET`           | Secret key for signing JWT tokens      |
 | `GOOGLE_CLIENT_ID`     | Google OAuth 2.0 client ID             |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth 2.0 client secret         |
@@ -63,6 +63,7 @@ Edit `backend/.env` with your settings:
 | `LLM_MODEL`            | Primary model for weekly plan generation |
 | `LLM_FALLBACK_MODEL`   | Fallback model when primary unavailable |
 | `DATABASE_URL`         | Supabase PostgreSQL connection string  |
+| `DATABASE_URL_TEST`    | Supabase PostgreSQL connection string for integration testing |
 
 ### 2. Install dependencies
 
@@ -78,19 +79,22 @@ Start both backend and frontend development servers simultaneously using:
 npm run dev
 ```
 
-The frontend dev server (port 5173) proxies `/api` requests to the backend (port 3001). Open `http://localhost:5173`.
+The frontend dev server (port 3000) proxies `/api` requests to the backend (port 3001). Open `http://localhost:3000`.
 
 ## Docker Deployment
 
 ```bash
-# Build and start the production container
-docker compose up --build -d
+# Build the production image
+docker build -t fitness-app .
+
+# Run the container (injecting your .env file)
+docker run -p 3001:3001 --env-file .env fitness-app
 ```
 
 This builds a multi-stage Docker image:
 
 1. **Builder stage** — Installs all dependencies and builds the React frontend with Vite.
-2. **Production stage** — Installs only production dependencies, copies the built frontend to `./public`, and serves both the Express API and static frontend on port 80.
+2. **Production stage** — Installs only production dependencies, copies the built frontend to `./public`, and serves both the Express API and static frontend on port 80 (or port mapping configured in run command).
 
 The container includes a health check at `GET /api/health`.
 
@@ -109,7 +113,7 @@ fitness-app/
 │   ├── src/
 │   │   ├── config/           # Database, Passport configuration
 │   │   ├── controllers/      # Request handlers
-│   │   ├── middlewares/       # Auth, validation, error handling
+│   │   ├── middlewares/      # Auth, validation, error handling
 │   │   ├── repositories/     # Database queries (pg)
 │   │   ├── routes/           # Route definitions
 │   │   ├── services/         # Business logic
@@ -124,10 +128,8 @@ fitness-app/
 │   │       ├── calendar/     # CalendarGrid, MonthNav, DayDetailPanel, hooks, utils
 │   │       └── hooks/        # useResponsive, etc.
 │   └── vite.config.js        # Vite config (dev proxy included)
-├── supabase/                 # Database configuration and migrations
-├── scripts/                  # Utility scripts (start-all.sh)
+├── scripts/                  # Utility scripts (db-init.js, start-all.sh, remove_postman_folder.js)
 ├── Dockerfile                # Multi-stage production build
-├── docker-compose.yml        # Production container setup
 └── LICENSE                   # GNU General Public License v3
 ```
 
