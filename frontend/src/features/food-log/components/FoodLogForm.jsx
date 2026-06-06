@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { getDailyLogs, getLogHistory, getRecentFoods, logFood } from '../api/foodLogApi.js';
 import FoodSearch from './FoodSearch.jsx';
 import CustomFoodForm from './CustomFoodForm.jsx';
@@ -19,7 +20,7 @@ export default function FoodLogForm() {
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = format(new Date(), 'yyyy-MM-dd');
 
   useEffect(() => {
     async function loadData() {

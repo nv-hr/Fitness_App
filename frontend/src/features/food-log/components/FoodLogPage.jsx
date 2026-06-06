@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { getDailySummary } from '../api/foodLogApi.js';
 import CalorieSummary from './CalorieSummary.jsx';
 import FoodLogForm from './FoodLogForm.jsx';
@@ -11,7 +12,7 @@ export default function FoodLogPage() {
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = format(new Date(), 'yyyy-MM-dd');
 
   useEffect(() => {
     async function loadSummary() {

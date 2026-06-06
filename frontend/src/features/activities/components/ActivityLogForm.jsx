@@ -1,11 +1,12 @@
 import { useState } from 'react';
+import { format } from 'date-fns';
 import { calculateActivityCalories } from './previewCalories.js';
 import { Flame, Clock, Zap, Calendar, RotateCw, AlertCircle } from 'lucide-react';
 
 export default function ActivityLogForm({ activity, onSubmit, onCancel }) {
   const [durationMin, setDurationMin] = useState(String(activity.duration_min));
   const [intensity, setIntensity] = useState('moderate');
-  const [loggedDate, setLoggedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [loggedDate, setLoggedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [submitting, setSubmitting] = useState(false);
 
   const previewCalories = calculateActivityCalories(

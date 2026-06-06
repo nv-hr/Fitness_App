@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { startOfMonth } from 'date-fns';
+import { startOfMonth, format } from 'date-fns';
 import { useMonthData } from '../../shared/calendar/index.js';
 import { getWeeklyPlan } from './api/activityCalendarApi.js';
 import { getActivitySummary } from './api/activityApi.js';
@@ -22,7 +22,7 @@ export default function ActivityPage() {
 
   const { dayStatusMap, loading, error } = useMonthData(currentMonth, fetchWeekFn);
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = format(new Date(), 'yyyy-MM-dd');
 
   useEffect(() => {
     async function loadSummary() {

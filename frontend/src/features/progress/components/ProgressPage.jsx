@@ -1,9 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { TrendingUp } from 'lucide-react';
 import WeightEntryCard from './WeightEntryCard.jsx';
 import WeightHistoryTable from './WeightHistoryTable.jsx';
 import WeightTrendChart from './WeightTrendChart.jsx';
 import TrendPredictionCard from './TrendPredictionCard.jsx';
+import { getProfile } from '../../profile/api/profileApi.js';
 
 /**
  * ProgressPage
@@ -12,12 +13,30 @@ import TrendPredictionCard from './TrendPredictionCard.jsx';
  * Why this wrapper: keeps route-level concerns (page header, layout) separated
  * from the individual tracking widgets, which are independently testable.
  */
-export default function ProgressPage({ profile }) {
+export default function ProgressPage() {
+  const [profile, setProfile] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    getProfile()
+      .then((data) => setProfile(data.data.profile))
+      .catch(() => {/* profile may not exist yet */});
+  }, [refreshKey]);
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setRefreshKey((k) => k + 1);
+    };
+    window.addEventListener('health-system-update', handleUpdate);
+    return () => {
+      window.removeEventListener('health-system-update', handleUpdate);
+    };
+  }, []);
 
   /** Bubble success upward so all cards refetch their data simultaneously */
   const handleLogSuccess = useCallback(() => {
     setRefreshKey((k) => k + 1);
+    window.dispatchEvent(new CustomEvent('health-system-update'));
   }, []);
 
   return (
