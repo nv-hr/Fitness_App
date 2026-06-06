@@ -189,6 +189,9 @@ function generateFallbackDailyMealPlan(calorieTarget, dbFoods) {
 
 /**
  * Swap a single food item with a random different food from the same category.
+ * 
+ * @param {object} deps - Dependencies and context.
+ * @returns {Promise<{plan: object}>}
  */
 export async function regenerateCategory(deps) {
   const { userId, planDate, mealType, getProfile, getAllFoods, getLogHistory } = deps;
@@ -200,8 +203,8 @@ export async function regenerateCategory(deps) {
   }
 
   // 2. Generate a new full plan (reuse generateDailyMealPlan functionality)
-  // We need to pass the dependencies correctly to generateDailyMealPlan
-  const newPlanResult = await generateDailyMealPlan(deps);
+  // Pass bypassCache: true so that we generate a fresh plan instead of hitting cached active plan
+  const newPlanResult = await generateDailyMealPlan({ ...deps, bypassCache: true });
   const newPlan = newPlanResult.plan;
   if (!newPlan) {
     throw new AppError('GenerationError', 'Failed to generate new meals', 500);
@@ -234,13 +237,23 @@ export async function regenerateCategory(deps) {
 
   // Persist
   await upsertPlan(userId, planDate, data, plan.status);
+
+  // Ensure the cache is updated with the final merged plan
+  setCachedPlan(userId, planDate, JSON.parse(JSON.stringify(data)), 'meal');
+
   return { plan: data };
 }
 
+/**
+ * Generate a daily meal plan using LLM or fallback template.
+ * 
+ * @param {object} deps - Dependencies and options.
+ * @returns {Promise<{plan: object, fromCache: boolean, status: string}>}
+ */
 export async function generateDailyMealPlan(deps) {
-  const { userId, planDate, getProfile, getAllFoods, getLogHistory, forceFallback } = deps;
+  const { userId, planDate, getProfile, getAllFoods, getLogHistory, forceFallback, bypassCache } = deps;
   const cached = getCachedPlan(userId, planDate, 'meal');
-  if (!forceFallback && cached && cached.status !== 'fallback') {
+  if (!forceFallback && !bypassCache && cached && cached.status !== 'fallback') {
     return { plan: cached, fromCache: true, status: 'active' };
   }
   let profile, dbFoods, recentLogs;
