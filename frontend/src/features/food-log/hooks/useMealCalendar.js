@@ -110,37 +110,6 @@ export function useMealCalendar(onDaySelect) {
     return () => { cancelled = true; };
   }, [selectedDay]);
 
-  // ── Auto-generate plan for today if it's missing ────────────────────────────
-
-  useEffect(() => {
-    if (!selectedDay) return;
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    const selStr = format(selectedDay, 'yyyy-MM-dd');
-
-    if (selStr === todayStr && !planLoading && !dayPlan && !generating && genRetryAfter === null) {
-      setGenerating(true);
-      setGeneratingStatus('Auto-formulating meals...');
-      generateDailyMealPlanStream(
-        todayStr,
-        (chunk) => {
-          setGeneratingStatus(`Auto-formulating: ${chunk}`);
-        },
-        (plan) => {
-          if (plan) setDayPlan(plan);
-          setGenerating(false);
-          setGeneratingStatus('');
-        },
-        (err) => {
-          if (err.retryAfter || err.code === 'RATE_LIMITED') {
-            setGenRetryAfter(err.retryAfter || 150);
-          }
-          setGenerating(false);
-          setGeneratingStatus('');
-        }
-      );
-    }
-  }, [selectedDay, planLoading, dayPlan, generating, genRetryAfter, setGenRetryAfter]);
-
   // ── Manual full-day regeneration ────────────────────────────────────────────
 
   const handleGenerateDay = useCallback(async () => {
@@ -162,72 +131,58 @@ export function useMealCalendar(onDaySelect) {
       }
 
       if (!activeTodayPlan?.meals?.length) {
-        setGeneratingStatus('Formulating...');
-        generateDailyMealPlanStream(
-          dateStr,
-          (chunk) => {
-            setGeneratingStatus(`Formulating: ${chunk}`);
-          },
-          (plan) => {
-            if (plan) setDayPlan(plan);
-            setGenerating(false);
-            setGeneratingStatus('');
-            window.dispatchEvent(new CustomEvent('health-system-update'));
-          },
-          (err) => {
-            if (err.retryAfter || err.code === 'RATE_LIMITED') {
-              setGenRetryAfter(err.retryAfter || 150);
-            } else {
-              setToast({ message: err.message || 'Failed to generate meal plan' });
-            }
-            setGenerating(false);
-            setGeneratingStatus('');
-          }
-        );
-      } else {
-        // Existing plan: regenerate each category sequentially with cache-busting toggles
-        const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
-        let updatedPlan = activeTodayPlan;
-
-        for (const mealType of mealTypes) {
-          setGeneratingStatus(`Recreating ${mealType.charAt(0).toUpperCase() + mealType.slice(1)}...`);
-
-          const mealWithItems = updatedPlan?.meals?.find((m) => m.items?.length > 0);
-          if (mealWithItems?.items?.length > 0) {
-            const first = mealWithItems.items[0];
-            try {
-              await toggleItemLogged(dateStr, mealWithItems.meal_type, first.food_id, !first.logged);
-              await toggleItemLogged(dateStr, mealWithItems.meal_type, first.food_id, !!first.logged);
-            } catch (e) {
-              console.warn('Cache-clear toggle failed:', e);
-            }
-          }
-
-          // Await sequentially via a promise wrapper for category stream
-          await new Promise((resolve, reject) => {
-            regenerateCategoryStream(
-              dateStr,
-              mealType,
-              (chunk) => {
-                setGeneratingStatus(`Recreating ${mealType}: ${chunk}`);
-              },
-              (plan) => {
-                if (plan) {
-                  updatedPlan = plan;
-                  setDayPlan(updatedPlan);
-                }
-                resolve();
-              },
-              (err) => {
-                reject(err);
-              }
-            );
-          });
+        setGeneratingStatus('Initializing plan...');
+        const initRes = await generateDailyMealPlan(dateStr, { fallback: true });
+        activeTodayPlan = initRes.data?.plan || null;
+        if (activeTodayPlan) {
+          setDayPlan(activeTodayPlan);
+        } else {
+          throw new Error('Failed to initialize placeholder meal plan');
         }
-        setGenerating(false);
-        setGeneratingStatus('');
-        window.dispatchEvent(new CustomEvent('health-system-update'));
       }
+
+      // Generate/regenerate each category sequentially with cache-busting toggles
+      const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
+      let updatedPlan = activeTodayPlan;
+
+      for (const mealType of mealTypes) {
+        setGeneratingStatus(`Recreating ${mealType.charAt(0).toUpperCase() + mealType.slice(1)}...`);
+
+        const mealWithItems = updatedPlan?.meals?.find((m) => m.items?.length > 0);
+        if (mealWithItems?.items?.length > 0) {
+          const first = mealWithItems.items[0];
+          try {
+            await toggleItemLogged(dateStr, mealWithItems.meal_type, first.food_id, !first.logged);
+            await toggleItemLogged(dateStr, mealWithItems.meal_type, first.food_id, !!first.logged);
+          } catch (e) {
+            console.warn('Cache-clear toggle failed:', e);
+          }
+        }
+
+        // Await sequentially via a promise wrapper for category stream
+        await new Promise((resolve, reject) => {
+          regenerateCategoryStream(
+            dateStr,
+            mealType,
+            (chunk) => {
+              setGeneratingStatus(`Recreating ${mealType}: ${chunk}`);
+            },
+            (plan) => {
+              if (plan) {
+                updatedPlan = plan;
+                setDayPlan(updatedPlan);
+              }
+              resolve();
+            },
+            (err) => {
+              reject(err);
+            }
+          );
+        });
+      }
+      setGenerating(false);
+      setGeneratingStatus('');
+      window.dispatchEvent(new CustomEvent('health-system-update'));
     } catch (err) {
       if (err.retryAfter || err.code === 'RATE_LIMITED') {
         setGenRetryAfter(err.retryAfter || 150);
@@ -238,6 +193,17 @@ export function useMealCalendar(onDaySelect) {
       setGeneratingStatus('');
     }
   }, [setGenRetryAfter]);
+
+  // ── Auto-generate plan for today if it's missing ────────────────────────────
+  useEffect(() => {
+    if (!selectedDay) return;
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const selStr = format(selectedDay, 'yyyy-MM-dd');
+
+    if (selStr === todayStr && !planLoading && !dayPlan && !generating && genRetryAfter === null) {
+      handleGenerateDay();
+    }
+  }, [selectedDay, planLoading, dayPlan, generating, genRetryAfter, handleGenerateDay]);
 
   // ── Log all items in a meal ─────────────────────────────────────────────────
 

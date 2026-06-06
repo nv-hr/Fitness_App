@@ -42,22 +42,28 @@ async function generate(req, res, next) {
   try {
     const userId = req.user.userId;
     let planDate = req.body.date;
+    const forceFallback = req.body.fallback === true;
     if (planDate && !isValidDateString(planDate)) {
       return errorResponse(res, 'Invalid date format (use YYYY-MM-DD)', 400, 'VALIDATION_ERROR');
     }
     planDate = planDate || getTodayString();
-    // Check DB for existing plan before regenerating (cache was wiped on restart)
-    const existing = await findByUserAndDate(userId, planDate);
-    if (existing && existing.plan_data && existing.status !== 'fallback') {
-      setCachedPlan(userId, planDate, structuredClone(existing.plan_data), 'meal');
-      return successResponse(res, { plan: existing.plan_data, fromCache: false, status: 'active' });
+    
+    // Bypass existing check if forceFallback is requested
+    if (!forceFallback) {
+      const existing = await findByUserAndDate(userId, planDate);
+      if (existing && existing.plan_data && existing.status !== 'fallback') {
+        setCachedPlan(userId, planDate, structuredClone(existing.plan_data), 'meal');
+        return successResponse(res, { plan: existing.plan_data, fromCache: false, status: 'active' });
+      }
     }
+    
     const result = await generateDailyMealPlan({
       getProfile: (id) => getProfile(id),
       getAllFoods: (id) => searchFoods(id, '', 200),
       getLogHistory: (id, days) => getLogHistory(id, days),
       userId,
       planDate,
+      forceFallback,
     });
     return successResponse(res, result);
   } catch (err) {

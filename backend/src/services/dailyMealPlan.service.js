@@ -238,9 +238,9 @@ export async function regenerateCategory(deps) {
 }
 
 export async function generateDailyMealPlan(deps) {
-  const { userId, planDate, getProfile, getAllFoods, getLogHistory } = deps;
+  const { userId, planDate, getProfile, getAllFoods, getLogHistory, forceFallback } = deps;
   const cached = getCachedPlan(userId, planDate, 'meal');
-  if (cached && cached.status !== 'fallback') {
+  if (!forceFallback && cached && cached.status !== 'fallback') {
     return { plan: cached, fromCache: true, status: 'active' };
   }
   let profile, dbFoods, recentLogs;
@@ -262,6 +262,26 @@ export async function generateDailyMealPlan(deps) {
   }
   const calorieTarget = profile.calorieTarget || 2000;
   const userProfile = profile.profile;
+
+  if (forceFallback) {
+    const fallback = generateFallbackDailyMealPlan(calorieTarget, dbFoods || []);
+    fallback.date = planDate;
+    fallback.calorie_target = calorieTarget;
+    fallback.generated_at = new Date().toISOString();
+    fallback.llm_model = 'template-fallback';
+    for (const meal of fallback.meals) {
+      for (const item of (meal.items || [])) {
+        item.logged = false;
+      }
+    }
+    try {
+      await upsertPlan(userId, planDate, fallback, 'fallback');
+    } catch (err) {
+      console.error('[DailyMealPlan] Failed to persist fallback plan:', err.message);
+    }
+    setCachedPlan(userId, planDate, JSON.parse(JSON.stringify(fallback)), 'meal');
+    return { plan: fallback, fromCache: false, status: 'fallback' };
+  }
   const prompt = buildDailyMealPlanPrompt(userProfile, dbFoods, recentLogs, planDate, calorieTarget);
   let plan;
   let attempt = 0;

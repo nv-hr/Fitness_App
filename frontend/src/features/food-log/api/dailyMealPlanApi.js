@@ -5,8 +5,8 @@ export async function getDailyMealPlan(date) {
   return apiGet(`/api/daily-meal-plans${params}`);
 }
 
-export async function generateDailyMealPlan(date) {
-  return apiPost('/api/daily-meal-plans/generate', { date });
+export async function generateDailyMealPlan(date, options = {}) {
+  return apiPost('/api/daily-meal-plans/generate', { date, ...options });
 }
 
 export function generateDailyMealPlanStream(date, onChunk, onDone, onError) {
