@@ -13,6 +13,11 @@ export default function ActivityLogSection() {
   const [successMsg, setSuccessMsg] = useState('');
   const [loggingActivity, setLoggingActivity] = useState(null);
 
+  /**
+   * Fetches the latest activity history from the server.
+   * Layer 1 (loggingActivity state) disables all Log buttons while a
+   * submission is in-flight, so this is never called concurrently.
+   */
   const refreshHistory = useCallback(async () => {
     try {
       const historyRes = await getActivityHistory(7);

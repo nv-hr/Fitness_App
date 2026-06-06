@@ -56,6 +56,20 @@ function getMonday(date) {
   return d.toISOString().split('T')[0];
 }
 
+function isDateWithinTimezoneRange(dateStr) {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setUTCDate(today.getUTCDate() - 1);
+  const tomorrow = new Date(today);
+  tomorrow.setUTCDate(today.getUTCDate() + 1);
+  
+  const todayStr = today.toISOString().split('T')[0];
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  
+  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr;
+}
+
 async function get(req, res, next) {
   try {
     const userId = req.user.userId;
@@ -211,6 +225,10 @@ async function regenerateDayHandler(req, res, next) {
 
     const result = await regenerateDay(deps, dayIndex);
 
+    if (result.plan && Array.isArray(result.plan.days)) {
+      await upsertPlan(userId, targetWeekStart, result.plan, result.status || 'active');
+    }
+
     return successResponse(res, result);
   } catch (err) {
     next(err);
@@ -242,15 +260,13 @@ async function swapHandler(req, res, next) {
     }
     targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());
 
-    // Only allow swapping for today
-    const todayStr = new Date().toISOString().split('T')[0];
     const dayDate = getMonday(new Date());
     const dayOffset = dayIndex;
     const targetDate = new Date(dayDate);
     targetDate.setDate(targetDate.getDate() + dayOffset);
     const targetDateStr = targetDate.toISOString().split('T')[0];
-    if (targetDateStr !== todayStr) {
-      return errorResponse(res, 'Can only swap activities for today', 400, 'VALIDATION_ERROR');
+    if (!isDateWithinTimezoneRange(targetDateStr)) {
+      return errorResponse(res, 'Can only swap activities for today (considering timezone differences)', 400, 'VALIDATION_ERROR');
     }
 
     // CR-02: Acquire per-user lock to make the entire migration+swap sequence atomic.
@@ -454,10 +470,8 @@ async function toggleComplete(req, res, next) {
       return errorResponse(res, 'Activity not found in plan day', 404, 'NOT_FOUND');
     }
 
-    // Only allow toggling for today
-    const todayStr = new Date().toISOString().split('T')[0];
-    if (day.date !== todayStr) {
-      return errorResponse(res, 'Can only toggle activities for today', 400, 'VALIDATION_ERROR');
+    if (!isDateWithinTimezoneRange(day.date)) {
+      return errorResponse(res, 'Can only toggle activities for today (considering timezone differences)', 400, 'VALIDATION_ERROR');
     }
 
     // Set the completed flag
@@ -601,6 +615,10 @@ async function regenerateDayStream(req, res, next) {
 
     const result = await regenerateDay(deps, dayIndex);
 
+    if (result.plan && Array.isArray(result.plan.days)) {
+      await upsertPlan(userId, targetWeekStart, result.plan, result.status || 'active');
+    }
+
     res.write(`data: ${JSON.stringify({ type: 'done', plan: result.plan })}\n\n`);
     res.end();
   } catch (err) {
@@ -629,14 +647,13 @@ async function swapStream(req, res, next) {
   }
   targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());
 
-  const todayStr = new Date().toISOString().split('T')[0];
   const dayDate = getMonday(new Date());
   const dayOffset = dayIndex;
   const targetDate = new Date(dayDate);
   targetDate.setDate(targetDate.getDate() + dayOffset);
   const targetDateStr = targetDate.toISOString().split('T')[0];
-  if (targetDateStr !== todayStr) {
-    return errorResponse(res, 'Can only swap activities for today', 400, 'VALIDATION_ERROR');
+  if (!isDateWithinTimezoneRange(targetDateStr)) {
+    return errorResponse(res, 'Can only swap activities for today (considering timezone differences)', 400, 'VALIDATION_ERROR');
   }
 
   res.setHeader('Content-Type', 'text/event-stream');

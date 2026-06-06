@@ -1,16 +1,13 @@
 import { pool } from '../config/database.js';
 import { AppError } from '../utils/errors.js';
 
-export async function findByUserAndWeek(userId, weekStart, clientOverride) {
+export async function findByUserAndWeek(userId, weekStart, clientOverride, forUpdate = false) {
   const db = clientOverride || pool;
   try {
-    const { rows } = await db.query(
-      `SELECT id, user_id, week_start, plan_data, status, created_at, updated_at
+    const queryStr = `SELECT id, user_id, week_start, plan_data, status, created_at, updated_at
        FROM weekly_plans
-       WHERE user_id = $1 AND week_start = $2
-       LIMIT 1`,
-      [userId, weekStart]
-    );
+       WHERE user_id = $1 AND week_start = $2` + (forUpdate ? ' FOR UPDATE' : '') + ' LIMIT 1';
+    const { rows } = await db.query(queryStr, [userId, weekStart]);
     return rows[0] || null;
   } catch (err) {
     throw new AppError('DatabaseError', `Failed to find weekly plan: ${err.message}`, 500);

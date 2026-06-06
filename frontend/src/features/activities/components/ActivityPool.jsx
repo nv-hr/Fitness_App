@@ -1,7 +1,16 @@
 import ActivityCard from './ActivityCard.jsx';
-import { Sparkles, Library } from 'lucide-react';
+import { Library } from 'lucide-react';
 
+/**
+ * @param {object}   props
+ * @param {object[]} props.activities  - Full list of available activities.
+ * @param {Function} props.onLogClick  - Called with the activity object when Log is clicked.
+ * @param {object|null} props.isLogging - The activity currently open in the log form (or null).
+ */
 export default function ActivityPool({ activities, onLogClick, isLogging }) {
+  // True when any log form is open — used to disable all other cards' Log buttons
+  const anyLogging = !!isLogging;
+
   return (
     <div className="bg-white p-5 rounded-xl border border-slate-200/50 shadow-sm space-y-4">
       <div className="border-b border-slate-50 pb-2.5 flex justify-between items-center">
@@ -25,6 +34,7 @@ export default function ActivityPool({ activities, onLogClick, isLogging }) {
             activity={activity}
             onLogClick={onLogClick}
             isLogging={isLogging?.id === activity.id}
+            anyLogging={anyLogging}
           />
         ))}
       </div>

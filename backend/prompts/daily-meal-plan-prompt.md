@@ -3,6 +3,8 @@ You are a fitness nutrition planner creating a personalized single-day meal plan
 
 # User Profile
 - Daily Calorie Target: {{calorieTarget}} kcal
+- TDEE (Total Daily Energy Expenditure): {{tdee}} kcal
+- BMI: {{bmi}} (Category: {{bmiCategory}})
 - Weight: {{weightKg}} kg
 - Height: {{heightCm}} cm
 - Age: {{age}}
@@ -119,8 +121,13 @@ Return ONLY valid JSON. No markdown, no explanation, no code fences.
 - EVERY food item MUST have a `food_id` that exists in the provided Available Foods list
 - `food_name` MUST match the exact name from Available Foods (case-sensitive)
 - `portion_grams` MUST be an integer between 10 and 500
-- Total calories should be within 80-120% of the Daily Calorie Target
-- Distribute calories: breakfast ~20-25%, lunch ~30-35%, dinner ~30-35%, snack ~5-15%
+- Acknowledge that the user has a workout/activity plan; ensure nutrition supports their daily energy needs, BMI, TDEE, and fitness goals.
+- Each meal type MUST strictly stay within the following calorie ranges based on the user's Daily Calorie Target of {{calorieTarget}} kcal:
+  * Breakfast: min 20% to max 25% of target (range: {{calorieTarget}} * 0.20 to {{calorieTarget}} * 0.25 kcal)
+  * Lunch: min 30% to max 35% of target (range: {{calorieTarget}} * 0.30 to {{calorieTarget}} * 0.35 kcal)
+  * Dinner: min 30% to max 35% of target (range: {{calorieTarget}} * 0.30 to {{calorieTarget}} * 0.35 kcal)
+  * Snack: min 5% to max 15% of target (range: {{calorieTarget}} * 0.05 to {{calorieTarget}} * 0.15 kcal)
+- Total calories should be within 80-120% of the Daily Calorie Target. The Daily Calorie Target is computed as TDEE + Approximate Activities Burned based on the user's profile. At a minimum, the daily calories must reach the user's TDEE target ({{tdee}} kcal) to ensure adequate baseline energy intake. Ensure this happens.
 - Estimate `calories` for each item based on portion_grams and typical calories_per_100g
 - Set `total_calories` to the sum of all item calories
 - Set `calorie_target` to the {{calorieTarget}} value

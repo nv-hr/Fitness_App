@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -105,6 +106,7 @@ export default function ProfileForm({ onSaveSuccess, isOverlay = false }) {
         setExistingProfile(response.data.profile);
       }
       setSuccess('Health profile successfully saved and analyzed!');
+      window.dispatchEvent(new CustomEvent('health-system-update'));
       if (onSaveSuccess) {
         // Wait briefly so they can read the success message
         setTimeout(() => {
@@ -356,7 +358,7 @@ export default function ProfileForm({ onSaveSuccess, isOverlay = false }) {
                     <input
                       id="targetDate"
                       type="date"
-                      min={new Date().toISOString().split('T')[0]}
+                      min={format(new Date(), 'yyyy-MM-dd')}
                       {...register('targetDate')}
                       className="block w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all cursor-pointer"
                     />

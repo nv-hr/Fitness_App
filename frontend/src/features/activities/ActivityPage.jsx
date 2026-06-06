@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { startOfMonth } from 'date-fns';
+import { startOfMonth, format } from 'date-fns';
 import { useMonthData } from '../../shared/calendar/index.js';
 import { getWeeklyPlan } from './api/activityCalendarApi.js';
 import { getActivitySummary } from './api/activityApi.js';
@@ -22,7 +22,7 @@ export default function ActivityPage() {
 
   const { dayStatusMap, loading, error } = useMonthData(currentMonth, fetchWeekFn);
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = format(new Date(), 'yyyy-MM-dd');
 
   useEffect(() => {
     async function loadSummary() {
@@ -71,19 +71,19 @@ export default function ActivityPage() {
       {!summaryLoading && summary ? (
         <ActivitySummary summary={summary} />
       ) : (
-        <div className="h-28 bg-slate-100 rounded-2xl animate-pulse flex items-center justify-center text-slate-400 text-xs">
+        <div className="h-28 bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl animate-pulse flex items-center justify-center text-slate-400 text-xs">
           <Loader2 className="w-5 h-5 animate-spin mr-2" /> Connecting daily calorie burn logs...
         </div>
       )}
 
       {/* Tab bar switches */}
-      <div className="bg-slate-100/80 backdrop-blur-xs p-1 rounded-2xl flex max-w-md border border-slate-200/20">
+      <div style={{ background: '#1e1e1e', border: '1px solid #2a2a2a' }} className="p-1 rounded-2xl flex max-w-md">
         <button
           onClick={() => setActiveTab('plan')}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
             activeTab === 'plan'
-              ? 'bg-white text-emerald-600 shadow-sm'
-              : 'text-slate-500 hover:text-slate-800'
+              ? 'bg-[#2d2d2d] text-emerald-400 shadow-sm'
+              : 'text-[#555] hover:text-[#aaa]'
           }`}
         >
           <Calendar className="w-4 h-4" />
@@ -93,8 +93,8 @@ export default function ActivityPage() {
           onClick={() => setActiveTab('log')}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
             activeTab === 'log'
-              ? 'bg-white text-emerald-600 shadow-sm'
-              : 'text-slate-500 hover:text-slate-800'
+              ? 'bg-[#2d2d2d] text-emerald-400 shadow-sm'
+              : 'text-[#555] hover:text-[#aaa]'
           }`}
         >
           <Dumbbell className="w-4 h-4" />
@@ -113,8 +113,8 @@ export default function ActivityPage() {
       )}
 
       {activeTab === 'log' && (
-        <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/50 shadow-lux">
-          <h2 className="font-display font-bold text-lg text-slate-800 border-b border-slate-100 pb-3 mb-6 flex items-center gap-2">
+        <div className="bg-[#1a1a1a] p-6 sm:p-8 rounded-2xl border border-[#2a2a2a] shadow-lux">
+          <h2 className="font-display font-bold text-lg text-white border-b border-[#2a2a2a] pb-3 mb-6 flex items-center gap-2">
             <span className="w-1.5 h-4 bg-emerald-500 rounded-full inline-block"></span>
             Log New Workout
           </h2>

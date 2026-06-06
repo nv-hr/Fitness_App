@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { format } from 'date-fns';
 import { Scale, CalendarDays, StickyNote, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { logWeight } from '../api/weightApi.js';
 
@@ -11,7 +12,7 @@ import { logWeight } from '../api/weightApi.js';
  * and avoids the light-mode colour bleed from the previous implementation.
  */
 export default function WeightEntryCard({ onLogSuccess }) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = format(new Date(), 'yyyy-MM-dd');
   const [weightKg, setWeightKg] = useState('');
   const [loggedDate, setLoggedDate] = useState(today);
   const [notes, setNotes] = useState('');

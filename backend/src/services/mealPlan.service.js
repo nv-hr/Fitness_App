@@ -155,7 +155,7 @@ export function validateAndFixMealPlan(plan, dbFoods) {
   return { valid: errors.length === 0, plan, errors, warnings };
 }
 
-export function buildMealPlanPrompt(profile, dbFoods, recentLogs, weekStart, calorieTarget) {
+export function buildMealPlanPrompt(profile, dbFoods, recentLogs, weekStart, calorieTarget, tdee) {
   let foodText = dbFoods.map(f =>
     `- ID ${f.id}: ${f.name} (${f.calories_per_100g} cal/100g, ${f.category})`
   ).join('\n');
@@ -190,6 +190,7 @@ export function buildMealPlanPrompt(profile, dbFoods, recentLogs, weekStart, cal
     gender: profile.gender || '',
     fitnessGoal: profile.fitness_goal || profile.fitnessGoal || '',
     recentFoodLogs: recentText,
+    tdee: String(tdee || ''),
   });
 }
 
@@ -326,7 +327,7 @@ export async function generateMealPlan(deps) {
   }
   const calorieTarget = profile.calorieTarget || 2000;
   const userProfile = profile.profile;
-  const prompt = buildMealPlanPrompt(userProfile, dbFoods, recentLogs, weekStart, calorieTarget);
+  const prompt = buildMealPlanPrompt(userProfile, dbFoods, recentLogs, weekStart, calorieTarget, profile.tdee);
   let plan;
   let attempt = 0;
   const maxAttempts = 2;

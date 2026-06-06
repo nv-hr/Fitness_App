@@ -10,6 +10,8 @@ You are a fitness planner creating a personalized 7-day weekly activity plan for
 - Activity Level: {{activityLevel}}
 - Daily Calorie Target: {{calorieTarget}} kcal
 - BMR: {{bmr}} kcal
+- TDEE (Total Daily Energy Expenditure): {{tdee}} kcal
+- BMI: {{bmi}} (Category: {{bmiCategory}})
 - Available Activity Days: {{availableDays}} days this week
 
 # Available Activity Days

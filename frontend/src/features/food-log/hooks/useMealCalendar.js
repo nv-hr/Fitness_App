@@ -50,7 +50,7 @@ import { useCountdownTimer } from '../../../shared/hooks/useCountdownTimer.js';
 export function useMealCalendar(onDaySelect) {
   const [selectedDay, setSelectedDay] = useState(() => startOfToday());
   const [dayPlan, setDayPlan] = useState(null);
-  const [planLoading, setPlanLoading] = useState(false);
+  const [planLoading, setPlanLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [generatingStatus, setGeneratingStatus] = useState('');
   const [loggingMeal, setLoggingMeal] = useState(null);
@@ -323,6 +323,9 @@ export function useMealCalendar(onDaySelect) {
     swapRetryAfter,
     toast,
     isNotToday,
+    /** True whenever any write mutation (log, regenerate, generate) is in-flight.
+     *  Used to disable all other action buttons and prevent conflicting requests. */
+    isBusy: !!(loggingMeal || regeneratingCat || generating),
     handlePrevDay,
     handleNextDay,
     handleGoToToday,

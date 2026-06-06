@@ -1,11 +1,12 @@
 import { useState } from 'react';
+import { format } from 'date-fns';
 import { calculateActivityCalories } from './previewCalories.js';
 import { Flame, Clock, Zap, Calendar, RotateCw, AlertCircle } from 'lucide-react';
 
 export default function ActivityLogForm({ activity, onSubmit, onCancel }) {
   const [durationMin, setDurationMin] = useState(String(activity.duration_min));
   const [intensity, setIntensity] = useState('moderate');
-  const [loggedDate, setLoggedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [loggedDate, setLoggedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [submitting, setSubmitting] = useState(false);
 
   const previewCalories = calculateActivityCalories(
@@ -116,27 +117,33 @@ export default function ActivityLogForm({ activity, onSubmit, onCancel }) {
         )}
 
         {/* Action button triggers */}
-        <div className="flex gap-2.5 pt-2 border-t border-slate-150">
+        <div className="flex gap-2.5 pt-2 border-t border-slate-200/20">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={submitting}
+            className="flex-1 py-2 px-4 rounded-xl text-xs font-semibold cursor-pointer text-center transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ border: '1px solid #333', color: '#888', background: 'transparent' }}
+            onMouseEnter={e => { if (!submitting) e.currentTarget.style.background = '#222'; }}
+            onMouseLeave={e => { if (!submitting) e.currentTarget.style.background = 'transparent'; }}
+          >
+            Cancel
+          </button>
           <button
             type="submit"
             disabled={submitting}
-            className="flex-2 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 transition-all cursor-pointer shadow-sm disabled:bg-slate-400 disabled:cursor-not-allowed"
+            className="flex-2 flex items-center justify-center gap-1.5 py-2 px-4 rounded-xl text-xs font-bold text-white transition-all cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ background: '#047857' }}
+            onMouseEnter={e => { if (!submitting) e.currentTarget.style.background = '#059669'; }}
+            onMouseLeave={e => { if (!submitting) e.currentTarget.style.background = '#047857'; }}
           >
             {submitting ? (
               <>
                 <RotateCw className="w-3.5 h-3.5 animate-spin" /> Logging...
               </>
             ) : (
-              'Save Workout Log'
+              'Log Activity'
             )}
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={submitting}
-            className="flex-1 py-2.5 px-4 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs font-semibold cursor-pointer text-center font-mono"
-          >
-            Cancel
           </button>
         </div>
       </form>

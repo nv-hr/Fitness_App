@@ -30,7 +30,7 @@ export default function CalorieSummary({ totalConsumed, calorieTarget, remaining
           <p className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1">
             <Flame className="w-3.5 h-3.5 text-orange-500" /> Consumed
           </p>
-          <p className="text-xl sm:text-2xl font-display font-black text-slate-800">
+          <p className="text-xl sm:text-2xl font-display font-black text-white">
             {totalConsumed} <span className="text-xs sm:text-sm font-sans font-medium text-slate-500">kcal</span>
           </p>
         </div>
@@ -41,7 +41,7 @@ export default function CalorieSummary({ totalConsumed, calorieTarget, remaining
             <p className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1">
               <Target className="w-3.5 h-3.5 text-emerald-500" /> TDEE Target
             </p>
-            <p className="text-xl sm:text-2xl font-display font-black text-slate-800">
+            <p className="text-xl sm:text-2xl font-display font-black text-white">
               {calorieTarget} <span className="text-xs sm:text-sm font-sans font-medium text-slate-500">kcal</span>
             </p>
           </div>
@@ -52,7 +52,7 @@ export default function CalorieSummary({ totalConsumed, calorieTarget, remaining
           <p className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1">
             <Heart className="w-3.5 h-3.5 text-rose-500 animate-pulse" /> Calorie Ratio
           </p>
-          <p className="text-xl sm:text-2xl font-display font-black text-slate-800">
+          <p className="text-xl sm:text-2xl font-display font-black text-white">
             {progressPercent.toFixed(0)} <span className="text-xs sm:text-sm font-sans font-medium text-slate-500">%</span>
           </p>
         </div>

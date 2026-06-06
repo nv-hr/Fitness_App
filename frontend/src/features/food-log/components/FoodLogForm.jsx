@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { format } from 'date-fns';
 import { getDailyLogs, getLogHistory, getRecentFoods, logFood } from '../api/foodLogApi.js';
 import FoodSearch from './FoodSearch.jsx';
 import CustomFoodForm from './CustomFoodForm.jsx';
@@ -18,8 +19,29 @@ export default function FoodLogForm() {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = format(new Date(), 'yyyy-MM-dd');
+
+  /**
+   * Fetches the latest logs, history, and recent foods from the server.
+   * Layer 1 (button disable) ensures this is never called concurrently,
+   * so no in-flight guard is needed here.
+   */
+  const refreshData = useCallback(async () => {
+    try {
+      const [logsRes, historyRes, recentRes] = await Promise.all([
+        getDailyLogs(today),
+        getLogHistory(7),
+        getRecentFoods(),
+      ]);
+      setLogs(logsRes.data || []);
+      setHistory(historyRes.data || []);
+      setRecentFoods(recentRes.data || []);
+    } catch {
+      // Silently fail — user can refresh manually
+    }
+  }, [today]);
 
   useEffect(() => {
     async function loadData() {
@@ -41,30 +63,10 @@ export default function FoodLogForm() {
     loadData();
   }, [today]);
 
-  useEffect(() => {
-    const handleUpdate = () => {
-      refreshData();
-    };
-    window.addEventListener('health-system-update', handleUpdate);
-    return () => {
-      window.removeEventListener('health-system-update', handleUpdate);
-    };
-  }, [today]);
-
-  async function refreshData() {
-    try {
-      const [logsRes, historyRes, recentRes] = await Promise.all([
-        getDailyLogs(today),
-        getLogHistory(7),
-        getRecentFoods(),
-      ]);
-      setLogs(logsRes.data || []);
-      setHistory(historyRes.data || []);
-      setRecentFoods(recentRes.data || []);
-    } catch {
-      // Silently fail — user can refresh
-    }
-  }
+  // NOTE: Intentionally NOT listening to 'health-system-update' here.
+  // The parent FoodLogPage already handles summary refresh via refreshTrigger.
+  // Listening here too would create a duplicate concurrent refresh that races
+  // against the one already called inside handleLogFood, causing stale overwrites.
 
   const handleFoodSelect = (food) => {
     setSelectedFood(food);
@@ -84,6 +86,7 @@ export default function FoodLogForm() {
   };
 
   const handleLogFood = async () => {
+    if (submitting) return;
     if (!selectedFood) {
       setError('Please select a food first');
       return;
@@ -94,6 +97,7 @@ export default function FoodLogForm() {
     }
 
     try {
+      setSubmitting(true);
       setError('');
       setSuccessMsg('');
 
@@ -123,6 +127,8 @@ export default function FoodLogForm() {
       window.dispatchEvent(new CustomEvent('health-system-update'));
     } catch (err) {
       setError(err.message || 'Failed to save food log');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -202,7 +208,7 @@ export default function FoodLogForm() {
                 Portion Eaten (grams)
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none" style={{ color: '#555' }}>
+                <div className="absolute inset-y-0 left-0 pl-3-5 flex items-center pointer-events-none" style={{ color: '#555' }}>
                   <Scale className="w-4 h-4" />
                 </div>
                 <input
@@ -213,7 +219,8 @@ export default function FoodLogForm() {
                   min="1"
                   max="5000"
                   placeholder="e.g. 150"
-                  className="block w-full pl-9 pr-3 py-2 text-sm rounded-lg font-mono focus:outline-none transition-all"
+                  disabled={submitting}
+                  className="block w-full pl-9 pr-3 py-2 text-sm rounded-lg font-mono focus:outline-none transition-all disabled:opacity-50"
                   style={{ background: '#222', border: '1px solid #333', color: '#fff' }}
                 />
               </div>
@@ -228,7 +235,8 @@ export default function FoodLogForm() {
                 id="mealType"
                 value={mealType}
                 onChange={(e) => setMealType(e.target.value)}
-                className="block w-full px-3 py-2 text-sm rounded-lg focus:outline-none transition-all cursor-pointer"
+                disabled={submitting}
+                className="block w-full px-3 py-2 text-sm rounded-lg focus:outline-none transition-all cursor-pointer disabled:opacity-50"
                 style={{ background: '#222', border: '1px solid #333', color: '#fff' }}
               >
                 <option value="breakfast">Breakfast</option>
@@ -252,21 +260,23 @@ export default function FoodLogForm() {
           <div className="flex gap-2">
             <button
               onClick={() => setSelectedFood(null)}
-              className="flex-1 py-2 px-4 rounded-xl text-xs font-semibold cursor-pointer text-center transition-all"
+              disabled={submitting}
+              className="flex-1 py-2 px-4 rounded-xl text-xs font-semibold cursor-pointer text-center transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ border: '1px solid #333', color: '#888', background: 'transparent' }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#222'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+              onMouseEnter={e => { if (!submitting) e.currentTarget.style.background = '#222'; }}
+              onMouseLeave={e => { if (!submitting) e.currentTarget.style.background = 'transparent'; }}
             >
               Cancel
             </button>
             <button
               onClick={handleLogFood}
-              className="flex-2 flex items-center justify-center gap-1.5 py-2 px-4 rounded-xl text-xs font-bold text-white transition-all cursor-pointer shadow-sm"
+              disabled={submitting}
+              className="flex-2 flex items-center justify-center gap-1.5 py-2 px-4 rounded-xl text-xs font-bold text-white transition-all cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: '#b91c1c' }}
-              onMouseEnter={e => { e.currentTarget.style.background = '#dc2626'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = '#b91c1c'; }}
+              onMouseEnter={e => { if (!submitting) e.currentTarget.style.background = '#dc2626'; }}
+              onMouseLeave={e => { if (!submitting) e.currentTarget.style.background = '#b91c1c'; }}
             >
-              Log Intake
+              {submitting ? 'Logging...' : 'Log Intake'}
             </button>
           </div>
         </div>

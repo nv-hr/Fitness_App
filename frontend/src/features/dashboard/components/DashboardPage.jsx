@@ -69,12 +69,23 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     getProfile()
       .then((data) => setProfile(data.data.profile))
       .catch(() => {/* profile may not exist yet */})
       .finally(() => setLoading(false));
+  }, [refreshTrigger]);
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setRefreshTrigger((prev) => prev + 1);
+    };
+    window.addEventListener('health-system-update', handleUpdate);
+    return () => {
+      window.removeEventListener('health-system-update', handleUpdate);
+    };
   }, []);
 
   if (loading) {

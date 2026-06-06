@@ -28,6 +28,7 @@ const MEAL_META = {
  * @param {boolean}  props.isLogging               - Whether this meal is currently being logged.
  * @param {boolean}  props.isRegenerating          - Whether this meal is being regenerated.
  * @param {number}   props.swapRetryAfter          - Seconds left in the regeneration cooldown.
+ * @param {boolean}  [props.globalBusy]            - True when ANY mutation is in-flight (log, regen, generate); disables all interactive buttons.
  * @param {Function} props.onLog                   - Called when "Log All" is clicked.
  * @param {Function} props.onRegenerate            - Called when "Regenerate" is clicked.
  * @param {Function} props.onToggleItem            - Called when a single item is toggled.
@@ -39,6 +40,7 @@ export default function MealCard({
   isLogging,
   isRegenerating,
   swapRetryAfter,
+  globalBusy = false,
   onLog,
   onRegenerate,
   onToggleItem,
@@ -76,9 +78,10 @@ export default function MealCard({
             ) : (
               <button
                 onClick={onRegenerate}
-                disabled={swapRetryAfter > 0}
+                disabled={swapRetryAfter > 0 || globalBusy}
+                title={globalBusy && swapRetryAfter === 0 ? 'Please wait for the current action to finish' : undefined}
                 className={`h-8 px-3 rounded-lg flex items-center gap-1.5 transition-all text-xs font-bold ${
-                  swapRetryAfter > 0
+                  swapRetryAfter > 0 || globalBusy
                     ? 'bg-[#222] border border-[#333] text-slate-500 cursor-not-allowed'
                     : 'bg-red-950/30 hover:bg-red-950/50 text-red-400 border border-red-900/30 cursor-pointer active:scale-95'
                 }`}
@@ -140,8 +143,9 @@ export default function MealCard({
                 {item.logged ? (
                   <button
                     onClick={() => onToggleItem(meal.meal_type, item.food_id, item.logged)}
-                    className="h-8 px-2.5 rounded-xl bg-red-700 hover:bg-red-800 text-white flex items-center gap-1.5 border border-red-800 transition-all cursor-pointer text-xs font-bold"
-                    title="Click to mark unconsumed"
+                    disabled={globalBusy}
+                    className="h-8 px-2.5 rounded-xl bg-red-700 hover:bg-red-800 text-white flex items-center gap-1.5 border border-red-800 transition-all cursor-pointer text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={globalBusy ? 'Please wait for the current action to finish' : 'Click to mark unconsumed'}
                   >
                     <CheckCircle2 className="w-4 h-4" />
                     <span>Logged</span>
@@ -149,8 +153,9 @@ export default function MealCard({
                 ) : isNotToday ? null : (
                   <button
                     onClick={() => onToggleItem(meal.meal_type, item.food_id, item.logged)}
-                    className="h-8 px-2.5 rounded-xl border border-[#333] hover:border-red-900/40 bg-[#222] hover:bg-red-950/30 text-slate-400 hover:text-red-400 flex items-center gap-1.5 transition-all cursor-pointer text-xs font-bold"
-                    title="Click to mark consumed"
+                    disabled={globalBusy}
+                    className="h-8 px-2.5 rounded-xl border border-[#333] hover:border-red-900/40 bg-[#222] hover:bg-red-950/30 text-slate-400 hover:text-red-400 flex items-center gap-1.5 transition-all cursor-pointer text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={globalBusy ? 'Please wait for the current action to finish' : 'Click to mark consumed'}
                   >
                     <span className="w-2.5 h-2.5 rounded-full border border-slate-500 bg-[#222] inline-block" />
                     <span>Unlogged</span>

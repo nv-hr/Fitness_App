@@ -39,7 +39,17 @@ export function validateDailyMealPlanStructure(plan) {
   return { valid: errors.length === 0, errors };
 }
 
-export function validateAndFixDailyMealPlan(plan, dbFoods) {
+/**
+ * Validate the daily meal plan and fuzzy match database foods. Enforces calorie range and BMI-based safety limits.
+ * 
+ * @param {object} plan - The generated plan.
+ * @param {Array} dbFoods - Available food items.
+ * @param {number} [calorieTarget] - The daily calorie target.
+ * @param {number} [tdee] - The user's TDEE.
+ * @param {string} [bmiCategory] - The user's BMI Category.
+ * @returns {object} Validated plan, errors, and warnings.
+ */
+export function validateAndFixDailyMealPlan(plan, dbFoods, calorieTarget, tdee, bmiCategory) {
   const errors = [];
   const warnings = [];
   if (!plan || !Array.isArray(plan.meals)) {
@@ -71,10 +81,33 @@ export function validateAndFixDailyMealPlan(plan, dbFoods) {
     return sum + (meal.items || []).reduce((s, item) => s + (item.calories || 0), 0);
   }, 0);
   plan.total_calories = dayTotal;
+
+  // 1. Calorie Target range validation (80-120% of target)
+  if (calorieTarget) {
+    const minCal = Math.round(calorieTarget * 0.8);
+    const maxCal = Math.round(calorieTarget * 1.2);
+    if (dayTotal < minCal || dayTotal > maxCal) {
+      errors.push(`Total calories (${dayTotal} kcal) must be between ${minCal} and ${maxCal} kcal (80-120% of target ${calorieTarget} kcal)`);
+    }
+  }
+
+  // 2. Safety limits based on TDEE and BMI Category
+  if (tdee && bmiCategory) {
+    if (bmiCategory === 'obese' && dayTotal > tdee) {
+      errors.push(`Plan total calories (${dayTotal} kcal) exceeds TDEE (${tdee} kcal) for obese BMI category`);
+    }
+    if (bmiCategory === 'underweight' && dayTotal < tdee) {
+      errors.push(`Plan total calories (${dayTotal} kcal) is below TDEE (${tdee} kcal) for underweight BMI category`);
+    }
+  }
+
   return { valid: errors.length === 0, plan, errors, warnings };
 }
 
-function buildDailyMealPlanPrompt(profile, dbFoods, recentLogs, planDate, calorieTarget) {
+/**
+ * Build daily meal plan prompt with user profile details, TDEE, and BMI.
+ */
+function buildDailyMealPlanPrompt(profile, dbFoods, recentLogs, planDate, calorieTarget, tdee, bmi, bmiCategory) {
   let foodText = dbFoods.map(f =>
     `- ID ${f.id}: ${f.name} (${f.calories_per_100g} cal/100g, ${f.category})`
   ).join('\n');
@@ -106,6 +139,9 @@ function buildDailyMealPlanPrompt(profile, dbFoods, recentLogs, planDate, calori
     age: String(profile.age || ''),
     gender: profile.gender || '',
     fitnessGoal: profile.fitness_goal || profile.fitnessGoal || '',
+    tdee: String(tdee || ''),
+    bmi: String(bmi || ''),
+    bmiCategory: bmiCategory || '',
     recentFoodLogs: recentText,
   });
 }
@@ -272,10 +308,12 @@ export async function generateDailyMealPlan(deps) {
   if (!profile || !profile.profile) {
     const fallback = generateFallbackDailyMealPlan(2000, dbFoods || []);
     return { plan: fallback, fromCache: false, status: 'fallback' };
-  }
-  const calorieTarget = profile.calorieTarget || 2000;
+  }  const calorieTarget = profile.calorieTarget || 2000;
   const userProfile = profile.profile;
-
+  const tdee = profile.tdee;
+  const bmi = profile.bmi;
+  const bmiCategory = profile.bmiCategory;
+ 
   if (forceFallback) {
     const fallback = generateFallbackDailyMealPlan(calorieTarget, dbFoods || []);
     fallback.date = planDate;
@@ -295,7 +333,7 @@ export async function generateDailyMealPlan(deps) {
     setCachedPlan(userId, planDate, JSON.parse(JSON.stringify(fallback)), 'meal');
     return { plan: fallback, fromCache: false, status: 'fallback' };
   }
-  const prompt = buildDailyMealPlanPrompt(userProfile, dbFoods, recentLogs, planDate, calorieTarget);
+  const prompt = buildDailyMealPlanPrompt(userProfile, dbFoods, recentLogs, planDate, calorieTarget, tdee, bmi, bmiCategory);
   let plan;
   let attempt = 0;
   const maxAttempts = 2;
@@ -327,7 +365,7 @@ export async function generateDailyMealPlan(deps) {
       if (attempt < maxAttempts) continue;
       break;
     }
-    const nameCheck = validateAndFixDailyMealPlan(plan, dbFoods);
+    const nameCheck = validateAndFixDailyMealPlan(plan, dbFoods, calorieTarget, tdee, bmiCategory);
     if (!nameCheck.valid) {
       console.warn(`[DailyMealPlan] Name validation failed (attempt ${attempt}):`, nameCheck.errors.join('; '));
       if (attempt < maxAttempts) continue;

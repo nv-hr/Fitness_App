@@ -5,11 +5,14 @@ import userEvent from '@testing-library/user-event';
 import ProgressPage from '../ProgressPage.jsx';
 
 vi.mock('../../api/weightApi.js');
+vi.mock('../../profile/api/profileApi.js');
 
 import * as weightApi from '../../api/weightApi.js';
+import * as profileApi from '../../profile/api/profileApi.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  profileApi.getProfile.mockResolvedValue({ data: { profile: { target_weight_kg: 70 } } });
 });
 
 describe('ProgressPage', () => {
