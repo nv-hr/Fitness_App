@@ -94,7 +94,7 @@ export default function LandingPage() {
     <div className="landing-page">
       {/* ─── Header ─────────────────────────────────────────── */}
       <header className="landing-header">
-        <div className="landing-container landing-header__inner">
+        <div className="landing-header__inner">
           {/* Logo */}
           <Link to="/" className="landing-logo">
             <Activity className="landing-logo__icon" />
