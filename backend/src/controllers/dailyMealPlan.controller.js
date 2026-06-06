@@ -16,6 +16,20 @@ function getTodayString() {
   return new Date().toISOString().split('T')[0];
 }
 
+function isDateWithinTimezoneRange(dateStr) {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setUTCDate(today.getUTCDate() - 1);
+  const tomorrow = new Date(today);
+  tomorrow.setUTCDate(today.getUTCDate() + 1);
+  
+  const todayStr = today.toISOString().split('T')[0];
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  
+  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr;
+}
+
 async function get(req, res, next) {
   try {
     const userId = req.user.userId;
@@ -79,8 +93,8 @@ async function logMeals(req, res, next) {
       return errorResponse(res, 'Invalid date format (use YYYY-MM-DD)', 400, 'VALIDATION_ERROR');
     }
     const planDate = date || getTodayString();
-    if (planDate !== getTodayString()) {
-      return errorResponse(res, 'Can only log meals for today', 400, 'VALIDATION_ERROR');
+    if (!isDateWithinTimezoneRange(planDate)) {
+      return errorResponse(res, 'Can only log meals for today (considering timezone differences)', 400, 'VALIDATION_ERROR');
     }
     if (!Array.isArray(mealTypes) || mealTypes.length === 0) {
       return errorResponse(res, 'mealTypes must be a non-empty array', 400, 'VALIDATION_ERROR');
@@ -144,8 +158,8 @@ async function toggleItemLogged(req, res, next) {
       return errorResponse(res, 'Invalid date format (use YYYY-MM-DD)', 400, 'VALIDATION_ERROR');
     }
     const planDate = toggleDate || getTodayString();
-    if (planDate !== getTodayString()) {
-      return errorResponse(res, 'Can only toggle meals for today', 400, 'VALIDATION_ERROR');
+    if (!isDateWithinTimezoneRange(planDate)) {
+      return errorResponse(res, 'Can only toggle meals for today (considering timezone differences)', 400, 'VALIDATION_ERROR');
     }
     const validMealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
     if (!validMealTypes.includes(mealType)) {
