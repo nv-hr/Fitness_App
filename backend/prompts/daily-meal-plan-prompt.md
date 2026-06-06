@@ -127,7 +127,7 @@ Return ONLY valid JSON. No markdown, no explanation, no code fences.
   * Lunch: min 30% to max 35% of target (range: {{calorieTarget}} * 0.30 to {{calorieTarget}} * 0.35 kcal)
   * Dinner: min 30% to max 35% of target (range: {{calorieTarget}} * 0.30 to {{calorieTarget}} * 0.35 kcal)
   * Snack: min 5% to max 15% of target (range: {{calorieTarget}} * 0.05 to {{calorieTarget}} * 0.15 kcal)
-- Total calories should be within 80-120% of the Daily Calorie Target
+- Total calories should be within 80-120% of the Daily Calorie Target. The Daily Calorie Target is computed as TDEE + Approximate Activities Burned based on the user's profile. At a minimum, the daily calories must reach the user's TDEE target ({{tdee}} kcal) to ensure adequate baseline energy intake. Ensure this happens.
 - Estimate `calories` for each item based on portion_grams and typical calories_per_100g
 - Set `total_calories` to the sum of all item calories
 - Set `calorie_target` to the {{calorieTarget}} value
