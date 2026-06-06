@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { AppError, ValidationError, NotFoundError } from '../utils/errors.js';
 import { levenshteinDistance } from '../utils/string.js';
+import { calculateBmi, getBmiCategory, calculateBmr, calculateTdee, getCalorieTarget } from './profile.service.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROMPTS_DIR = path.resolve(__dirname, '../../prompts');
@@ -91,6 +92,13 @@ export function buildSystemPrompt(profile, activityHistory, activities, weekStar
     : 'No recent activity history.';
   const activitiesText = activities.map(a => `- ${a.name} (${a.estimated_calories} cal, ~${a.duration_min}min)`).join('\n');
 
+  // Compute physiological variables
+  const bmi = calculateBmi(profile.weight_kg, profile.height_cm);
+  const bmiCategory = getBmiCategory(bmi);
+  const bmr = Math.round(calculateBmr(profile.weight_kg, profile.height_cm, profile.age, profile.gender));
+  const tdee = calculateTdee(profile.weight_kg, profile.height_cm, profile.age, profile.gender, profile.activity_level);
+  const calorieTarget = tdee ? getCalorieTarget(tdee, profile.fitness_goal, profile.calorie_rate) : 2000;
+
   return buildPrompt('weekly-plan-prompt.md', {
     weightKg: profile.weight_kg,
     heightCm: profile.height_cm,
@@ -98,6 +106,11 @@ export function buildSystemPrompt(profile, activityHistory, activities, weekStar
     gender: profile.gender,
     fitnessGoal: profile.fitness_goal,
     activityLevel: profile.activity_level || 'sedentary',
+    calorieTarget: String(calorieTarget || ''),
+    bmr: String(bmr || ''),
+    tdee: String(tdee || ''),
+    bmi: String(bmi || ''),
+    bmiCategory: bmiCategory || '',
     activityHistory: historyText,
     topActivityNames,
     availableActivities: activitiesText,
