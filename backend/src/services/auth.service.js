@@ -55,6 +55,7 @@ export async function register({ email, password, pdpConsent }) {
       id: user.id,
       email: user.email,
       pdp_consent: user.pdp_consent === true,
+      has_password: user.password_hash !== null,
     },
     token,
   };
@@ -95,6 +96,7 @@ export async function login({ email, password }) {
       id: user.id,
       email: user.email,
       pdp_consent: user.pdp_consent === true,
+      has_password: true,
     },
     token,
   };
@@ -131,10 +133,12 @@ export async function handleGoogleOAuth({ googleId, email, displayName }) {
       id: user.id,
       email: user.email,
       pdp_consent: user.pdp_consent === true,
+      has_password: user.password_hash !== null,
     },
     token,
   };
 }
+
 
 /**
  * Generate a JWT token for the given user.

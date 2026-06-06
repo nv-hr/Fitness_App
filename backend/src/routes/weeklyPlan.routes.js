@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import weeklyPlanController from '../controllers/weeklyPlan.controller.js';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
-import weeklyPlanLimiter, { regenerateLimiter, swapLimiter, toggleCompleteLimiter } from '../middlewares/weeklyPlanRateLimiter.js';
+import { weeklyPlanLimiter, regenerateLimiter, swapLimiter, toggleCompleteLimiter } from '../middlewares/rateLimiter.middleware.js';
 
 const router = Router();
 

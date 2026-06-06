@@ -16,4 +16,8 @@ router.post('/logout', authController.logout);
 // GET /api/auth/me — Get current user (protected)
 router.get('/me', authenticateToken, authController.getMe);
 
+// POST /api/auth/set-password — Set password (protected)
+router.post('/set-password', authenticateToken, authController.setPassword);
+
 export default router;
+

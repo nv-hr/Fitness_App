@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import activityPlanController from '../controllers/activityPlan.controller.js';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
-import activityPlanLimiter from '../middlewares/activityPlanRateLimiter.js';
+import { activityPlanLimiter } from '../middlewares/rateLimiter.middleware.js';
 
 const router = Router();
 

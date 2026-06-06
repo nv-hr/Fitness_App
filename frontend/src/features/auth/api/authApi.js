@@ -22,3 +22,11 @@ export async function logout() {
 export async function getMe() {
   return apiGet('/api/auth/me');
 }
+
+export async function setPassword(data) {
+  return apiPost('/api/auth/set-password', {
+    password: data.password,
+    pdpConsent: data.pdpConsent,
+  });
+}
+

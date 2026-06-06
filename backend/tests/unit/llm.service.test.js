@@ -489,7 +489,7 @@ describe('validatePlanStructure with availableDays + rest_day', () => {
     const days = dates.map((d, i) =>
       i < 5 ? makeActivityDay(d) : makeRestDay(d)
     );
-    const result = validatePlanStructure({ days }, '2026-01-05', 5);
+    const result = validatePlanStructure({ format_version: 1, days }, '2026-01-05', 5);
     expect(result.valid).toBe(true);
     expect(result.errors).toEqual([]);
   });

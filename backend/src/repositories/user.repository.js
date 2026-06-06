@@ -29,7 +29,7 @@ export async function findByEmail(email) {
 export async function findById(id) {
   try {
     const { rows } = await pool.query(
-      'SELECT id, email, google_id, pdp_consent, created_at FROM users WHERE id = $1 LIMIT 1',
+      'SELECT id, email, google_id, pdp_consent, created_at, (password_hash IS NOT NULL) AS has_password FROM users WHERE id = $1 LIMIT 1',
       [id]
     );
     return rows[0] || null;
@@ -41,7 +41,7 @@ export async function findById(id) {
 export async function findByGoogleId(googleId) {
   try {
     const { rows } = await pool.query(
-      'SELECT id, email, google_id, pdp_consent, created_at FROM users WHERE google_id = $1 LIMIT 1',
+      'SELECT id, email, google_id, pdp_consent, created_at, (password_hash IS NOT NULL) AS has_password FROM users WHERE google_id = $1 LIMIT 1',
       [googleId]
     );
     return rows[0] || null;
@@ -61,3 +61,16 @@ export async function updatePdpConsent(userId, consent) {
     throw new AppError('DatabaseError', `Failed to update PDP consent: ${err.message}`, 500);
   }
 }
+
+export async function updatePasswordHash(userId, passwordHash) {
+  try {
+    const { rows } = await pool.query(
+      'UPDATE users SET password_hash = $1, pdp_consent = true, pdp_consent_date = NOW() WHERE id = $2 RETURNING id, email',
+      [passwordHash, userId]
+    );
+    return rows[0] || null;
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to update password hash: ${err.message}`, 500);
+  }
+}
+

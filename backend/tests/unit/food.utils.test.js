@@ -1,7 +1,7 @@
 import {
   fuzzyMatchFoodName,
   recalculateDayCalories,
-} from '../utils/food.js';
+} from '../../src/utils/food.js';
 
 const mockFoods = [
   { id: 1, name: 'Chicken breast, raw, skinless', calories_per_100g: 165, category: 'meat' },

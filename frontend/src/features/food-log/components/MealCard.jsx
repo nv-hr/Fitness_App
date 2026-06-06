@@ -55,9 +55,6 @@ export default function MealCard({
       {/* ── Card header ── */}
       <div className="flex justify-between items-center border-b border-[#2d2d2d] pb-2.5 mb-3">
         <div className="flex items-center gap-2">
-          <div className={`p-1.5 rounded-lg border ${meta.colorClass}`}>
-            <span className="text-xs font-bold">{meta.label[0]}</span>
-          </div>
           <span className="font-display font-bold text-sm tracking-tight text-white capitalize">
             {meta.label}
           </span>
@@ -122,17 +119,19 @@ export default function MealCard({
 
       {/* ── Item rows ── */}
       {meal.items?.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {meal.items.map((item, i) => (
             <div
               key={i}
-              className="flex justify-between items-center py-2 px-3 rounded-lg border border-transparent hover:border-[#333] bg-[#181818] hover:bg-[#222] transition-all"
+              className={`flex justify-between items-center p-4 rounded-xl border border-[#2d2d2d] bg-[#1e1e1e] hover:bg-[#252525] transition-all duration-200 ${
+                item.logged ? 'opacity-50 border-slate-800 bg-[#151515]' : ''
+              }`}
             >
               <div className="space-y-0.5">
-                <span className="text-xs sm:text-sm font-semibold text-slate-200 leading-tight block">
+                <span className={`text-xs sm:text-sm font-semibold leading-tight block ${item.logged ? 'line-through text-slate-500' : 'text-white'}`}>
                   {item.food_name}
                 </span>
-                <span className="text-[11px] text-slate-500 font-mono">
+                <span className="text-[11px] text-slate-550 font-mono">
                   {item.portion_grams}g {item.calories ? `• ~${item.calories} kcal` : ''}
                 </span>
               </div>

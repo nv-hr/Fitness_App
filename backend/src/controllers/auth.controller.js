@@ -1,7 +1,8 @@
 import { register as registerUser, login as loginUser, handleGoogleOAuth, generateToken } from '../services/auth.service.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { ValidationError, AuthenticationError } from '../utils/errors.js';
-import { findById } from '../repositories/user.repository.js';
+import { findById, updatePasswordHash } from '../repositories/user.repository.js';
+import bcrypt from 'bcryptjs';
 
 /**
  * Cookie options for httpOnly JWT cookie (per D-01).
@@ -79,7 +80,32 @@ export async function getMe(req, res, next) {
       email: user.email,
       pdp_consent: user.pdp_consent === true,
       created_at: user.created_at,
+      has_password: user.has_password === true,
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/auth/set-password
+ * Setup password for a password-less/OAuth account.
+ */
+export async function setPassword(req, res, next) {
+  try {
+    const { password, pdpConsent } = req.body;
+    if (!password || password.length < 8) {
+      return errorResponse(res, 'Password must be at least 8 characters long', 400, 'VALIDATION_ERROR');
+    }
+    if (pdpConsent !== true) {
+      return errorResponse(res, 'PDP consent is required', 400, 'VALIDATION_ERROR');
+    }
+    const userId = req.user.userId;
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await updatePasswordHash(userId, hashedPassword);
+
+    return successResponse(res, { message: 'Password set successfully' });
   } catch (err) {
     next(err);
   }
@@ -110,5 +136,7 @@ export default {
   login,
   logout,
   getMe,
+  setPassword,
   googleCallback,
 };
+

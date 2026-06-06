@@ -12,7 +12,7 @@ import { format } from 'date-fns';
 import { useActivityCalendar } from '../hooks/useActivityCalendar.js';
 import DayActivityRow from './DayActivityRow.jsx';
 import { AiBannerCard, DateSwitcher, SectionHeader, Toast } from '../../../shared/ui/index.js';
-import { RotateCw, Info } from 'lucide-react';
+import { RotateCw, Info, Coffee } from 'lucide-react';
 
 /**
  * The weekly activity plan section: AI generation banner, date switcher,
@@ -89,13 +89,49 @@ export default function ActivityCalendarSection({ onDaySelect, onMonthChange, da
       );
     }
 
+    if (dayPlan?.rest_day) {
+      return (
+        <div className="relative overflow-hidden p-6 sm:p-8 rounded-2xl border border-[#2d2d2d] bg-[#1a1a1a] shadow-lg text-slate-350 animate-fade-in flex flex-col items-center text-center space-y-4">
+          <div className="p-3.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-inner">
+            <Coffee className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-1.5 max-w-md">
+            <h3 className="font-display font-bold text-lg text-white">
+              Planned Rest &amp; Recovery Day
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-450 leading-relaxed">
+              Your muscles adapt, rebuild, and grow stronger during rest. Today is a scheduled break designed to optimize your long-term athletic progress and prevent overtraining.
+            </p>
+          </div>
+
+          {/* Quick tips list to keep the user engaged in their healthy routine */}
+          <div className="w-full max-w-sm pt-4 border-t border-[#2d2d2d] grid grid-cols-3 gap-3 text-[11px] font-medium text-slate-450">
+            <div className="p-2.5 rounded-xl bg-[#111111] border border-[#2d2d2d] flex flex-col gap-1 items-center text-center">
+              <span className="text-base">💧</span>
+              <span className="text-white font-bold">Hydrate</span>
+              <span className="text-[10px] text-slate-500">Support joints</span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-[#111111] border border-[#2d2d2d] flex flex-col gap-1 items-center text-center">
+              <span className="text-base">🥗</span>
+              <span className="text-white font-bold">Nutrition</span>
+              <span className="text-[10px] text-slate-500">Refuel protein</span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-[#111111] border border-[#2d2d2d] flex flex-col gap-1 items-center text-center">
+              <span className="text-base">😴</span>
+              <span className="text-white font-bold">Sleep</span>
+              <span className="text-[10px] text-slate-500">7-9 hours</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="text-center py-12 px-4 rounded-xl border border-dashed border-[#2d2d2d] bg-[#1a1a1a] text-slate-500">
         <Info className="w-8 h-8 mx-auto mb-2 text-slate-600" />
         <p className="text-sm font-semibold">
-          {dayPlan?.rest_day
-            ? 'Rest Day — Your muscles need recovery today.'
-            : 'No workouts scheduled for this date.'}
+          No workouts scheduled for this date.
         </p>
         <p className="text-xs mt-1 max-w-xs mx-auto">
           Click &ldquo;Recreate Weekly Plan&rdquo; above to generate workout targets.

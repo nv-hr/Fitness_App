@@ -19,6 +19,7 @@ import AuthLayout from './layout/AuthLayout.jsx';
 // Route guards
 import ProtectedRoute from './guards/ProtectedRoute.jsx';
 import PublicRoute    from './guards/PublicRoute.jsx';
+import PasswordGuard  from './guards/PasswordGuard.jsx';
 
 // Shared UI
 import Loader from '../shared/ui/Loader.jsx';
@@ -26,6 +27,7 @@ import Loader from '../shared/ui/Loader.jsx';
 // Feature pages
 import LoginForm    from '../features/auth/components/LoginForm.jsx';
 import RegisterForm from '../features/auth/components/RegisterForm.jsx';
+import SetupPassword from '../features/auth/components/SetupPassword.jsx';
 import ProfileForm  from '../features/profile/components/ProfileForm.jsx';
 import { DashboardPage }              from '../features/dashboard/index.js';
 import { FoodLogPage }                from '../features/food-log/index.js';
@@ -33,6 +35,7 @@ import { ActivityPage }               from '../features/activities/index.js';
 import { ProgressPage }               from '../features/progress/index.js';
 import { BMICalculator, TDEECalculator } from '../features/calculators/index.js';
 import { LandingPage }                from '../features/landing/index.js';
+import { SettingsPage, ChangePasswordPage } from '../features/settings/index.js';
 
 /**
  * Renders the landing page for guests and the dashboard for authenticated users.
@@ -44,8 +47,12 @@ function HomeRoute() {
   const { user, loading } = useAuth();
   if (loading) return <Loader message="Loading..." />;
   if (!user) return <LandingPage />;
+  if (user.has_password === false || user.has_password === 'false' || user.has_password === null || user.has_password === undefined) {
+    return <Navigate to="/setup-password" replace />;
+  }
   return <AppShell><DashboardPage /></AppShell>;
 }
+
 
 /**
  * Root router. Wraps every authenticated route in AppShell and every
@@ -75,30 +82,51 @@ export default function Router() {
           }
         />
 
-        {/* Protected app pages — full authenticated shell */}
+        {/* Set Password Flow (Only accessible if logged in AND has no password) */}
+        <Route
+          path="/setup-password"
+          element={
+            <ProtectedRoute>
+              {/* If they already have a password, redirect them away to dashboard */}
+              <HasPasswordRedirect>
+                <AuthLayout><SetupPassword /></AuthLayout>
+              </HasPasswordRedirect>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected app pages — full authenticated shell wrapped in PasswordGuard */}
         <Route
           path="/profile"
-          element={<ProtectedRoute><AppShell><ProfileForm /></AppShell></ProtectedRoute>}
+          element={<ProtectedRoute><PasswordGuard><AppShell><ProfileForm /></AppShell></PasswordGuard></ProtectedRoute>}
+        />
+        <Route
+          path="/settings"
+          element={<ProtectedRoute><PasswordGuard><AppShell><SettingsPage /></AppShell></PasswordGuard></ProtectedRoute>}
+        />
+        <Route
+          path="/change-password"
+          element={<ProtectedRoute><PasswordGuard><AppShell><ChangePasswordPage /></AppShell></PasswordGuard></ProtectedRoute>}
         />
         <Route
           path="/bmi"
-          element={<ProtectedRoute><AppShell><BMICalculator /></AppShell></ProtectedRoute>}
+          element={<ProtectedRoute><PasswordGuard><AppShell><BMICalculator /></AppShell></PasswordGuard></ProtectedRoute>}
         />
         <Route
           path="/tdee"
-          element={<ProtectedRoute><AppShell><TDEECalculator /></AppShell></ProtectedRoute>}
+          element={<ProtectedRoute><PasswordGuard><AppShell><TDEECalculator /></AppShell></PasswordGuard></ProtectedRoute>}
         />
         <Route
           path="/food-log"
-          element={<ProtectedRoute><AppShell><FoodLogPage /></AppShell></ProtectedRoute>}
+          element={<ProtectedRoute><PasswordGuard><AppShell><FoodLogPage /></AppShell></PasswordGuard></ProtectedRoute>}
         />
         <Route
           path="/activities"
-          element={<ProtectedRoute><AppShell><ActivityPage /></AppShell></ProtectedRoute>}
+          element={<ProtectedRoute><PasswordGuard><AppShell><ActivityPage /></AppShell></PasswordGuard></ProtectedRoute>}
         />
         <Route
           path="/progress"
-          element={<ProtectedRoute><AppShell><ProgressPage /></AppShell></ProtectedRoute>}
+          element={<ProtectedRoute><PasswordGuard><AppShell><ProgressPage /></AppShell></PasswordGuard></ProtectedRoute>}
         />
 
         {/* Redirect legacy meal-calendar path */}
@@ -116,3 +144,16 @@ export default function Router() {
     </BrowserRouter>
   );
 }
+
+/**
+ * Redirects users who already have a password away from /setup-password.
+ */
+function HasPasswordRedirect({ children }) {
+  const { user } = useAuth();
+  if (user && user.has_password !== false && user.has_password !== 'false' && user.has_password !== null && user.has_password !== undefined) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+}
+
+

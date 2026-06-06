@@ -1,9 +1,9 @@
 import { RefreshCw, CheckCircle2, Clock, Zap, Flame, RotateCw } from 'lucide-react';
 
 const INTENSITY_META = {
-  light: { label: 'Light', badge: 'bg-slate-100 text-slate-655 text-slate-600 border-slate-200' },
-  moderate: { label: 'Moderate', badge: 'bg-teal-50 text-teal-700 border-teal-200/50' },
-  vigorous: { label: 'High', badge: 'bg-rose-50 text-rose-700 border-rose-200/50' },
+  light: { label: 'Light', badge: 'bg-slate-800/80 text-slate-200 border-slate-700/50' },
+  moderate: { label: 'Moderate', badge: 'bg-teal-950/60 text-teal-300 border-teal-900/50' },
+  vigorous: { label: 'High', badge: 'bg-rose-950/60 text-rose-300 border-rose-900/50' },
 };
 
 export default function DayActivityRow({ 
@@ -20,20 +20,20 @@ export default function DayActivityRow({
 
   const formatCountdown = (seconds) => {
     const m = Math.floor(seconds / 60);
-    const s = seconds % 65;
+    const s = seconds % 60;
     const paddingSecs = String(s).padStart(2, '0');
     return `${m}:${paddingSecs}`;
   };
 
   const currentMeta = INTENSITY_META[activity.intensity] || {
     label: activity.intensity,
-    badge: 'bg-slate-100 text-slate-700 border-slate-200',
+    badge: 'bg-slate-800/80 text-slate-200 border-slate-700/50',
   };
 
   return (
     <div
-      className={`flex items-center justify-between p-4 mb-3.5 bg-slate-50/50 hover:bg-slate-50 border border-slate-200/60 rounded-xl transition-all duration-200 ${
-        completed ? 'opacity-70 border-slate-100 bg-slate-50/20' : ''
+      className={`flex items-center justify-between p-4 mb-3.5 bg-[#1e1e1e] hover:bg-[#252525] border border-[#2d2d2d] rounded-xl transition-all duration-200 ${
+        completed ? 'opacity-50 border-slate-800 bg-[#151515]' : ''
       }`}
       style={{
         pointerEvents: disabled ? 'none' : 'auto',
@@ -42,7 +42,7 @@ export default function DayActivityRow({
       {/* Exercise descriptions */}
       <div className="space-y-1.5 flex-1 pr-4">
         <div className="flex flex-wrap items-center gap-2">
-          <span className={`font-semibold text-sm ${completed ? 'line-through text-slate-400' : 'text-slate-850'}`}>
+          <span className={`font-semibold text-sm ${completed ? 'line-through text-slate-500' : 'text-white'}`}>
             {activity.name}
           </span>
           <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border ${currentMeta.badge}`}>
@@ -51,13 +51,13 @@ export default function DayActivityRow({
         </div>
 
         {/* Workout metrics */}
-        <div className="flex items-center gap-4 text-xs font-medium text-slate-400 font-mono font-sans">
-          <span className="flex items-center gap-1">
-            <Clock className="w-3.5 h-3.5 text-slate-400" /> {activity.duration_min} mins
+        <div className="flex items-center gap-4 text-xs font-medium text-slate-550 font-mono font-sans">
+          <span className="flex items-center gap-1 text-slate-400">
+            <Clock className="w-3.5 h-3.5 text-slate-500" /> {activity.duration_min} mins
           </span>
           {activity.calories_burned && (
-            <span className="flex items-center gap-1 font-bold text-amber-600 bg-amber-50 rounded px-1.5 py-0.5 border border-amber-100/50">
-              <Flame className="w-3.5 h-3.5" /> ~{activity.calories_burned} kcal
+            <span className="flex items-center gap-1 font-semibold text-amber-400 bg-amber-950/40 rounded px-1.5 py-0.5 border border-amber-900/30">
+              <Flame className="w-3.5 h-3.5 text-amber-500" /> ~{activity.calories_burned} kcal
             </span>
           )}
         </div>

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { getMe, logout as apiLogout, login as loginApi, register as registerApi } from '../api/authApi.js';
+import { getMe, logout as apiLogout, login as loginApi, register as registerApi, setPassword as setPasswordApi } from '../api/authApi.js';
 
 const AuthContext = createContext(null);
 
@@ -33,6 +33,12 @@ export function AuthProvider({ children }) {
     return response;
   };
 
+  const setPassword = async (data) => {
+    const response = await setPasswordApi(data);
+    setUser((prev) => prev ? { ...prev, has_password: true } : null);
+    return response;
+  };
+
   const logout = async () => {
     await apiLogout();
     setUser(null);
@@ -44,6 +50,7 @@ export function AuthProvider({ children }) {
     loading,
     login,
     register,
+    setPassword,
     logout,
     isAuthenticated: !!user,
   };
@@ -58,3 +65,4 @@ export function useAuth() {
   }
   return context;
 }
+

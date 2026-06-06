@@ -18,9 +18,11 @@ import foodRoutes from './routes/food.routes.js';
 import activityRoutes from './routes/activity.routes.js';
 import weeklyPlanRoutes from './routes/weeklyPlan.routes.js';
 import dailyMealPlanRoutes from './routes/dailyMealPlan.routes.js';
+import activityPlanRoutes from './routes/activityPlan.routes.js';
 import progressRoutes from './routes/progress.routes.js';
 import docsRoutes from './routes/docs.routes.js';
 import { errorResponse } from './utils/response.js';
+import { createRateLimiter } from './middlewares/rateLimiter.middleware.js';
 
 const app = express();
 
@@ -43,23 +45,7 @@ const parseFrontendUrl = () => {
 };
 const FRONTEND_URL = parseFrontendUrl();
 
-// Rate limiter helper to reduce boilerplate (IN-01)
-const createRateLimiter = (options = {}) => {
-  const {
-    windowMs = 1 * 60 * 1000,
-    max = 7,
-    message = 'Too many requests',
-    testMax = 1000,
-    testWindowMs = 1000,
-  } = options;
-  const isTest = process.env.NODE_ENV === 'test';
-  return rateLimit({
-    windowMs: isTest ? testWindowMs : windowMs,
-    max: isTest ? testMax : max,
-    message: { success: false, error: { message, code: 'RATE_LIMITED' } },
-    validate: { xForwardedForHeader: false, trustProxy: false, default: true },
-  });
-};
+
 
 // Global aggregate rate limiter — counts ALL requests toward one bucket, regardless of IP
 const isTestGlobal = process.env.NODE_ENV === 'test';
@@ -144,6 +130,7 @@ app.use('/api/weekly-plans', weeklyPlanRoutes);
 app.use('/api/daily-meal-plans', dailyMealPlanRoutes);
 
 // Activity plan routes
+app.use('/api/activity-plans', activityPlanRoutes);
 
 // Progress routes (weight logging, goal tracking)
 app.use('/api/progress', progressRoutes);

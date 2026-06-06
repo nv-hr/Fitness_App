@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 
 /** Navigation items shown in sidebar and mobile bar. */
+/** Navigation items shown in sidebar and mobile bar. */
 const NAV_ITEMS = [
   { path: '/',          label: 'Dashboard',       icon: LayoutDashboard },
   { path: '/bmi',       label: 'BMI Calculator',  icon: Scale           },
@@ -38,8 +39,8 @@ const NAV_ITEMS = [
   { path: '/activities',label: 'Activities',      icon: Activity        },
   { path: '/progress',  label: 'Progress',        icon: LineChart       },
   { path: '/profile',   label: 'Profile',         icon: User            },
-  { path: '#',          label: 'About',           icon: HelpCircle, dummy: true },
-  { path: '#',          label: 'Contact',         icon: Mail,       dummy: true },
+  { path: '/settings',  label: 'Settings',        icon: Settings },
+  { path: '#',          label: 'Log Out',         icon: LogOut,     action: 'logout' },
 ];
 
 /**
@@ -108,7 +109,7 @@ export default function AppShell({ children }) {
               </span>
             </Link>
 
-            {/* Header right actions */}
+            {/* Header right actions (Settings and logout removed per request) */}
             <div className="flex items-center gap-4">
               {!isMobile && (
                 <div className="text-right text-white">
@@ -116,19 +117,6 @@ export default function AppShell({ children }) {
                   <p className="text-xs font-semibold max-w-[150px] truncate">{user?.email}</p>
                 </div>
               )}
-              <button
-                className="text-white hover:opacity-80 transition-opacity cursor-pointer"
-                title="Settings"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
-              <button
-                onClick={logout}
-                className="flex items-center justify-center p-2 rounded-xl text-white hover:bg-white/10 transition-colors cursor-pointer"
-                title="Log out"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
             </div>
           </div>
         </div>
@@ -143,6 +131,20 @@ export default function AppShell({ children }) {
               {NAV_ITEMS.map((item, idx) => {
                 const Icon = item.icon;
                 const active = isNavActive(item.path, location.pathname, item.dummy);
+
+                if (item.action === 'logout') {
+                  return (
+                    <button
+                      key={idx}
+                      onClick={logout}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-rose-400 hover:bg-rose-950/20 cursor-pointer text-left border-none bg-transparent"
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                }
+
                 return (
                   <Link
                     key={idx}
@@ -169,6 +171,20 @@ export default function AppShell({ children }) {
             {NAV_ITEMS.filter((i) => !i.dummy).map((item, idx) => {
               const Icon = item.icon;
               const active = isNavActive(item.path, location.pathname, false);
+
+              if (item.action === 'logout') {
+                return (
+                  <button
+                    key={idx}
+                    onClick={logout}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0 text-slate-400 bg-[#222] hover:bg-[#333] border-none"
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              }
+
               return (
                 <Link
                   key={idx}
