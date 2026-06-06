@@ -314,15 +314,27 @@ export default function BMICalculator() {
             )}
 
             {calculatedResults && (
-              <div className="border-t border-[#2d2d2d] pt-4 mt-2">
-                <span className="text-[10px] text-slate-500 block uppercase tracking-widest font-semibold">
-                  Standard Ranges:
+              <div className="border-t border-[#2d2d2d] pt-4 mt-3">
+                <span className="text-xs text-slate-400 block uppercase tracking-widest font-semibold mb-2">
+                  Standard BMI Ranges:
                 </span>
-                <div className="grid grid-cols-4 gap-1 text-[9px] font-bold text-center mt-2 font-mono">
-                  <div className="bg-sky-950/20 text-sky-400 py-1 rounded border border-sky-950/40">&lt;18.5</div>
-                  <div className="bg-emerald-950/20 text-emerald-400 py-1 rounded border border-emerald-950/40">18.5-25</div>
-                  <div className="bg-amber-950/20 text-amber-400 py-1 rounded border border-amber-950/40">25-30</div>
-                  <div className="bg-red-950/20 text-red-400 py-1 rounded border border-red-950/40">30+</div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center font-sans">
+                  <div className="bg-sky-950/30 text-sky-400 py-3 px-2 rounded-xl border border-sky-900/30 flex flex-col justify-center gap-1 shadow-sm">
+                    <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">Underweight</span>
+                    <span className="font-mono text-sm font-extrabold">&lt; 18.5</span>
+                  </div>
+                  <div className="bg-emerald-950/30 text-emerald-400 py-3 px-2 rounded-xl border border-emerald-900/30 flex flex-col justify-center gap-1 shadow-sm">
+                    <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">Normal</span>
+                    <span className="font-mono text-sm font-extrabold">18.5 - 25</span>
+                  </div>
+                  <div className="bg-amber-950/30 text-amber-400 py-3 px-2 rounded-xl border border-amber-900/30 flex flex-col justify-center gap-1 shadow-sm">
+                    <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">Overweight</span>
+                    <span className="font-mono text-sm font-extrabold">25 - 30</span>
+                  </div>
+                  <div className="bg-red-950/30 text-red-400 py-3 px-2 rounded-xl border border-red-900/30 flex flex-col justify-center gap-1 shadow-sm">
+                    <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">Obese</span>
+                    <span className="font-mono text-sm font-extrabold">30+</span>
+                  </div>
                 </div>
               </div>
             )}

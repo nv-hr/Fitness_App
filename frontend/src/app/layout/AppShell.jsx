@@ -138,7 +138,7 @@ export default function AppShell({ children }) {
       <div className="flex-1 flex flex-col md:flex-row">
         {/* Desktop sidebar */}
         {!isMobile ? (
-          <aside className="w-64 bg-[#151515] border-r border-[#222] flex flex-col justify-between py-6 shrink-0">
+          <aside className="sticky top-14 h-[calc(100vh-3.5rem)] w-64 bg-[#151515] border-r border-[#222] flex flex-col justify-between py-6 shrink-0 z-30">
             <nav className="flex flex-col space-y-1 px-3">
               {NAV_ITEMS.map((item, idx) => {
                 const Icon = item.icon;
@@ -150,7 +150,7 @@ export default function AppShell({ children }) {
                     className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
                       active
                         ? 'bg-emerald-500 text-white font-semibold shadow-md'
-                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                        : 'text-slate-400 hover:text-[#ffffff] hover:bg-[#252525]'
                     }`}
                   >
                     <Icon className="w-4 h-4" />

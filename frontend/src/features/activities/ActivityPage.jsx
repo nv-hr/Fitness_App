@@ -9,7 +9,7 @@ import ActivityLogSection from './components/ActivityLogSection.jsx';
 import { Calendar, Dumbbell, Loader2 } from 'lucide-react';
 
 export default function ActivityPage() {
-  const [activeTab, setActiveTab] = useState('log');
+  const [activeTab, setActiveTab] = useState('plan');
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
@@ -79,17 +79,6 @@ export default function ActivityPage() {
       {/* Tab bar switches */}
       <div className="bg-slate-100/80 backdrop-blur-xs p-1 rounded-2xl flex max-w-md border border-slate-200/20">
         <button
-          onClick={() => setActiveTab('log')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-            activeTab === 'log'
-              ? 'bg-white text-emerald-600 shadow-sm'
-              : 'text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Dumbbell className="w-4 h-4" />
-          Log Workouts
-        </button>
-        <button
           onClick={() => setActiveTab('plan')}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
             activeTab === 'plan'
@@ -99,6 +88,17 @@ export default function ActivityPage() {
         >
           <Calendar className="w-4 h-4" />
           Weekly AI Plan
+        </button>
+        <button
+          onClick={() => setActiveTab('log')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeTab === 'log'
+              ? 'bg-white text-emerald-600 shadow-sm'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Dumbbell className="w-4 h-4" />
+          Log Workouts
         </button>
       </div>
 

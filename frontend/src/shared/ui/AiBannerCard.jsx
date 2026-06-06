@@ -41,7 +41,7 @@ export default function AiBannerCard({
           <Sparkles className="w-5 h-5 animate-pulse text-yellow-300" />
           {title}
         </h3>
-        <p className="text-xs text-white/70 mt-1 max-w-md leading-relaxed">{description}</p>
+        <p className="text-xs text-white mt-1 max-w-md leading-relaxed">{description}</p>
       </div>
 
       {/* Action button */}

@@ -44,7 +44,7 @@ function HomeRoute() {
   const { user, loading } = useAuth();
   if (loading) return <Loader message="Loading..." />;
   if (!user) return <LandingPage />;
-  return <DashboardPage />;
+  return <AppShell><DashboardPage /></AppShell>;
 }
 
 /**
@@ -107,11 +107,7 @@ export default function Router() {
         {/* Home: landing for guests, dashboard for authenticated users */}
         <Route
           path="/"
-          element={
-            <AppShell>
-              <HomeRoute />
-            </AppShell>
-          }
+          element={<HomeRoute />}
         />
 
         {/* Catch-all */}
