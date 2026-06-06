@@ -8,6 +8,20 @@ import * as activityRepo from '../repositories/activity.repository.js';
 import { getCachedPlan, setCachedPlan } from '../services/llm.service.js';
 import { findByUserAndWeek, upsertPlan } from '../repositories/weeklyPlan.repository.js';
 
+function isDateWithinTimezoneRange(dateStr) {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setUTCDate(today.getUTCDate() - 1);
+  const tomorrow = new Date(today);
+  tomorrow.setUTCDate(today.getUTCDate() + 1);
+  
+  const todayStr = today.toISOString().split('T')[0];
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  
+  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr;
+}
+
 /**
  * GET /api/activities — Full activity pool filtered by user's goal.
  */
@@ -51,10 +65,9 @@ async function logActivity(req, res, next) {
     // Default loggedDate to today
     const logDate = loggedDate || new Date().toISOString().split('T')[0];
 
-    // Only allow logging for today
-    const todayStr = new Date().toISOString().split('T')[0];
-    if (logDate !== todayStr) {
-      return errorResponse(res, 'Can only log activities for today', 400, 'VALIDATION_ERROR');
+    // Allow logging within timezone boundaries (yesterday, today, tomorrow relative to UTC)
+    if (!isDateWithinTimezoneRange(logDate)) {
+      return errorResponse(res, 'Can only log activities for today (considering timezone differences)', 400, 'VALIDATION_ERROR');
     }
 
     const log = await activityRepo.createActivityLog(req.user.userId, {
