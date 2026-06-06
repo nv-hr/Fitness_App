@@ -40,7 +40,14 @@ const translateToEnglish = (text) => {
   return translated;
 };
 
-export default function ActivityCard({ activity, onLogClick, isLogging }) {
+/**
+ * @param {object}   props
+ * @param {object}   props.activity    - Activity data object.
+ * @param {Function} props.onLogClick  - Called with the activity when Log is clicked.
+ * @param {boolean}  [props.isLogging]  - True when THIS card's form is open/submitting.
+ * @param {boolean}  [props.anyLogging] - True when ANY card's form is open; disables this card's Log button.
+ */
+export default function ActivityCard({ activity, onLogClick, isLogging, anyLogging = false }) {
   const equipsText = activity.equipment_needed && activity.equipment_needed.length > 0
     ? activity.equipment_needed.join(', ')
     : 'No Equipment';
@@ -48,6 +55,9 @@ export default function ActivityCard({ activity, onLogClick, isLogging }) {
   const equips = translateToEnglish(equipsText);
   const name = translateToEnglish(activity.name);
   const desc = translateToEnglish(activity.description);
+
+  // Disable the Log button when this card's form is open OR any other form is open
+  const logDisabled = isLogging || anyLogging;
 
   return (
     <div className="bg-slate-50/60 p-4.5 rounded-2xl border border-slate-200/50 hover:border-emerald-200 hover:bg-slate-50 transition-all duration-200 shadow-xs relative overflow-hidden group mb-4">
@@ -80,9 +90,10 @@ export default function ActivityCard({ activity, onLogClick, isLogging }) {
           <div className="pt-3 border-t border-slate-100/60 mt-3 flex justify-end">
             <button
               onClick={() => onLogClick(activity)}
-              disabled={isLogging}
+              disabled={logDisabled}
+              title={anyLogging && !isLogging ? 'Please finish the current log form first' : undefined}
               className={`w-full sm:w-auto flex items-center justify-center gap-1 px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all border cursor-pointer active:scale-95 ${
-                isLogging
+                logDisabled
                   ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
                   : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border-emerald-100/60'
               }`}

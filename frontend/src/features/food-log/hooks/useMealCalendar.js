@@ -323,6 +323,9 @@ export function useMealCalendar(onDaySelect) {
     swapRetryAfter,
     toast,
     isNotToday,
+    /** True whenever any write mutation (log, regenerate, generate) is in-flight.
+     *  Used to disable all other action buttons and prevent conflicting requests. */
+    isBusy: !!(loggingMeal || regeneratingCat || generating),
     handlePrevDay,
     handleNextDay,
     handleGoToToday,

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getAllActivities, getActivityHistory, logActivity, deleteActivityLog } from '../api/activityApi.js';
 import ActivityPool from './ActivityPool.jsx';
 import ActivityLogForm from './ActivityLogForm.jsx';
@@ -13,34 +13,17 @@ export default function ActivityLogSection() {
   const [successMsg, setSuccessMsg] = useState('');
   const [loggingActivity, setLoggingActivity] = useState(null);
 
-  const refreshInFlight = useRef(false);
-  const pendingRefresh = useRef(false);
-
   /**
-   * Serialised refresh with a one-item queue.
-   * If a refresh is already running, we schedule one more to fire
-   * after it completes rather than dropping the request entirely.
-   * This guarantees the list always reflects the latest DB state
-   * even when the user logs multiple activities in quick succession.
+   * Fetches the latest activity history from the server.
+   * Layer 1 (loggingActivity state) disables all Log buttons while a
+   * submission is in-flight, so this is never called concurrently.
    */
   const refreshHistory = useCallback(async () => {
-    if (refreshInFlight.current) {
-      pendingRefresh.current = true;
-      return;
-    }
-    refreshInFlight.current = true;
     try {
       const historyRes = await getActivityHistory(7);
       setHistory(historyRes.data || []);
     } catch {
       // Silently fail
-    } finally {
-      refreshInFlight.current = false;
-      if (pendingRefresh.current) {
-        pendingRefresh.current = false;
-        // Micro-delay to allow React to flush state before next fetch
-        setTimeout(() => refreshHistory(), 50);
-      }
     }
   }, []);
 

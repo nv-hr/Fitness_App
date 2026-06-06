@@ -32,6 +32,8 @@ export default function AiBannerCard({
   generating = false,
   generatingLabel = 'Generating...',
   retryAfter = null,
+  /** Externally imposed busy lock — e.g., a log or per-meal regen is in-flight. */
+  disabled = false,
 }) {
   return (
     <div className="bg-gradient-to-r from-red-900/80 to-rose-900/60 p-5 rounded-2xl text-white border border-red-800/30 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -53,6 +55,16 @@ export default function AiBannerCard({
           >
             <Clock className="w-4 h-4" />
             Wait {formatCountdown(retryAfter)}
+          </button>
+        ) : disabled ? (
+          // Another action (log/regen) is in-flight — lock the generate button
+          <button
+            disabled
+            title="Please wait for the current action to complete"
+            className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white/10 border border-white/10 text-white/40 font-bold text-xs rounded-xl cursor-not-allowed font-sans"
+          >
+            <RotateCw className="w-4 h-4 animate-spin" />
+            Busy...
           </button>
         ) : (
           <button

@@ -38,6 +38,7 @@ export default function MealCalendarSection({ onDaySelect }) {
     swapRetryAfter,
     toast,
     isNotToday,
+    isBusy,
     handlePrevDay,
     handleNextDay,
     handleGoToToday,
@@ -98,6 +99,7 @@ export default function MealCalendarSection({ onDaySelect }) {
               isLogging={loggingMeal === meal.meal_type}
               isRegenerating={regeneratingCategory === meal.meal_type}
               swapRetryAfter={swapRetryAfter}
+              globalBusy={isBusy}
               onLog={() => handleLogMeal(meal.meal_type)}
               onRegenerate={() => handleRegenerateCategory(meal.meal_type)}
               onToggleItem={handleToggleItem}
@@ -122,6 +124,7 @@ export default function MealCalendarSection({ onDaySelect }) {
         generating={generating}
         generatingLabel={generatingStatus || 'Formulating...'}
         retryAfter={genRetryAfter}
+        disabled={isBusy && !generating}
       />
 
       <DateSwitcher

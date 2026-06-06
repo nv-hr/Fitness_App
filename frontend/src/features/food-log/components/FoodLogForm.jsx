@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { getDailyLogs, getLogHistory, getRecentFoods, logFood } from '../api/foodLogApi.js';
 import FoodSearch from './FoodSearch.jsx';
@@ -23,21 +23,12 @@ export default function FoodLogForm() {
 
   const today = format(new Date(), 'yyyy-MM-dd');
 
-  const refreshInFlight = useRef(false);
-  const pendingRefresh = useRef(false);
-
   /**
-   * Serialised refresh with a one-item queue.
-   * If a refresh is already running, we mark pendingRefresh and let the
-   * current fetch trigger one more after it completes. This prevents
-   * concurrent stale-overwrite races while still catching rapid logs.
+   * Fetches the latest logs, history, and recent foods from the server.
+   * Layer 1 (button disable) ensures this is never called concurrently,
+   * so no in-flight guard is needed here.
    */
   const refreshData = useCallback(async () => {
-    if (refreshInFlight.current) {
-      pendingRefresh.current = true;
-      return;
-    }
-    refreshInFlight.current = true;
     try {
       const [logsRes, historyRes, recentRes] = await Promise.all([
         getDailyLogs(today),
@@ -49,13 +40,6 @@ export default function FoodLogForm() {
       setRecentFoods(recentRes.data || []);
     } catch {
       // Silently fail — user can refresh manually
-    } finally {
-      refreshInFlight.current = false;
-      if (pendingRefresh.current) {
-        pendingRefresh.current = false;
-        // Micro-delay to allow React to flush state before next fetch
-        setTimeout(() => refreshData(), 50);
-      }
     }
   }, [today]);
 
