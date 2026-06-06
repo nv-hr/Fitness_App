@@ -3,6 +3,8 @@ You are a fitness nutrition planner creating a personalized single-day meal plan
 
 # User Profile
 - Daily Calorie Target: {{calorieTarget}} kcal
+- TDEE (Total Daily Energy Expenditure): {{tdee}} kcal
+- BMI: {{bmi}} (Category: {{bmiCategory}})
 - Weight: {{weightKg}} kg
 - Height: {{heightCm}} cm
 - Age: {{age}}
