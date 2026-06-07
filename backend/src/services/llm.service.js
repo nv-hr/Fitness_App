@@ -39,7 +39,7 @@ const CONFIG = {
   model: process.env.LLM_MODEL || 'openrouter/owl-alpha',
   fallbackModel: process.env.LLM_FALLBACK_MODEL || '',
   fallbackModel2: process.env.LLM_FALLBACK_MODEL_2 || '',
-  temperature: 0.2,
+  temperature: 0.7,
   maxTokens: 2000,
   retryDelayMs: 1000,
 };
@@ -90,7 +90,10 @@ export function buildSystemPrompt(profile, activityHistory, activities, weekStar
         return `- ${dateStr}: ${a.activity_name} (${a.duration_min}min, ${a.intensity})`;
       }).join('\n')
     : 'No recent activity history.';
-  const activitiesText = activities.map(a => `- ${a.name} (${a.estimated_calories} cal, ~${a.duration_min}min)`).join('\n');
+  
+  // Shuffle available activities to prevent LLM bias towards the top of the list
+  const shuffledActivities = [...activities].sort(() => Math.random() - 0.5);
+  const activitiesText = shuffledActivities.map(a => `- ${a.name} (${a.estimated_calories} cal, ~${a.duration_min}min)`).join('\n');
 
   // Compute physiological variables
   const bmi = calculateBmi(profile.weight_kg, profile.height_cm);
@@ -497,6 +500,8 @@ export async function generateWeeklyPlan(deps) {
     return { plan: cached, fromCache: true, status: 'active' };
   }
 
+  console.log(`[LLM] Activities planning running for user ${deps.userId}, week ${deps.weekStart}`);
+
   let profile, history, dbActivities;
   try {
     [profile, history, dbActivities] = await Promise.all([
@@ -506,11 +511,13 @@ export async function generateWeeklyPlan(deps) {
     ]);
   } catch (err) {
     console.error('[LLM] Failed to fetch user data:', err.message);
+    console.warn(`[LLM] Activities planning returning fallback for user ${deps.userId}`);
     const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
     return { plan: fallback, fromCache: false, status: fallback.status };
   }
 
   if (!profile) {
+    console.warn(`[LLM] Activities planning returning fallback for user ${deps.userId} (no profile)`);
     const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
     return { plan: fallback, fromCache: false, status: fallback.status };
   }
@@ -541,6 +548,7 @@ export async function generateWeeklyPlan(deps) {
       } catch (err) {
         console.error(`[LLM] API call attempt ${attempt} failed:`, err.message);
         if (attempt >= maxAttempts) {
+          console.warn(`[LLM] Activities planning returning fallback for user ${deps.userId}`);
           const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
           return { plan: fallback, fromCache: false, status: fallback.status };
         }
@@ -615,10 +623,12 @@ export async function generateWeeklyPlan(deps) {
 
     setCachedPlan(deps.userId, deps.weekStart, JSON.parse(JSON.stringify(plan)));
 
+    console.log(`[LLM] Activities planning success for user ${deps.userId}`);
     return { plan, fromCache: false, status: 'active' };
   }
 
   console.warn('[LLM] All generation attempts failed, returning fallback');
+  console.warn(`[LLM] Activities planning returning fallback for user ${deps.userId}`);
   const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
   return { plan: fallback, fromCache: false, status: fallback.status };
 }

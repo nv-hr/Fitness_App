@@ -5,17 +5,19 @@ export async function getWeeklyPlan(weekStart) {
   return apiGet(`/api/weekly-plans${params}`);
 }
 
-export async function generateWeeklyPlan(weekStart, availableDays) {
+export async function generateWeeklyPlan(weekStart, availableDays, force) {
   return apiPost('/api/weekly-plans/generate', {
     weekStart,
     ...(availableDays != null && { availableDays }),
+    ...(force && { force }),
   });
 }
 
-export function generateWeeklyPlanStream(weekStart, availableDays, onChunk, onDone, onError) {
+export function generateWeeklyPlanStream(weekStart, availableDays, force, onChunk, onDone, onError) {
   return fetchSseStream('/api/weekly-plans/generate-stream', {
     weekStart,
     ...(availableDays != null && { availableDays }),
+    ...(force && { force }),
   }, onChunk, onDone, onError);
 }
 

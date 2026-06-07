@@ -315,6 +315,7 @@ export async function generateDailyMealPlan(deps) {
     return { plan: fallback, fromCache: false, status: 'fallback' };
   }
   if (!profile || !profile.profile) {
+    console.warn(`[LLM] Meal planning returning fallback for user ${userId} (no profile)`);
     const fallback = generateFallbackDailyMealPlan(2000, dbFoods || []);
     return { plan: fallback, fromCache: false, status: 'fallback' };
   } const calorieTarget = profile.calorieTarget || 2000;
@@ -343,6 +344,8 @@ export async function generateDailyMealPlan(deps) {
     return { plan: fallback, fromCache: false, status: 'fallback' };
   }
   const prompt = buildDailyMealPlanPrompt(userProfile, dbFoods, recentLogs, planDate, calorieTarget, tdee, bmi, bmiCategory, regeneratingMeal);
+  console.log(`[LLM] Meal planning running for user ${userId}, date ${planDate}`);
+  
   let plan;
   let attempt = 0;
   const maxAttempts = 2;
@@ -363,6 +366,7 @@ export async function generateDailyMealPlan(deps) {
     } catch (err) {
       console.error(`[DailyMealPlan] LLM API call attempt ${attempt} failed:`, err.message);
       if (attempt >= maxAttempts) {
+        console.warn(`[LLM] Meal planning returning fallback for user ${userId} (attempts exhausted)`);
         const fallback = generateFallbackDailyMealPlan(calorieTarget, dbFoods || []);
         return { plan: fallback, fromCache: false, status: 'fallback' };
       }
@@ -396,9 +400,10 @@ export async function generateDailyMealPlan(deps) {
       console.error('[DailyMealPlan] Failed to persist generated plan:', err.message);
     }
     setCachedPlan(userId, planDate, JSON.parse(JSON.stringify(plan)), 'meal');
+    console.log(`[LLM] Meal planning success for user ${userId}, date ${planDate}`);
     return { plan, fromCache: false, status: 'active' };
   }
-  console.warn('[DailyMealPlan] All generation attempts failed, returning fallback');
+  console.warn(`[LLM] Meal planning returning fallback for user ${userId} (all attempts failed)`);
   const fallback = generateFallbackDailyMealPlan(calorieTarget, dbFoods || []);
   fallback.date = planDate;
   fallback.calorie_target = calorieTarget;

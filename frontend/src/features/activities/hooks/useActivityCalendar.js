@@ -160,6 +160,7 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
       generateWeeklyPlanStream(
         weekStart,
         4,
+        false, // force
         (chunk) => {
           setGeneratingStatus(`Auto-formulating: ${chunk}`);
         },
@@ -192,10 +193,10 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
     const targetDay = selectedDay || new Date();
     const weekStart = format(startOfWeek(targetDay, { weekStartsOn: 1 }), 'yyyy-MM-dd');
 
-    regenerateDayStream(
+    generateWeeklyPlanStream(
       weekStart,
-      0,
       4,
+      true, // force
       (chunk) => {
         setGeneratingStatus(`Generating: ${chunk}`);
       },
