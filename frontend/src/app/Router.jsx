@@ -9,7 +9,7 @@
  * routing simultaneously — it is genuinely a routing concern, not a page.
  */
 
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../features/auth/hooks/useAuth.jsx';
 
 // Layout wrappers
@@ -48,7 +48,7 @@ function HomeRoute() {
   if (user.has_password === false || user.has_password === 'false' || user.has_password === null || user.has_password === undefined) {
     return <Navigate to="/setup-password" replace />;
   }
-  return <AppShell><DashboardPage /></AppShell>;
+  return <Navigate to="/dashboard" replace />;
 }
 
 
@@ -95,37 +95,26 @@ export default function Router() {
 
         {/* Protected app pages — full authenticated shell wrapped in PasswordGuard */}
         <Route
-          path="/profile"
-          element={<ProtectedRoute><PasswordGuard><AppShell><ProfileForm /></AppShell></PasswordGuard></ProtectedRoute>}
-        />
-        <Route
-          path="/settings"
-          element={<ProtectedRoute><PasswordGuard><AppShell><SettingsPage /></AppShell></PasswordGuard></ProtectedRoute>}
-        />
-        <Route
-          path="/change-password"
-          element={<ProtectedRoute><PasswordGuard><AppShell><ChangePasswordPage /></AppShell></PasswordGuard></ProtectedRoute>}
-        />
-        <Route
-          path="/bmi"
-          element={<ProtectedRoute><PasswordGuard><AppShell><BMICalculator /></AppShell></PasswordGuard></ProtectedRoute>}
-        />
-        <Route
-          path="/tdee"
-          element={<ProtectedRoute><PasswordGuard><AppShell><TDEECalculator /></AppShell></PasswordGuard></ProtectedRoute>}
-        />
-        <Route
-          path="/food-log"
-          element={<ProtectedRoute><PasswordGuard><AppShell><FoodLogPage /></AppShell></PasswordGuard></ProtectedRoute>}
-        />
-        <Route
-          path="/activities"
-          element={<ProtectedRoute><PasswordGuard><AppShell><ActivityPage /></AppShell></PasswordGuard></ProtectedRoute>}
-        />
-        <Route
-          path="/progress"
-          element={<ProtectedRoute><PasswordGuard><AppShell><ProgressPage /></AppShell></PasswordGuard></ProtectedRoute>}
-        />
+          element={
+            <ProtectedRoute>
+              <PasswordGuard>
+                <AppShell>
+                  <Outlet />
+                </AppShell>
+              </PasswordGuard>
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/profile" element={<ProfileForm />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/change-password" element={<ChangePasswordPage />} />
+          <Route path="/bmi" element={<BMICalculator />} />
+          <Route path="/tdee" element={<TDEECalculator />} />
+          <Route path="/food-log" element={<FoodLogPage />} />
+          <Route path="/activities" element={<ActivityPage />} />
+          <Route path="/progress" element={<ProgressPage />} />
+        </Route>
 
         {/* Redirect legacy meal-calendar path */}
         <Route path="/meal-calendar" element={<Navigate to="/food-log" replace />} />
@@ -149,7 +138,7 @@ export default function Router() {
 function HasPasswordRedirect({ children }) {
   const { user } = useAuth();
   if (user && user.has_password !== false && user.has_password !== 'false' && user.has_password !== null && user.has_password !== undefined) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
   return children;
 }

@@ -21,6 +21,6 @@ import Loader from '../../shared/ui/Loader.jsx';
 export default function PublicRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return <Loader message="Preparing portal..." />;
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to="/dashboard" replace />;
   return children;
 }
