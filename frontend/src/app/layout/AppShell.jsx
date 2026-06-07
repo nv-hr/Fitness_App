@@ -9,10 +9,9 @@
 
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../../features/auth/hooks/useAuth.jsx';
+import { useAuth } from '../../features/auth/index.js';
 import { useResponsive } from '../../shared/hooks/useResponsive.js';
-import { getProfile } from '../../features/profile/api/profileApi.js';
-import ProfileForm from '../../features/profile/components/ProfileForm.jsx';
+import { getProfile, ProfileForm } from '../../features/profile/index.js';
 import Loader from '../../shared/ui/Loader.jsx';
 import {
   LayoutDashboard,
