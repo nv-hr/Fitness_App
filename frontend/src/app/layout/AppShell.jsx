@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../../features/auth/index.js';
 import { useResponsive } from '../../shared/hooks/useResponsive.js';
 import { getProfile, ProfileForm } from '../../features/profile/index.js';
@@ -31,7 +31,7 @@ import {
 /** Navigation items shown in sidebar and mobile bar. */
 /** Navigation items shown in sidebar and mobile bar. */
 const NAV_ITEMS = [
-  { path: '/',          label: 'Dashboard',       icon: LayoutDashboard },
+  { path: '/dashboard', label: 'Dashboard',       icon: LayoutDashboard },
   { path: '/bmi',       label: 'BMI Calculator',  icon: Scale           },
   { path: '/tdee',      label: 'TDEE Calculator', icon: Flame           },
   { path: '/food-log',  label: 'Food Tracker',    icon: Apple           },
@@ -204,7 +204,7 @@ export default function AppShell({ children }) {
 
         {/* Page content */}
         <main className="flex-1 bg-[#121212] py-8 px-4 sm:px-6 lg:px-8">
-          {children}
+          {children || <Outlet />}
         </main>
       </div>
 
