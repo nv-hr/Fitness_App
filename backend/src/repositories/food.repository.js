@@ -127,19 +127,42 @@ export async function getLogHistory(userId, days = 7) {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
     const cutoffStr = cutoffDate.toISOString().split('T')[0];
+    
+    // Why LEFT JOIN and JSON_AGG: We fetch complete food intake details (including names from foods or custom entries)
+    // aggregated per day so the UI can display detailed lists inside the history panel in a single request.
     const { rows } = await pool.query(
-      `SELECT log_date, SUM(calories) as total_calories, COUNT(*) as entry_count
-       FROM food_logs
-       WHERE user_id = $1 AND log_date >= $2::date
-       GROUP BY log_date
-       ORDER BY log_date DESC`,
+      `SELECT 
+         fl.log_date, 
+         SUM(fl.calories) as total_calories, 
+         COUNT(*) as entry_count,
+         COALESCE(
+           JSON_AGG(
+             JSON_BUILD_OBJECT(
+               'id', fl.id,
+               'food_name', COALESCE(f.name, fl.custom_food_name),
+               'calories', fl.calories,
+               'portion_grams', fl.portion_grams,
+               'meal_type', fl.meal_type
+             ) ORDER BY fl.meal_type, fl.created_at
+           ),
+           '[]'::json
+         ) as foods
+       FROM food_logs fl
+       LEFT JOIN foods f ON fl.food_id = f.id
+       WHERE fl.user_id = $1 AND fl.log_date >= $2::date
+       GROUP BY fl.log_date
+       ORDER BY fl.log_date DESC`,
       [userId, cutoffStr]
     );
-    return rows.map(r => ({ ...r, log_date: r.log_date.toLocaleDateString('en-CA') }));
+     return rows.map(r => ({
+       ...r,
+       log_date: r.log_date instanceof Date ? r.log_date.toISOString().split('T')[0] : r.log_date,
+     }));
   } catch (err) {
     throw new AppError('DatabaseError', `Failed to get log history: ${err.message}`, 500);
   }
 }
+
 
 /**
  * Get recently logged foods for quick-add (LOG-05).
@@ -304,5 +327,45 @@ export async function getFoodById(foodId) {
     return rows[0] || null;
   } catch (err) {
     throw new AppError('DatabaseError', `Failed to get food: ${err.message}`, 500);
+  }
+}
+
+/**
+ * Delete a food log entry by ID scoped to the authenticated user.
+ * Why user-scoped: Security rule ensures users can only delete their own logs.
+ * @param {number} logId
+ * @param {number} userId
+ * @param {import('pg').PoolClient} [clientOverride]
+ * @returns {Promise<Object|null>} Deleted log row
+ */
+export async function deleteFoodLogById(logId, userId, clientOverride) {
+  const db = clientOverride || pool;
+  try {
+    const { rows } = await db.query(
+      `DELETE FROM food_logs WHERE id = $1 AND user_id = $2 RETURNING *`,
+      [logId, userId]
+    );
+    return rows[0] || null;
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to delete food log by ID: ${err.message}`, 500);
+  }
+}
+
+/**
+ * Get a single food log entry by ID scoped to the authenticated user.
+ * Why user-scoped: Security check prevents users from inspecting other logs.
+ * @param {number} logId
+ * @param {number} userId
+ * @returns {Promise<Object|null>} Log entry
+ */
+export async function getFoodLogById(logId, userId) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM food_logs WHERE id = $1 AND user_id = $2 LIMIT 1`,
+      [logId, userId]
+    );
+    return rows[0] || null;
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to get food log by ID: ${err.message}`, 500);
   }
 }

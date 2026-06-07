@@ -143,6 +143,8 @@ function buildDailyMealPlanPrompt(profile, dbFoods, recentLogs, planDate, calori
     bmi: String(bmi || ''),
     bmiCategory: bmiCategory || '',
     recentFoodLogs: recentText,
+    targetWeightKg: String(profile.target_weight_kg || profile.targetWeightKg || ''),
+    targetDate: String(profile.target_date || profile.targetDate || ''),
   });
 }
 

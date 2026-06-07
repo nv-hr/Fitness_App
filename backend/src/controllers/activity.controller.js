@@ -94,10 +94,24 @@ async function logActivity(req, res, next) {
           if (day?.activities) {
             const actIdx = day.activities.findIndex(a => a.activity_id === activityId);
             if (actIdx !== -1) {
-              day.activities[actIdx].completed = true;
+              const plannedActivity = day.activities[actIdx];
+              
+              // Why SELECT COALESCE(SUM(duration_min)): Sum all logged minutes for this activity today
+              // to check if it matches or exceeds the planned duration.
+              const { rows: durRows } = await client.query(
+                `SELECT COALESCE(SUM(duration_min), 0) as total
+                 FROM activity_logs
+                 WHERE user_id = $1 AND logged_date = $2 AND activity_id = $3`,
+                [req.user.userId, logDate, activityId]
+              );
+              const totalDuration = Number(durRows[0].total);
+
+              plannedActivity.completed = totalDuration >= plannedActivity.duration_min;
+
               const allCompleted = day.activities.length > 0 && day.activities.every(a => a.completed === true);
               if (allCompleted) day.completed = true;
               else delete day.completed;
+
               await upsertPlan(req.user.userId, weekStart, plan.plan_data, plan.status, client);
               await client.query('COMMIT');
               setCachedPlan(req.user.userId, weekStart, plan.plan_data);
@@ -122,7 +136,7 @@ async function logActivity(req, res, next) {
 
     return successResponse(res, {
       ...log,
-      logged_date: log.logged_date instanceof Date ? log.logged_date.toLocaleDateString('en-CA') : log.logged_date,
+      logged_date: log.logged_date instanceof Date ? log.logged_date.toISOString().split('T')[0] : log.logged_date,
     }, 201);
   } catch (err) {
     next(err);
@@ -157,7 +171,7 @@ async function getActivityHistory(req, res, next) {
       const grouped = {};
       for (const row of rows) {
         const dateKey = row.logged_date instanceof Date
-          ? row.logged_date.toLocaleDateString('en-CA')
+          ? row.logged_date.toISOString().split('T')[0]
           : String(row.logged_date).split('T')[0];
         if (!grouped[dateKey]) {
           grouped[dateKey] = {
@@ -198,10 +212,7 @@ function getMonday(date) {
   return d.toISOString().split('T')[0];
 }
 
-function formatDateLocal(d) {
-  const date = d instanceof Date ? d : new Date(d);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
+
 
 /**
  * DELETE /api/activities/log/:id — Delete an activity log entry.
@@ -225,7 +236,9 @@ async function deleteActivityLog(req, res, next) {
 
     // Un-check the corresponding toggle in the weekly plan (best-effort)
     try {
-      const loggedDate = formatDateLocal(logEntry.logged_date);
+      const loggedDate = logEntry.logged_date instanceof Date
+        ? logEntry.logged_date.toISOString().split('T')[0]
+        : String(logEntry.logged_date).split('T')[0];
       const weekStart = getMonday(new Date(loggedDate));
       const targetDate = loggedDate;
       const activityId = logEntry.activity_id;
@@ -250,8 +263,19 @@ async function deleteActivityLog(req, res, next) {
 
         if (day && Array.isArray(day.activities)) {
           const actIdx = day.activities.findIndex(a => a.activity_id === activityId);
-          if (actIdx !== -1 && day.activities[actIdx].completed === true) {
-            day.activities[actIdx].completed = false;
+          if (actIdx !== -1) {
+            // Why SELECT COALESCE(SUM(duration_min)) after deletion: To check if the remaining logs
+            // still satisfy the planned workout duration or if the activity should be unchecked.
+            const { rows: durRows } = await pool.query(
+              `SELECT COALESCE(SUM(duration_min), 0) as total
+               FROM activity_logs
+               WHERE user_id = $1 AND logged_date = $2 AND activity_id = $3`,
+              [userId, targetDate, activityId]
+            );
+            const totalDuration = Number(durRows[0].total);
+            const plannedActivity = day.activities[actIdx];
+
+            plannedActivity.completed = totalDuration >= plannedActivity.duration_min;
 
             // Recompute day-level completed flag
             const allCompleted = day.activities.length > 0 && day.activities.every(a => a.completed === true);

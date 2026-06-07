@@ -4,7 +4,7 @@ import { getCachedPlan, setCachedPlan, clearCachedPlan } from '../services/llm.s
 import { generateDailyMealPlan, regenerateCategory } from '../services/dailyMealPlan.service.js';
 import { getProfile } from '../services/profile.service.js';
 import { searchFoods, getLogHistory, batchLogItems, getFoodById, getFoodsByCategory, createFoodLog, deleteFoodLogByPlan } from '../repositories/food.repository.js';
-import { findByUserAndDate, markMealsLogged, markItemLogged } from '../repositories/dailyMealPlan.repository.js';
+import { findByUserAndDate, markMealsLogged, markItemLogged, syncMealPlanLoggedStates } from '../repositories/dailyMealPlan.repository.js';
 
 function isValidDateString(str) {
   if (typeof str !== 'string') return false;
@@ -38,15 +38,25 @@ async function get(req, res, next) {
       return errorResponse(res, 'Invalid date format (use YYYY-MM-DD)', 400, 'VALIDATION_ERROR');
     }
     planDate = planDate || getTodayString();
+    
+    let planData = null;
     const cached = getCachedPlan(userId, planDate, 'meal');
     if (cached && cached.status !== 'fallback') {
-      return successResponse(res, { plan: cached, fromCache: true });
+      planData = cached;
+    } else {
+      const dbPlan = await findByUserAndDate(userId, planDate);
+      if (dbPlan) {
+        planData = dbPlan.plan_data;
+      }
     }
-    const dbPlan = await findByUserAndDate(userId, planDate);
-    if (!dbPlan) {
+
+    if (!planData) {
       return successResponse(res, { plan: null, fromCache: false });
     }
-    return successResponse(res, { plan: dbPlan.plan_data, fromCache: false });
+
+    const syncedPlanData = await syncMealPlanLoggedStates(userId, planDate, planData);
+    setCachedPlan(userId, planDate, syncedPlanData, 'meal');
+    return successResponse(res, { plan: syncedPlanData, fromCache: false });
   } catch (err) {
     next(err);
   }
@@ -137,6 +147,7 @@ async function logMeals(req, res, next) {
       const inserted = await batchLogItems(userId, items, client);
       await markMealsLogged(userId, planDate, mealTypes, client);
       await client.query('COMMIT');
+      clearCachedPlan(userId, planDate, 'meal');
       return successResponse(res, { logged: inserted.length, items: inserted });
     } catch (err) {
       await client.query('ROLLBACK');

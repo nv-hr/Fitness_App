@@ -158,7 +158,10 @@ export async function getActivityHistory(userId, days = 7) {
        ORDER BY al.logged_date DESC`,
       [userId, cutoffStr]
     );
-    return rows.map(r => ({ ...r, logged_date: r.logged_date.toLocaleDateString('en-CA') }));
+    return rows.map(r => ({
+      ...r,
+      logged_date: r.logged_date instanceof Date ? r.logged_date.toISOString().split('T')[0] : r.logged_date,
+    }));
   } catch (err) {
     throw new AppError('DatabaseError', `Failed to get activity history: ${err.message}`, 500);
   }

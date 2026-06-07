@@ -10,6 +10,8 @@ You are a fitness nutrition planner creating a personalized single-day meal plan
 - Age: {{age}}
 - Gender: {{gender}}
 - Fitness Goal: {{fitnessGoal}}
+- Target Weight: {{targetWeightKg}} kg
+- Target Date: {{targetDate}}
 
 # Available Foods (select ONLY from this list)
 {{foodDatabase}}

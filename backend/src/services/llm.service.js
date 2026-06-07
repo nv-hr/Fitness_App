@@ -111,6 +111,8 @@ export function buildSystemPrompt(profile, activityHistory, activities, weekStar
     tdee: String(tdee || ''),
     bmi: String(bmi || ''),
     bmiCategory: bmiCategory || '',
+    targetWeightKg: String(profile.target_weight_kg || ''),
+    targetDate: String(profile.target_date || ''),
     activityHistory: historyText,
     topActivityNames,
     availableActivities: activitiesText,

@@ -4,7 +4,8 @@ import { ValidationError } from '../utils/errors.js';
 import { calculateCalories, validateFoodData, validateCustomFoodData } from '../services/food.service.js';
 import { findByUserId as findProfileByUserId } from '../repositories/profile.repository.js';
 import { calculateTdee, getCalorieTarget } from '../services/profile.service.js';
-import { markItemLogged } from '../repositories/dailyMealPlan.repository.js';
+import { markItemLogged, syncItemLoggedState } from '../repositories/dailyMealPlan.repository.js';
+import { clearCachedPlan } from '../services/llm.service.js';
 
 const VALID_MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 
@@ -112,7 +113,8 @@ export async function logFood(req, res, next) {
 
     try {
       if (foodId) {
-        await markItemLogged(req.user.userId, logDateValue, mealType, foodId, true);
+        await syncItemLoggedState(req.user.userId, logDateValue, mealType, foodId);
+        clearCachedPlan(req.user.userId, logDateValue, 'meal');
       }
     } catch (err) {
       console.error('Failed to sync food log to meal plan:', err.message);
@@ -201,6 +203,48 @@ export async function getRecentFoods(req, res, next) {
   }
 }
 
+/**
+ * DELETE /api/food/log/:id — Delete a food log entry scoped to the authenticated user.
+ * Why user-scoped: Security rule ensures users can only delete their own logs.
+ * Recompute meal plan checked status (syncItemLoggedState) on best effort.
+ */
+export async function deleteFoodLog(req, res, next) {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!id || id < 1) {
+      return errorResponse(res, 'Invalid log ID', 400, 'VALIDATION_ERROR');
+    }
+
+    const userId = req.user.userId;
+
+    // Fetch the log first to get food_id, log_date, and meal_type
+    const log = await foodRepo.getFoodLogById(id, userId);
+    if (!log) {
+      return errorResponse(res, 'Food log entry not found', 404, 'NOT_FOUND');
+    }
+
+    // Delete the entry
+    await foodRepo.deleteFoodLogById(id, userId);
+
+    // Recompute the daily meal plan checked status (best effort)
+    try {
+      if (log.food_id) {
+        const dateStr = log.log_date instanceof Date
+          ? log.log_date.toISOString().split('T')[0]
+          : String(log.log_date).split('T')[0];
+        await syncItemLoggedState(userId, dateStr, log.meal_type, log.food_id);
+        clearCachedPlan(userId, dateStr, 'meal');
+      }
+    } catch (syncErr) {
+      console.warn(`[deleteFoodLog] Failed to sync daily meal plan state: ${syncErr.message}`);
+    }
+
+    return successResponse(res, null, 200);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export default {
   searchFoods,
   createCustomFood,
@@ -209,4 +253,5 @@ export default {
   getDailyLogs,
   getLogHistory,
   getRecentFoods,
+  deleteFoodLog,
 };

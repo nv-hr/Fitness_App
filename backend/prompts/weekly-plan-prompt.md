@@ -13,6 +13,8 @@ You are a fitness planner creating a personalized 7-day weekly activity plan for
 - TDEE (Total Daily Energy Expenditure): {{tdee}} kcal
 - BMI: {{bmi}} (Category: {{bmiCategory}})
 - Available Activity Days: {{availableDays}} days this week
+- Target Weight: {{targetWeightKg}} kg
+- Target Date: {{targetDate}}
 
 # Available Activity Days
 The user has {{availableDays}} days available for exercise this week (4, 5, or 6 days).

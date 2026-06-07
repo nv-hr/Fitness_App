@@ -28,4 +28,7 @@ router.get('/history', foodController.getLogHistory);
 // GET /api/food/recent — Recently logged foods
 router.get('/recent', foodController.getRecentFoods);
 
+// DELETE /api/food/log/:id — Delete a food log entry
+router.delete('/log/:id', foodController.deleteFoodLog);
+
 export default router;

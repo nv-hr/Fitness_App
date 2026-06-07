@@ -11,7 +11,7 @@ import {
   upsertActivityLogFromPlan,
   deleteActivityLogByPlan,
 } from '../repositories/activity.repository.js';
-import { findByUserAndWeek, upsertPlan } from '../repositories/weeklyPlan.repository.js';
+import { findByUserAndWeek, upsertPlan, syncWeeklyPlanCompletedStates } from '../repositories/weeklyPlan.repository.js';
 
 // CR-01: Migration failure cooldown — prevents infinite retry on every GET
 // when LLM is unavailable. After a failed attempt, subsequent requests
@@ -138,7 +138,9 @@ async function get(req, res, next) {
       generated_at: row.plan_data?.generated_at || row.created_at,
     };
 
-    return successResponse(res, { plan, fromCache: false });
+    const syncedPlan = await syncWeeklyPlanCompletedStates(userId, weekStart, plan);
+    setCachedPlan(userId, weekStart, syncedPlan);
+    return successResponse(res, { plan: syncedPlan, fromCache: false });
   } catch (err) {
     next(err);
   }
