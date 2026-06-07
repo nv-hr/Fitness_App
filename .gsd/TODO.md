@@ -1,3 +1,3 @@
 # TODO.md
 
-- [ ] Run `/plan 1` to start Phase 1.
+All tasks for milestone v1.1 are complete!
