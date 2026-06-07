@@ -12,6 +12,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../auth/hooks/useAuth.jsx';
 import { getProfile } from '../../profile/api/profileApi.js';
 import Loader from '../../../shared/ui/Loader.jsx';
+import OnboardingModal from './OnboardingModal.jsx';
 import {
   User,
   Apple,
@@ -92,14 +93,20 @@ export default function DashboardPage() {
     return <Loader message="Connecting biometrics profile..." />;
   }
 
+  const needsOnboarding = !profile;
+
   const welcomeName = profile?.name || user?.email?.split('@')[0] || 'Member';
   const bmi = profile
     ? (profile.weight_kg / ((profile.height_cm / 100) ** 2)).toFixed(1)
     : null;
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* ── Hero Welcome Banner ── */}
+    <>
+      {needsOnboarding && (
+        <OnboardingModal onSaveSuccess={(newProfile) => setProfile(newProfile)} />
+      )}
+      <div className="space-y-8 animate-fade-in">
+        {/* ── Hero Welcome Banner ── */}
       <div
         className="relative overflow-hidden rounded-3xl p-6 sm:p-10 shadow-elevated border border-[#2a2a2a]"
         style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #1f1516 50%, #1a1a1a 100%)' }}
@@ -205,5 +212,6 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

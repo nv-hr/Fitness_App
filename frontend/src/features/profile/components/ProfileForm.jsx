@@ -27,9 +27,6 @@ export default function ProfileForm({ onSaveSuccess, isOverlay = false }) {
     );
   }
 
-  const isUpdateFlag = isUpdate; // For alias in case local code used isUpdate flag
-
-
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       {!isOverlay && (
