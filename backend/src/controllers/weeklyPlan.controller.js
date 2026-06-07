@@ -62,11 +62,11 @@ function isDateWithinTimezoneRange(dateStr) {
   yesterday.setUTCDate(today.getUTCDate() - 1);
   const tomorrow = new Date(today);
   tomorrow.setUTCDate(today.getUTCDate() + 1);
-  
+
   const todayStr = today.toISOString().split('T')[0];
   const yesterdayStr = yesterday.toISOString().split('T')[0];
   const tomorrowStr = tomorrow.toISOString().split('T')[0];
-  
+
   return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr;
 }
 
@@ -90,6 +90,7 @@ async function get(req, res, next) {
         if (!isMigrationOnCooldown(userId, weekStart)) {
           const migrated = await attemptMigration(userId, weekStart);
           if (migrated) {
+            setCachedPlan(userId, weekStart, migrated);
             return successResponse(res, { plan: migrated, fromCache: false });
           }
           // CR-01: Record failed migration to enforce cooldown
@@ -123,6 +124,7 @@ async function get(req, res, next) {
       if (!isMigrationOnCooldown(userId, weekStart)) {
         const migrated = await attemptMigration(userId, weekStart);
         if (migrated) {
+          setCachedPlan(userId, weekStart, migrated);
           return successResponse(res, { plan: migrated, fromCache: false });
         }
         // CR-01: Record failed migration to enforce cooldown
@@ -398,8 +400,9 @@ async function attemptMigration(userId, weekStart) {
       return null;
     }
 
-    // Persist migrated plan to DB
+    // Persist migrated plan to DB and cache
     await upsertPlan(userId, weekStart, newPlan, 'active');
+    setCachedPlan(userId, weekStart, newPlan);
     console.log(`[Migration] Successfully migrated plan for user ${userId}, week ${weekStart}.`);
 
     return newPlan;
