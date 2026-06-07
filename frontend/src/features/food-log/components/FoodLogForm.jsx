@@ -5,7 +5,7 @@ import FoodSearch from './FoodSearch.jsx';
 import CustomFoodForm from './CustomFoodForm.jsx';
 import FoodLogTable from './FoodLogTable.jsx';
 import CalorieHistory from './CalorieHistory.jsx';
-import { calculatePreviewCalories } from './previewCalories.js';
+import { calculatePreviewCalories } from '../utils/previewCalories.js';
 import { CheckCircle2, ShieldAlert, Coffee, Utensils, Moon, Cookie, Scale, Plus, Sparkles, Loader2 } from 'lucide-react';
 
 export default function FoodLogForm() {

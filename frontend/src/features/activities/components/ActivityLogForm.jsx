@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { calculateActivityCalories } from './previewCalories.js';
+import { calculateActivityCalories } from '../utils/previewCalories.js';
 import { Flame, Clock, Zap, Calendar, RotateCw, AlertCircle } from 'lucide-react';
 
 export default function ActivityLogForm({ activity, onSubmit, onCancel }) {
