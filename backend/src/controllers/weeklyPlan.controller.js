@@ -499,7 +499,8 @@ async function toggleComplete(req, res, next) {
           loggedDate: day.date,
         });
       } else {
-        await deleteActivityLogByPlan(userId, activityId, day.date);
+        const act = day.activities[activityIdx];
+        await deleteActivityLogByPlan(userId, activityId, day.date, act.duration_min);
       }
     } catch (logErr) {
       console.warn(`[ToggleComplete] Failed to sync activity_log: ${logErr.message}`);

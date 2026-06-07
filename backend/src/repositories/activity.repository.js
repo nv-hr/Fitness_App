@@ -270,11 +270,16 @@ export async function upsertActivityLogFromPlan(userId, { activityId, durationMi
  * @param {string} loggedDate
  * @returns {Promise<boolean>} Whether a row was deleted
  */
-export async function deleteActivityLogByPlan(userId, activityId, loggedDate) {
+export async function deleteActivityLogByPlan(userId, activityId, loggedDate, durationMin) {
   try {
     const { rowCount } = await pool.query(
-      `DELETE FROM activity_logs WHERE user_id = $1 AND activity_id = $2 AND logged_date = $3`,
-      [userId, activityId, loggedDate]
+      `DELETE FROM activity_logs
+       WHERE id IN (
+         SELECT id FROM activity_logs
+         WHERE user_id = $1 AND activity_id = $2 AND logged_date = $3 AND duration_min = $4
+         LIMIT 1
+       )`,
+      [userId, activityId, loggedDate, durationMin]
     );
     return (rowCount || 0) > 0;
   } catch (err) {
