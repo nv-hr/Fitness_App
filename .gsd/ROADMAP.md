@@ -23,3 +23,17 @@
 **Status**: ⬜ Not Started
 **Objective**: Deploy the Dockerized application to Heroku (`fit-life`)
 **Requirements**: REQ-03
+
+---
+
+### Phase 4: Fix Sync Issue
+**Status**: ⬜ Not Started
+**Objective**: Fix issue where logging a food manually (e.g. "100g milk") checks the AI plan item (e.g. "250g milk"), but preserve correct check/uncheck plan item sync behavior.
+**Depends on**: None
+
+**Tasks**:
+- [ ] TBD (run /plan 4 to create)
+
+**Verification**:
+- TBD
+
