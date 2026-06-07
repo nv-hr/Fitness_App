@@ -1,2 +1,2 @@
-export { default as DayActivityRow } from './components/DayActivityRow.jsx';
+export { DayActivityRow } from '../../shared/ui/index.js';
 export { default as Toast } from './components/Toast.jsx';

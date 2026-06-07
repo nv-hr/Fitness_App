@@ -13,3 +13,4 @@ export { default as AiBannerCard }  from './AiBannerCard.jsx';
 export { default as SectionHeader } from './SectionHeader.jsx';
 export { default as PageHeader }    from './PageHeader.jsx';
 export { default as FormField }     from './FormField.jsx';
+export { default as DayActivityRow } from './DayActivityRow.jsx';
