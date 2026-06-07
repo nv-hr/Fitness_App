@@ -10,9 +10,9 @@
 ## Phases
 
 ### Phase 1: Remove PDP Consent from Settings Password Change
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Remove pdpConsent validation and checkbox from ChangePasswordPage.jsx while ensuring the API call sends pdpConsent: true under-the-hood to satisfy the backend.
 
 ### Phase 2: Verification & Build
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Run tests and compile the production build to verify the application remains stable.
