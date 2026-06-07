@@ -9,9 +9,6 @@ import { useNavigate } from 'react-router-dom';
 const schema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string().min(8, 'Confirm password must be at least 8 characters'),
-  pdpConsent: z.literal(true, {
-    errorMap: () => ({ message: 'You must consent to the processing of your data to continue' }),
-  }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ['confirmPassword'],
@@ -31,7 +28,6 @@ export default function ChangePasswordPage() {
     defaultValues: {
       password: '',
       confirmPassword: '',
-      pdpConsent: false,
     }
   });
 
@@ -46,7 +42,7 @@ export default function ChangePasswordPage() {
       setSuccess('');
       await setPassword({
         password: data.password,
-        pdpConsent: data.pdpConsent,
+        pdpConsent: true,
       });
       setSuccess('Password changed successfully!');
       setTimeout(() => {
@@ -65,7 +61,7 @@ export default function ChangePasswordPage() {
             Change Password
           </h2>
           <p className="text-slate-400 text-xs sm:text-sm mt-1.5 leading-relaxed">
-            Enter your new password below and re-confirm consent to update your security credentials.
+            Enter your new password below to update your security credentials.
           </p>
         </div>
 
@@ -133,23 +129,6 @@ export default function ChangePasswordPage() {
             </div>
             {errors.confirmPassword && (
               <p className="text-rose-500 text-xs mt-1 font-medium">{errors.confirmPassword.message}</p>
-            )}
-          </div>
-
-          {/* PDP Consent Checkbox */}
-          <div className="space-y-1 pt-1">
-            <label className="relative flex items-start gap-3 cursor-pointer p-0.5 select-none text-xs text-slate-400 leading-normal font-sans">
-              <input
-                type="checkbox"
-                {...register('pdpConsent')}
-                className="mt-0.5 w-4.5 h-4.5 text-emerald-500 border-slate-700 rounded focus:ring-emerald-500/20 focus:ring-2 accent-emerald-500 transition-all flex-shrink-0"
-              />
-              <span>
-                I consent to the collection and processing of my health, physical activity, and diet metrics to receive personalized recommendations (PDP Consent).
-              </span>
-            </label>
-            {errors.pdpConsent && (
-              <p className="text-rose-500 text-xs mt-1 font-medium">{errors.pdpConsent.message}</p>
             )}
           </div>
 

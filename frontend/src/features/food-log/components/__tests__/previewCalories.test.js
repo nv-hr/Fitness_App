@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculatePreviewCalories } from '../previewCalories.js';
+import { calculatePreviewCalories } from '../../utils/previewCalories.js';
 
 describe('calculatePreviewCalories', () => {
   it('returns correct calories for valid input (165 kcal/100g, 150g portion)', () => {

@@ -326,9 +326,10 @@ describe('POST /api/daily-meal-plans/log', () => {
   });
 
   it('should reject missing mealTypes → 400 VALIDATION_ERROR', async () => {
+    const todayStr = new Date().toISOString().split('T')[0];
     const res = await logAgent
       .post('/api/daily-meal-plans/log')
-      .send({ date: '2026-06-01' });
+      .send({ date: todayStr });
 
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
@@ -337,9 +338,10 @@ describe('POST /api/daily-meal-plans/log', () => {
   });
 
   it('should reject empty mealTypes array → 400 VALIDATION_ERROR', async () => {
+    const todayStr = new Date().toISOString().split('T')[0];
     const res = await logAgent
       .post('/api/daily-meal-plans/log')
-      .send({ mealTypes: [] });
+      .send({ date: todayStr, mealTypes: [] });
 
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
@@ -348,9 +350,10 @@ describe('POST /api/daily-meal-plans/log', () => {
   });
 
   it('should reject invalid mealType → 400 VALIDATION_ERROR', async () => {
+    const todayStr = new Date().toISOString().split('T')[0];
     const res = await logAgent
       .post('/api/daily-meal-plans/log')
-      .send({ mealTypes: ['invalid_type'] });
+      .send({ date: todayStr, mealTypes: ['invalid_type'] });
 
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
@@ -359,9 +362,10 @@ describe('POST /api/daily-meal-plans/log', () => {
   });
 
   it('should return 404 when no plan exists for date → 404 NOT_FOUND', async () => {
+    const todayStr = new Date().toISOString().split('T')[0];
     const res = await logAgent
       .post('/api/daily-meal-plans/log')
-      .send({ date: '2026-06-01', mealTypes: ['breakfast'] });
+      .send({ date: todayStr, mealTypes: ['breakfast'] });
 
     expect(res.status).toBe(404);
     expect(res.body.success).toBe(false);

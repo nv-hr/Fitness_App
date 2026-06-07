@@ -1,5 +1,5 @@
 # Decisions
 
-> Previous milestone decisions archived in `.gsd/milestones/v1.0/DECISIONS.md`
+> Previous milestone decisions archived in `.gsd/milestones/v1.1.1/DECISIONS.md`
 
 ---

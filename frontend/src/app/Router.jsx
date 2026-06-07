@@ -25,10 +25,8 @@ import PasswordGuard  from './guards/PasswordGuard.jsx';
 import Loader from '../shared/ui/Loader.jsx';
 
 // Feature pages
-import LoginForm    from '../features/auth/components/LoginForm.jsx';
-import RegisterForm from '../features/auth/components/RegisterForm.jsx';
-import SetupPassword from '../features/auth/components/SetupPassword.jsx';
-import ProfileForm  from '../features/profile/components/ProfileForm.jsx';
+import { LoginForm, RegisterForm, SetupPassword } from '../features/auth/index.js';
+import { ProfileForm }  from '../features/profile/index.js';
 import { DashboardPage }              from '../features/dashboard/index.js';
 import { FoodLogPage }                from '../features/food-log/index.js';
 import { ActivityPage }               from '../features/activities/index.js';

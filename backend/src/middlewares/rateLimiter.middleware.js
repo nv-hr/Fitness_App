@@ -19,7 +19,7 @@ export const createRateLimiter = (options = {}) => {
     windowMs: isTest ? testWindowMs : windowMs,
     max: isTest ? testMax : max,
     message: { success: false, error: { message, code: 'RATE_LIMITED' } },
-    keyGenerator: (req) => req.user?.userId ? `user_${req.user.userId}` : req.ip,
+    keyGenerator: (req) => req.user?.userId ? `user_${req.user.userId}` : req['ip'],
     validate: { xForwardedForHeader: false, default: true },
   });
 };

@@ -10,7 +10,7 @@
 
 import { format } from 'date-fns';
 import { useActivityCalendar } from '../hooks/useActivityCalendar.js';
-import DayActivityRow from './DayActivityRow.jsx';
+import { DayActivityRow } from '../../../shared/ui';
 import { AiBannerCard, DateSwitcher, SectionHeader, Toast } from '../../../shared/ui/index.js';
 import { RotateCw, Info, Coffee } from 'lucide-react';
 

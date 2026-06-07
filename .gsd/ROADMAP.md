@@ -1,12 +1,10 @@
 # ROADMAP.md
 
-> **Current Phase**: None
-> **Milestone**: None
+> **Current Milestone**: v1.1.1
+> **Goal**: Remove PDP consent requirement when changing password from settings page
 
-## Must-Haves (from SPEC)
-- [x] Target goal setting form on onboarding
-- [x] Successful Heroku deployment
+## Must-Haves
+- ✅ Remove PDP consent checkbox and validation from Change Password page
+- ✅ Ensure changing password from Settings page succeeds without user checking any consent boxes
 
 ## Phases
-
-No active phases. Run `/new-milestone` to create a new milestone.

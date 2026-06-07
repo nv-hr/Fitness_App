@@ -5,15 +5,4 @@ coverage/
 .DS_Store
 *.log
 .env
-!.env.example
 .planning/
-.agents
-.agent
-.gemini
-.gsd
-adapters
-docs
-scripts
-GSD-STYLE.md
-PROJECT_RULES.md
-model_capabilities.yaml

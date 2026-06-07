@@ -1,6 +1,6 @@
 import { describe, test, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import DayActivityRow from '../DayActivityRow.jsx';
+import { DayActivityRow } from '../../../../shared/ui';
 
 describe('DayActivityRow', () => {
   const baseActivity = {
