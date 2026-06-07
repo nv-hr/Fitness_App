@@ -1,11 +1,8 @@
 ## Current Position
-- **Milestone**: v1.1
-- **Phase**: 5 (completed)
-- **Task**: All tasks complete
-- **Status**: Verified
-
-## Last Session Summary
-Phase 5 executed successfully. Modified the result layout on the BMI Calculator to match the TDEE Calculator's design layout, colors, and font sizes.
+- **Milestone**: v1.1 (completed)
+- **Phase**: All complete
+- **Task**: Milestone complete
+- **Status**: Tagged and Archived
 
 ## Next Steps
-All phases complete! Run /complete-milestone to close out the milestone.
+1. Run `/new-milestone` to start the next milestone.
