@@ -1,16 +1,16 @@
 # ROADMAP.md
 
-> **Current Phase**: Not started
+> **Current Phase**: Phase 2: Polish & Verification
 > **Milestone**: v1.0
 
 ## Must-Haves (from SPEC)
-- [ ] Target goal setting form on onboarding
+- [x] Target goal setting form on onboarding
 - [x] Successful Heroku deployment
 
 ## Phases
 
 ### Phase 1: Onboarding Fix
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 **Objective**: Implement the missing target goal setting form for first-time users
 **Requirements**: REQ-01, REQ-02
 
@@ -23,7 +23,7 @@
 
 ### Phase 3: Fix Sync Issue
 **Status**: ⬜ Not Started
-**Objective**: Fix issue where logging a food manually (e.g. "100g milk") checks the AI plan item (e.g. "250g milk"), but preserve correct check/uncheck plan item sync behavior.
+**Objective**: Fix issue where logging a food/activity manually (e.g. "100g milk") checks the AI plan item (e.g. "250g milk"), but preserve correct check/uncheck plan item sync behavior.
 **Depends on**: None
 
 **Tasks**:

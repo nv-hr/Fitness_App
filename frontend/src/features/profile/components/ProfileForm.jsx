@@ -326,49 +326,47 @@ export default function ProfileForm({ onSaveSuccess, isOverlay = false }) {
             </div>
 
             {/* Goal Weight Subcard Panel */}
-            {isUpdate && (
-              <div className="bg-slate-50/70 p-4.5 rounded-xl border border-slate-200/50 space-y-4">
-                <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
-                  <Award className="w-4 h-4 text-emerald-500" /> Target Goal Settings
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Target Weight */}
-                  <div>
-                    <label htmlFor="targetWeightKg" className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">
-                      Target Weight (kg)
-                    </label>
-                    <input
-                      id="targetWeightKg"
-                      type="number"
-                      step="0.1"
-                      placeholder="e.g. 62.0"
-                      {...register('targetWeightKg')}
-                      className="block w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all"
-                    />
-                    {errors.targetWeightKg && (
-                      <p className="text-rose-600 text-xs mt-1 font-medium">{errors.targetWeightKg.message}</p>
-                    )}
-                  </div>
+            <div className="bg-slate-50/70 p-4.5 rounded-xl border border-slate-200/50 space-y-4">
+              <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
+                <Award className="w-4 h-4 text-emerald-500" /> Target Goal Settings
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Target Weight */}
+                <div>
+                  <label htmlFor="targetWeightKg" className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">
+                    Target Weight (kg)
+                  </label>
+                  <input
+                    id="targetWeightKg"
+                    type="number"
+                    step="0.1"
+                    placeholder="e.g. 62.0"
+                    {...register('targetWeightKg')}
+                    className="block w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all"
+                  />
+                  {errors.targetWeightKg && (
+                    <p className="text-rose-600 text-xs mt-1 font-medium">{errors.targetWeightKg.message}</p>
+                  )}
+                </div>
 
-                  {/* Target Date */}
-                  <div>
-                    <label htmlFor="targetDate" className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">
-                      Target Date
-                    </label>
-                    <input
-                      id="targetDate"
-                      type="date"
-                      min={format(new Date(), 'yyyy-MM-dd')}
-                      {...register('targetDate')}
-                      className="block w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all cursor-pointer"
-                    />
-                    {errors.targetDate && (
-                      <p className="text-rose-600 text-xs mt-1 font-medium">{errors.targetDate.message}</p>
-                    )}
-                  </div>
+                {/* Target Date */}
+                <div>
+                  <label htmlFor="targetDate" className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">
+                    Target Date
+                  </label>
+                  <input
+                    id="targetDate"
+                    type="date"
+                    min={format(new Date(), 'yyyy-MM-dd')}
+                    {...register('targetDate')}
+                    className="block w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all cursor-pointer"
+                  />
+                  {errors.targetDate && (
+                    <p className="text-rose-600 text-xs mt-1 font-medium">{errors.targetDate.message}</p>
+                  )}
                 </div>
               </div>
-            )}
+            </div>
 
             {/* Save Button */}
             <button
