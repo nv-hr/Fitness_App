@@ -3,14 +3,14 @@ import { searchFoods } from '../api/foodLogApi.js';
 import { Search, Loader2, Plus, Sparkles, AlertCircle } from 'lucide-react';
 
 const categoryLabels = {
-  proteins: 'Protein 💪',
-  carbs: 'Carbohydrates 🌾',
-  vegetables: 'Vegetables 🥦',
-  fruits: 'Fruits 🍎',
-  dairy: 'Dairy 🥛',
-  fats: 'Healthy Fats 🥑',
-  drinks: 'Beverages 💧',
-  other: 'Other 🍽️',
+  proteins: 'Protein',
+  carbs: 'Carbohydrates',
+  vegetables: 'Vegetables',
+  fruits: 'Fruits',
+  dairy: 'Dairy',
+  fats: 'Healthy Fats',
+  drinks: 'Beverages',
+  other: 'Other',
 };
 
 export default function FoodSearch({ onFoodSelect, onToggleCustomForm }) {
@@ -88,7 +88,7 @@ export default function FoodSearch({ onFoodSelect, onToggleCustomForm }) {
                   {food.name}
                 </span>
                 {food.category && (
-                  <span className="inline-block text-[10px] bg-slate-100 text-slate-550 border border-slate-200/40 px-1.5 py-0.5 rounded-md font-semibold mt-1">
+                  <span className="inline-block text-[10px] bg-slate-50 text-slate-550 border border-slate-200 px-1.5 py-0.5 rounded-md font-semibold mt-1">
                     {categoryLabels[food.category] || food.category}
                   </span>
                 )}

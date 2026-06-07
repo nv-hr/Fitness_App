@@ -62,11 +62,11 @@ function isDateWithinTimezoneRange(dateStr) {
   yesterday.setUTCDate(today.getUTCDate() - 1);
   const tomorrow = new Date(today);
   tomorrow.setUTCDate(today.getUTCDate() + 1);
-  
+
   const todayStr = today.toISOString().split('T')[0];
   const yesterdayStr = yesterday.toISOString().split('T')[0];
   const tomorrowStr = tomorrow.toISOString().split('T')[0];
-  
+
   return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr;
 }
 
@@ -90,6 +90,7 @@ async function get(req, res, next) {
         if (!isMigrationOnCooldown(userId, weekStart)) {
           const migrated = await attemptMigration(userId, weekStart);
           if (migrated) {
+            setCachedPlan(userId, weekStart, migrated);
             return successResponse(res, { plan: migrated, fromCache: false });
           }
           // CR-01: Record failed migration to enforce cooldown
@@ -123,6 +124,7 @@ async function get(req, res, next) {
       if (!isMigrationOnCooldown(userId, weekStart)) {
         const migrated = await attemptMigration(userId, weekStart);
         if (migrated) {
+          setCachedPlan(userId, weekStart, migrated);
           return successResponse(res, { plan: migrated, fromCache: false });
         }
         // CR-01: Record failed migration to enforce cooldown
@@ -262,15 +264,12 @@ async function swapHandler(req, res, next) {
     }
     targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());
 
-    const dayDate = getMonday(new Date());
-    const dayOffset = dayIndex;
-    const targetDate = new Date(dayDate);
-    targetDate.setDate(targetDate.getDate() + dayOffset);
-    const targetDateStr = targetDate.toISOString().split('T')[0];
+    const targetDateObj = new Date(targetWeekStart);
+    targetDateObj.setUTCDate(targetDateObj.getUTCDate() + dayIndex);
+    const targetDateStr = targetDateObj.toISOString().split('T')[0];
     if (!isDateWithinTimezoneRange(targetDateStr)) {
       return errorResponse(res, 'Can only swap activities for today (considering timezone differences)', 400, 'VALIDATION_ERROR');
     }
-
     // CR-02: Acquire per-user lock to make the entire migration+swap sequence atomic.
     // This prevents concurrent swap requests from racing on cache/DB state.
     const lockKey = `swap_${userId}_${targetWeekStart}`;
@@ -401,8 +400,9 @@ async function attemptMigration(userId, weekStart) {
       return null;
     }
 
-    // Persist migrated plan to DB
+    // Persist migrated plan to DB and cache
     await upsertPlan(userId, weekStart, newPlan, 'active');
+    setCachedPlan(userId, weekStart, newPlan);
     console.log(`[Migration] Successfully migrated plan for user ${userId}, week ${weekStart}.`);
 
     return newPlan;
@@ -650,15 +650,12 @@ async function swapStream(req, res, next) {
   }
   targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());
 
-  const dayDate = getMonday(new Date());
-  const dayOffset = dayIndex;
-  const targetDate = new Date(dayDate);
-  targetDate.setDate(targetDate.getDate() + dayOffset);
-  const targetDateStr = targetDate.toISOString().split('T')[0];
+  const targetDateObj = new Date(targetWeekStart);
+  targetDateObj.setUTCDate(targetDateObj.getUTCDate() + dayIndex);
+  const targetDateStr = targetDateObj.toISOString().split('T')[0];
   if (!isDateWithinTimezoneRange(targetDateStr)) {
     return errorResponse(res, 'Can only swap activities for today (considering timezone differences)', 400, 'VALIDATION_ERROR');
   }
-
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');

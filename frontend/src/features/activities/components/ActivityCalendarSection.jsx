@@ -37,6 +37,7 @@ export default function ActivityCalendarSection({ onDaySelect, onMonthChange, da
     completedActivities,
     toast,
     isNotToday,
+    isPastDay,
     handlePrevDay,
     handleNextDay,
     handleGoToToday,
@@ -80,9 +81,10 @@ export default function ActivityCalendarSection({ onDaySelect, onMonthChange, da
                         completedActivities.has(activity.activity_id)
                       )
               }
-              disabled={isNotToday}
+              disableSwap={isNotToday}
+              disableToggle={isNotToday}
               completed={completedActivities.has(activity.activity_id)}
-              isSwapping={swappingActivityId === activity.activity_id}
+              isSwapping={swappingActivityId === `${(selectedDay.getDay() + 6) % 7}-${activity.activity_id}`}
               swapRetryAfter={swapRetryAfter}
             />
           ))}

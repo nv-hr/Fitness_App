@@ -7,7 +7,7 @@
  * this card independently testable and reusable.
  */
 
-import { CheckCircle2, RotateCw, RefreshCw, Clock } from 'lucide-react';
+import { CheckCircle2, RotateCw, RefreshCw, Clock, Scale, Flame } from 'lucide-react';
 import { formatCountdown } from '../../../shared/lib/countdown.js';
 
 /** Meal-type display metadata: label, icon, accent colours. */
@@ -134,9 +134,16 @@ export default function MealCard({
                 <span className={`text-xs sm:text-sm font-semibold leading-tight block ${item.logged ? 'line-through text-slate-500' : 'text-white'}`}>
                   {item.food_name}
                 </span>
-                <span className="text-[11px] text-slate-550 font-mono">
-                  {item.portion_grams}g {item.calories ? `• ~${item.calories} kcal` : ''}
-                </span>
+                <div className="flex items-center gap-4 text-xs font-medium text-slate-550 font-mono font-sans mt-1">
+                  <span className="flex items-center gap-1 text-slate-400">
+                    <Scale className="w-3.5 h-3.5 text-slate-500" /> {item.portion_grams} g
+                  </span>
+                  {item.calories > 0 && (
+                    <span className="flex items-center gap-1 font-semibold text-amber-400 bg-amber-950/40 rounded px-1.5 py-0.5 border border-amber-900/30">
+                      <Flame className="w-3.5 h-3.5 text-amber-500" /> ~{item.calories} kcal
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center gap-2">

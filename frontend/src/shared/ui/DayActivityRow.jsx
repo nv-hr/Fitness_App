@@ -12,7 +12,8 @@ export default function DayActivityRow({
   isSwapping, 
   swapRetryAfter, 
   onToggle, 
-  disabled = false, 
+  disableSwap = false,
+  disableToggle = false, 
   completed = false 
 }) {
   const isCountingDown = swapRetryAfter != null && swapRetryAfter > 0;
@@ -36,7 +37,7 @@ export default function DayActivityRow({
         completed ? 'opacity-50 border-slate-800 bg-[#151515]' : ''
       }`}
       style={{
-        pointerEvents: disabled ? 'none' : 'auto',
+        pointerEvents: 'auto',
       }}
     >
       {/* Exercise descriptions */}
@@ -65,22 +66,21 @@ export default function DayActivityRow({
 
       {/* Interactions area */}
       <div className="flex items-center gap-2.5">
-        {/* Swap button or spinner — hidden when disabled */}
-        {!disabled && (
-          isSwapping ? (
-            <div className="w-10 h-7 flex items-center justify-center">
-              <RotateCw className="w-4 h-4 text-emerald-500 animate-spin" />
-            </div>
-          ) : (
-            <button
-              onClick={() => { if (!isSwapDisabled && onSwap) onSwap(activity.activity_id); }}
-              disabled={isSwapDisabled}
-              className={`h-7 px-2.5 font-bold text-xs rounded-lg flex items-center gap-1 transition-all ${
-                isSwapDisabled
-                   ? 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed'
-                   : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-100/60 cursor-pointer active:scale-95'
-              }`}
-            >
+        {/* Swap button or spinner */}
+        {isSwapping ? (
+          <div className="w-10 h-7 flex items-center justify-center">
+            <RotateCw className="w-4 h-4 text-emerald-500 animate-spin" />
+          </div>
+        ) : (
+          <button
+            onClick={() => { if (!isSwapDisabled && !disableSwap && onSwap) onSwap(activity.activity_id); }}
+            disabled={isSwapDisabled || disableSwap}
+            className={`h-7 px-2.5 font-bold text-xs rounded-lg flex items-center gap-1 transition-all ${
+              isSwapDisabled || disableSwap
+                 ? 'bg-[#222] border border-[#333] text-slate-500 cursor-not-allowed'
+                 : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-100/60 cursor-pointer active:scale-95'
+            }`}
+          >
               {isCountingDown ? (
                 <span className="flex items-center gap-0.5 text-[10px] font-mono">
                   Wait {formatCountdown(swapRetryAfter)}
@@ -91,48 +91,33 @@ export default function DayActivityRow({
                 </>
               )}
             </button>
-          )
         )}
 
         {/* Completion toggle */}
-        {!disabled ? (
-          <button
-            onClick={() => { if (onToggle) onToggle(); }}
-            className={`h-8 px-2.5 rounded-xl flex items-center gap-1.5 justify-center transition-all cursor-pointer font-sans font-bold text-xs shadow-xs ${
-              completed
-                ? 'bg-emerald-500 hover:bg-emerald-600 text-white border border-emerald-600'
-                : 'border border-slate-350 bg-white hover:border-emerald-500 hover:bg-emerald-50 text-slate-500 hover:text-emerald-700'
-            }`}
-            aria-label={completed ? 'Mark incomplete' : 'Mark completed'}
-          >
-            {completed ? (
-              <>
-                <CheckCircle2 className="w-4 h-4 text-white" />
-                <span>Done</span>
-              </>
-            ) : (
-              <>
-                <span className="w-2.5 h-2.5 rounded-full border border-slate-400 bg-white inline-block"></span>
-                <span>Active</span>
-              </>
-            )}
-          </button>
-        ) : (
-          /* Non-today: show completion status indicator (no toggle) */
-          <div className="h-8 px-2.5 rounded-xl flex items-center gap-1.5 justify-center font-sans font-bold text-xs text-slate-400 bg-slate-50 border border-slate-100">
-            {completed ? (
-              <>
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <span>Done</span>
-              </>
-            ) : (
-              <>
-                <span className="w-2.5 h-2.5 rounded-full border border-slate-300 bg-slate-100 inline-block"></span>
-                <span>Active</span>
-              </>
-            )}
-          </div>
-        )}
+        <button
+          disabled={isSwapping || disableToggle}
+          onClick={() => { if (!isSwapping && !disableToggle && onToggle) onToggle(); }}
+          className={`h-8 px-2.5 rounded-xl flex items-center gap-1.5 justify-center transition-all font-sans font-bold text-xs shadow-xs ${
+            (isSwapping || disableToggle) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+          } ${
+            completed
+              ? 'bg-emerald-500 hover:bg-emerald-600 text-white border border-emerald-600'
+              : 'border border-slate-350 bg-white hover:border-emerald-500 hover:bg-emerald-50 text-slate-500 hover:text-emerald-700'
+          }`}
+          aria-label={completed ? 'Mark incomplete' : 'Mark completed'}
+        >
+          {completed ? (
+            <>
+              <CheckCircle2 className="w-4 h-4 text-white" />
+              <span>Done</span>
+            </>
+          ) : (
+            <>
+              <span className="w-2.5 h-2.5 rounded-full border border-slate-400 bg-white inline-block"></span>
+              <span>Active</span>
+            </>
+          )}
+        </button>
       </div>
     </div>
   );

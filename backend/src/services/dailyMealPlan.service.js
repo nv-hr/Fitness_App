@@ -107,7 +107,7 @@ export function validateAndFixDailyMealPlan(plan, dbFoods, calorieTarget, tdee, 
 /**
  * Build daily meal plan prompt with user profile details, TDEE, and BMI.
  */
-function buildDailyMealPlanPrompt(profile, dbFoods, recentLogs, planDate, calorieTarget, tdee, bmi, bmiCategory) {
+function buildDailyMealPlanPrompt(profile, dbFoods, recentLogs, planDate, calorieTarget, tdee, bmi, bmiCategory, regeneratingMeal) {
   let foodText = dbFoods.map(f =>
     `- ID ${f.id}: ${f.name} (${f.calories_per_100g} cal/100g, ${f.category})`
   ).join('\n');
@@ -128,9 +128,10 @@ function buildDailyMealPlanPrompt(profile, dbFoods, recentLogs, planDate, calori
   }
   const recentText = recentLogs && recentLogs.length > 0
     ? recentLogs.slice(0, 7).map(log =>
-        `- ${log.log_date}: ${log.total_calories} kcal (${log.entry_count} items)`
-      ).join('\n')
+      `- ${log.log_date}: ${log.total_calories} kcal (${log.entry_count} items)`
+    ).join('\n')
     : 'No recent food logs available.';
+  const regenerationConstraint = regeneratingMeal ? `- The user requested to change their ${regeneratingMeal.type}. Their current ${regeneratingMeal.type} contains: ${regeneratingMeal.foods}. Ensure the newly generated ${regeneratingMeal.type} is not exactly this combination of foods (you can reuse some items, but the overall meal must be different).` : '';
   return buildPrompt('daily-meal-plan-prompt.md', {
     foodDatabase: foodText,
     calorieTarget: String(calorieTarget),
@@ -145,6 +146,7 @@ function buildDailyMealPlanPrompt(profile, dbFoods, recentLogs, planDate, calori
     recentFoodLogs: recentText,
     targetWeightKg: String(profile.target_weight_kg || profile.targetWeightKg || ''),
     targetDate: String(profile.target_date || profile.targetDate || ''),
+    regenerationConstraint,
   });
 }
 
@@ -240,9 +242,14 @@ export async function regenerateCategory(deps) {
     throw new AppError('NotFoundError', 'No daily meal plan found', 404);
   }
 
+  // Find the current foods in the meal to instruct LLM not to duplicate the exact meal
+  const currentMeal = plan.plan_data?.meals?.find(m => m.meal_type === mealType);
+  const regeneratedMealFoods = currentMeal?.items?.map(i => i.food_name).join(', ');
+  const regeneratingMeal = currentMeal ? { type: mealType, foods: regeneratedMealFoods } : null;
+
   // 2. Generate a new full plan (reuse generateDailyMealPlan functionality)
   // Pass bypassCache: true so that we generate a fresh plan instead of hitting cached active plan
-  const newPlanResult = await generateDailyMealPlan({ ...deps, bypassCache: true });
+  const newPlanResult = await generateDailyMealPlan({ ...deps, bypassCache: true, regeneratingMeal });
   const newPlan = newPlanResult.plan;
   if (!newPlan) {
     throw new AppError('GenerationError', 'Failed to generate new meals', 500);
@@ -289,7 +296,7 @@ export async function regenerateCategory(deps) {
  * @returns {Promise<{plan: object, fromCache: boolean, status: string}>}
  */
 export async function generateDailyMealPlan(deps) {
-  const { userId, planDate, getProfile, getAllFoods, getLogHistory, forceFallback, bypassCache } = deps;
+  const { userId, planDate, getProfile, getAllFoods, getLogHistory, forceFallback, bypassCache, regeneratingMeal } = deps;
   const cached = getCachedPlan(userId, planDate, 'meal');
   if (!forceFallback && !bypassCache && cached && cached.status !== 'fallback') {
     return { plan: cached, fromCache: true, status: 'active' };
@@ -310,12 +317,12 @@ export async function generateDailyMealPlan(deps) {
   if (!profile || !profile.profile) {
     const fallback = generateFallbackDailyMealPlan(2000, dbFoods || []);
     return { plan: fallback, fromCache: false, status: 'fallback' };
-  }  const calorieTarget = profile.calorieTarget || 2000;
+  } const calorieTarget = profile.calorieTarget || 2000;
   const userProfile = profile.profile;
   const tdee = profile.tdee;
   const bmi = profile.bmi;
   const bmiCategory = profile.bmiCategory;
- 
+
   if (forceFallback) {
     const fallback = generateFallbackDailyMealPlan(calorieTarget, dbFoods || []);
     fallback.date = planDate;
@@ -335,7 +342,7 @@ export async function generateDailyMealPlan(deps) {
     setCachedPlan(userId, planDate, JSON.parse(JSON.stringify(fallback)), 'meal');
     return { plan: fallback, fromCache: false, status: 'fallback' };
   }
-  const prompt = buildDailyMealPlanPrompt(userProfile, dbFoods, recentLogs, planDate, calorieTarget, tdee, bmi, bmiCategory);
+  const prompt = buildDailyMealPlanPrompt(userProfile, dbFoods, recentLogs, planDate, calorieTarget, tdee, bmi, bmiCategory, regeneratingMeal);
   let plan;
   let attempt = 0;
   const maxAttempts = 2;
