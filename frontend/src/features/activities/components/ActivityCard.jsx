@@ -74,8 +74,8 @@ export default function ActivityCard({ activity, onLogClick, isLogging, anyLoggi
           <span className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1">
             <Clock className="w-3.5 h-3.5 text-blue-500" /> {activity.duration_min} mins
           </span>
-          <span className="flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-100 rounded-lg px-2.5 py-1">
-            <Flame className="w-3.5 h-3.5 text-orange-500" /> {activity.estimated_calories} kcal
+          <span className="flex items-center gap-1 font-semibold text-amber-400 bg-amber-950/40 rounded px-1.5 py-0.5 border border-amber-900/30">
+            <Flame className="w-3.5 h-3.5 text-amber-500" /> ~{activity.estimated_calories} kcal
           </span>
         </div>
 

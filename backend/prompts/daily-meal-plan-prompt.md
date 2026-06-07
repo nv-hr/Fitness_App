@@ -140,3 +140,4 @@ Return ONLY valid JSON. No markdown, no explanation, no code fences.
 - Portion sizes should be realistic for a single meal: 100-250g for protein, 50-200g for carbs, 50-150g for vegetables
 - Include a variety: at least 1 protein, 1 carb, 1 vegetable or fruit
 - Do NOT include foods not in the Available Foods list
+{{regenerationConstraint}}

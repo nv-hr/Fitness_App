@@ -38,6 +38,7 @@ import { useCountdownTimer } from '../../../shared/hooks/useCountdownTimer.js';
  *   completedActivities: Set<string>,
  *   toast: {message:string}|null,
  *   isNotToday: boolean,
+ *   isPastDay: boolean,
  *   handlePrevDay: Function,
  *   handleNextDay: Function,
  *   handleGoToToday: Function,
@@ -250,7 +251,7 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
 
     const weekStart = format(startOfWeek(selectedDay, { weekStartsOn: 1 }), 'yyyy-MM-dd');
 
-    setSwappingActivityId(activityId);
+    setSwappingActivityId(`${dayIndex}-${activityId}`);
     swapActivityStream(
       weekStart,
       activityId,
@@ -312,6 +313,7 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
   // ── Derived state ────────────────────────────────────────────────────────────
 
   const isNotToday = selectedDay ? !isToday(selectedDay) : true;
+  const isPastDay = selectedDay ? selectedDay < startOfToday() : false;
 
   return {
     selectedDay,
@@ -325,6 +327,7 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
     completedActivities,
     toast,
     isNotToday,
+    isPastDay,
     handlePrevDay,
     handleNextDay,
     handleGoToToday,
