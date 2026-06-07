@@ -1,6 +1,6 @@
 # ROADMAP.md
 
-> **Current Phase**: Phase 2: Polish & Verification
+> **Current Phase**: Phase 3: Fix Sync Issue
 > **Milestone**: v1.0
 
 ## Must-Haves (from SPEC)
@@ -22,14 +22,14 @@
 ---
 
 ### Phase 3: Fix Sync Issue
-**Status**: 🏗️ In Progress
+**Status**: ✅ Complete
 **Objective**: Fix issue where logging a food/activity manually (e.g. "100g milk") checks the AI plan item (e.g. "250g milk"), but preserve correct check/uncheck plan item sync behavior.
 **Depends on**: None
 
 **Tasks**:
-- [ ] TBD (run /plan 3 to create)
+- [x] Update Daily Meal Plan Repositories and Controller (Food Syncing)
+- [x] Update Weekly Plan Repositories and Controller (Activity Syncing)
 
 **Verification**:
-- TBD
-
+- Run unit tests (`npm run test:unit`) to ensure all tests pass successfully.
 
