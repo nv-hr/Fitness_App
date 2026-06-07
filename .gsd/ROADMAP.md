@@ -22,7 +22,7 @@
 ---
 
 ### Phase 3: Fix Sync Issue
-**Status**: ⬜ Not Started
+**Status**: 🏗️ In Progress
 **Objective**: Fix issue where logging a food/activity manually (e.g. "100g milk") checks the AI plan item (e.g. "250g milk"), but preserve correct check/uncheck plan item sync behavior.
 **Depends on**: None
 
