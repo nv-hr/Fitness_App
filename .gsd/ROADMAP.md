@@ -5,7 +5,7 @@
 
 ## Must-Haves (from SPEC)
 - [ ] Target goal setting form on onboarding
-- [ ] Successful Heroku deployment
+- [x] Successful Heroku deployment
 
 ## Phases
 
@@ -19,21 +19,17 @@
 **Objective**: Verify existing features work smoothly with the new goal form
 **Requirements**: REQ-02
 
-### Phase 3: Deployment
-**Status**: ⬜ Not Started
-**Objective**: Deploy the Dockerized application to Heroku (`fit-life`)
-**Requirements**: REQ-03
-
 ---
 
-### Phase 4: Fix Sync Issue
+### Phase 3: Fix Sync Issue
 **Status**: ⬜ Not Started
 **Objective**: Fix issue where logging a food manually (e.g. "100g milk") checks the AI plan item (e.g. "250g milk"), but preserve correct check/uncheck plan item sync behavior.
 **Depends on**: None
 
 **Tasks**:
-- [ ] TBD (run /plan 4 to create)
+- [ ] TBD (run /plan 3 to create)
 
 **Verification**:
 - TBD
+
 

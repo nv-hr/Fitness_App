@@ -5,5 +5,6 @@ Codebase mapping complete.
 - No major technical debt items found explicitly.
 
 ### Updates
-- Added Phase 4: Fix Sync Issue to the roadmap.
+- Removed Phase 3: Deployment (completed manually by user).
+- Added Phase 3: Fix Sync Issue to the roadmap.
 
