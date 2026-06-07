@@ -279,20 +279,26 @@ export default function BMICalculator() {
             </div>
 
             {calculatedResults && status ? (
-              <div className="space-y-5 mt-4 animate-fade-in flex-1 flex flex-col justify-center">
-                <div className="text-center p-6 bg-slate-900 rounded-xl border border-slate-700 relative overflow-hidden" style={{ background: '#1a1a1a' }}>
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent" />
-                <p className="text-sm font-semibold text-slate-400 mb-2 relative z-10">Your BMI Is</p>
-                <div className="font-display font-bold text-5xl text-emerald-400 tracking-tight relative z-10">
-                  {calculatedResults.bmi.toFixed(1)}
+              <div className="space-y-4 mt-4 animate-fade-in flex-1 flex flex-col justify-center">
+                {/* Core Outputs */}
+                <div className="grid grid-cols-2 gap-3 text-center">
+                  <div className="py-4 bg-[#121212] rounded-xl border border-[#2d2d2d]">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">BMI Score</p>
+                    <p className="text-2xl font-display font-black text-white mt-0.5 font-mono">
+                      {calculatedResults.bmi.toFixed(1)}
+                    </p>
+                  </div>
+                  <div className="py-4 bg-[#121212] rounded-xl border border-[#2d2d2d]">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">Weight Status</p>
+                    <p className="text-2xl font-display font-black text-red-400 mt-0.5">
+                      {status.label}
+                    </p>
+                  </div>
                 </div>
-                  <span className={`inline-block mt-2 px-3.5 py-1 rounded-full text-xs font-bold ${status.bg} ${status.color} border ${status.border}`}>
-                    {status.label}
-                  </span>
-                  <p className="text-[10px] text-slate-500 mt-1.5">
-                    {calculatedResults.gender === 'female' ? 'Female' : 'Male'}, {calculatedResults.age > 0 ? `${calculatedResults.age} years old` : '—'}
-                  </p>
-                </div>
+
+                <p className="text-[10px] text-slate-500 text-center">
+                  {calculatedResults.gender === 'female' ? 'Female' : 'Male'}, {calculatedResults.age > 0 ? `${calculatedResults.age} years old` : '—'}
+                </p>
 
                 <div className={`p-4 rounded-xl border ${status.bg} ${status.border} text-xs leading-relaxed`}>
                   <p className={`font-extrabold text-sm uppercase tracking-wider flex items-center gap-1.5 text-white mb-2 pb-1 border-b ${status.border}`}>
