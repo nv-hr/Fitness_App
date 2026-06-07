@@ -42,7 +42,7 @@ Consider the user's activity level "{{activityLevel}}" when assigning duration a
 The user has been most active with these activities:
 {{topActivityNames}}
 
-These are the user's favorite activities from their history. Prioritize these where appropriate, but also introduce 1-2 new activities for variety.
+These are the user's favorite activities from their history. While you should include some of these, it is CRITICAL that you ensure the plan varies significantly from week to week. Introduce at least 3-4 different activities that are not in their history or top favorites to keep the workouts fresh and engaging. DO NOT simply copy the example plan or their history.
 
 # Available Activities (select ONLY from this list)
 {{availableActivities}}
