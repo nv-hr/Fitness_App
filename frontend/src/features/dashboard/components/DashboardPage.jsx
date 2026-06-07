@@ -127,7 +127,7 @@ export default function DashboardPage() {
           >
             Welcome, <span className="bg-gradient-to-r from-red-400 to-rose-300 bg-clip-text text-transparent">{welcomeName}</span>! 👋
           </h1>
-          <p className="mt-3 text-[#888] text-sm sm:text-base leading-relaxed">
+          <p className="mt-3 text-[#a3a3a3] text-sm sm:text-base leading-relaxed">
             Let's make progress today! Track your food intake, follow daily workout recommendations, and maintain a healthy lifestyle.
           </p>
 
@@ -135,19 +135,19 @@ export default function DashboardPage() {
           {profile && (
             <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-4 border-t border-[#2d2d2d] pt-6">
               <div>
-                <p className="text-xs text-[#666] uppercase tracking-wider">Actual Weight</p>
+                <p className="text-xs text-[#8c8c8c] uppercase tracking-wider">Actual Weight</p>
                 <p className="text-xl font-bold font-mono text-emerald-400 mt-1">
-                  {profile.weight_kg} <span className="text-xs font-sans text-[#666]">kg</span>
+                  {profile.weight_kg} <span className="text-xs font-sans text-[#8c8c8c]">kg</span>
                 </p>
               </div>
               <div>
-                <p className="text-xs text-[#666] uppercase tracking-wider">Biometric BMI</p>
+                <p className="text-xs text-[#8c8c8c] uppercase tracking-wider">Biometric BMI</p>
                 <p className="text-xl font-bold font-mono text-sky-400 mt-1">{bmi}</p>
               </div>
               <div className="col-span-2 sm:col-span-1">
-                <p className="text-xs text-[#666] uppercase tracking-wider">Target Calories / TDEE</p>
+                <p className="text-xs text-[#8c8c8c] uppercase tracking-wider">Target Calories / TDEE</p>
                 <p className="text-xl font-bold font-mono text-amber-400 mt-1">
-                  {Math.round(profile.tdee || 2000)} <span className="text-xs font-sans text-[#666]">kcal</span>
+                  {Math.round(profile.tdee || 2000)} <span className="text-xs font-sans text-[#8c8c8c]">kcal</span>
                 </p>
               </div>
             </div>
@@ -162,9 +162,9 @@ export default function DashboardPage() {
             <h2 className="font-display font-bold text-2xl tracking-tight" style={{ color: '#fff' }}>
               Explore Health Features
             </h2>
-            <p className="text-sm text-[#666]">Choose a tracker module below to start logging your daily progress.</p>
+            <p className="text-sm text-[#8c8c8c]">Choose a tracker module below to start logging your daily progress.</p>
           </div>
-          <div className="hidden sm:flex items-center gap-1.5 text-[#555] text-xs">
+          <div className="hidden sm:flex items-center gap-1.5 text-[#7b7b7b] text-xs">
             <TrendingUp className="w-4 h-4 text-red-500" />
             <span>Planned Performance</span>
           </div>
@@ -191,18 +191,18 @@ export default function DashboardPage() {
                   </div>
                   <div className="space-y-1 flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#242424] text-[#666] border border-[#333]">
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#242424] text-[#8c8c8c] border border-[#333]">
                         {shortcut.badge}
                       </span>
                     </div>
                     <h3 className="font-display font-bold text-lg group-hover:text-red-400 transition-colors pt-1.5" style={{ color: '#fff' }}>
                       {shortcut.title}
                     </h3>
-                    <p className="text-xs sm:text-sm text-[#666] leading-relaxed pt-0.5">{shortcut.desc}</p>
+                    <p className="text-xs sm:text-sm text-[#8c8c8c] leading-relaxed pt-0.5">{shortcut.desc}</p>
                   </div>
                 </div>
 
-                <div className="relative z-10 flex justify-end items-center text-xs font-semibold text-[#444] group-hover:text-red-400 transition-colors mt-4 pt-4 border-t border-[#242424]">
+                <div className="relative z-10 flex justify-end items-center text-xs font-semibold text-[#666666] group-hover:text-red-400 transition-colors mt-4 pt-4 border-t border-[#242424]">
                   <span>Get Started</span>
                   <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                 </div>

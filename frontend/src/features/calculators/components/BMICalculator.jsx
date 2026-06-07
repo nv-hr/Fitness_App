@@ -305,7 +305,7 @@ export default function BMICalculator() {
                     <Heart className={`w-4 h-4 ${status.color}`} />
                     Health Guidance
                   </p>
-                  <p className="text-slate-300 font-medium">
+                  <p className="text-slate-400 font-medium">
                     {status.desc}
                   </p>
                 </div>
