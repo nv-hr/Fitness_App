@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
-import { getDailyLogs, getLogHistory, getRecentFoods, logFood } from '../api/foodLogApi.js';
+import { getDailyLogs, getLogHistory, getRecentFoods, logFood, deleteFoodLog } from '../api/foodLogApi.js';
 import FoodSearch from './FoodSearch.jsx';
 import CustomFoodForm from './CustomFoodForm.jsx';
 import FoodLogTable from './FoodLogTable.jsx';
@@ -129,6 +129,19 @@ export default function FoodLogForm() {
       setError(err.message || 'Failed to save food log');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeleteLog = async (logId) => {
+    try {
+      setError('');
+      setSuccessMsg('');
+      await deleteFoodLog(logId);
+      setSuccessMsg('Food entry removed.');
+      await refreshData();
+      window.dispatchEvent(new CustomEvent('health-system-update'));
+    } catch (err) {
+      setError(err.message || 'Failed to delete food entry');
     }
   };
 
@@ -283,7 +296,7 @@ export default function FoodLogForm() {
       )}
 
       <div className="border-t pt-6" style={{ borderColor: '#222' }}>
-        <FoodLogTable logs={logs} recentFoods={recentFoods} onQuickAdd={handleQuickAdd} />
+        <FoodLogTable logs={logs} recentFoods={recentFoods} onQuickAdd={handleQuickAdd} onDelete={handleDeleteLog} />
       </div>
 
       <div className="border-t pt-6" style={{ borderColor: '#222' }}>

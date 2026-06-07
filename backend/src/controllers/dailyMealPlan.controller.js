@@ -213,7 +213,21 @@ async function toggleItemLogged(req, res, next) {
           }
         }
       } else {
-        await deleteFoodLogByPlan(userId, foodId, planDate, mealType, client);
+        let portionGrams = 0;
+        const plan = await findByUserAndDate(userId, planDate, client);
+        if (plan) {
+          const data = plan.plan_data;
+          for (const meal of data.meals) {
+            if (meal.meal_type !== mealType) continue;
+            for (const item of meal.items) {
+              if (item.food_id === foodId) {
+                portionGrams = item.portion_grams;
+                break;
+              }
+            }
+          }
+        }
+        await deleteFoodLogByPlan(userId, foodId, planDate, mealType, portionGrams, client);
       }
 
       await client.query('COMMIT');

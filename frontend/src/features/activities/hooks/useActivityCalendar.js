@@ -56,6 +56,17 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
   const [swappingActivityId, setSwappingActivityId] = useState(null);
   const [completedActivities, setCompletedActivities] = useState(() => new Set());
   const [toast, setToast] = useState(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setRefreshTrigger((prev) => prev + 1);
+    };
+    window.addEventListener('health-system-update', handleUpdate);
+    return () => {
+      window.removeEventListener('health-system-update', handleUpdate);
+    };
+  }, []);
 
   const { remaining: genRetryAfter, setRemaining: setGenRetryAfter } = useCountdownTimer(null);
   const { remaining: swapRetryAfter, setRemaining: setSwapRetryAfter } = useCountdownTimer(null);
@@ -131,7 +142,7 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
 
     fetchDayPlan();
     return () => { cancelled = true; };
-  }, [selectedDay]);
+  }, [selectedDay, refreshTrigger]);
 
   // ── Auto-generate plan for today if it's missing ────────────────────────────
 

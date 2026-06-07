@@ -303,14 +303,18 @@ export async function getFoodsByCategory(userId, category, limit = 50) {
  * @param {string} mealType
  * @returns {Promise<Object|null>}
  */
-export async function deleteFoodLogByPlan(userId, foodId, logDate, mealType, clientOverride) {
+export async function deleteFoodLogByPlan(userId, foodId, logDate, mealType, portionGrams, clientOverride) {
   const db = clientOverride || pool;
   try {
     const { rows } = await db.query(
       `DELETE FROM food_logs
-       WHERE user_id = $1 AND food_id = $2 AND log_date = $3::date AND meal_type = $4
+       WHERE id IN (
+         SELECT id FROM food_logs
+         WHERE user_id = $1 AND food_id = $2 AND log_date = $3::date AND meal_type = $4 AND portion_grams = $5
+         LIMIT 1
+       )
        RETURNING *`,
-      [userId, foodId, logDate, mealType]
+      [userId, foodId, logDate, mealType, portionGrams]
     );
     return rows[0] || null;
   } catch (err) {

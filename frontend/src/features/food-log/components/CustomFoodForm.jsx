@@ -31,25 +31,26 @@ export default function CustomFoodForm({ onSuccess, onCancel }) {
     }
   };
 
+  // Why dark-themed inline styles: To visually match the manual food logging form and maintain design consistency.
   return (
     <div className="space-y-4 pt-1">
       {message && (
-        <div className="flex gap-2 p-2.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-100 text-xs font-semibold items-center">
-          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-          <span>{message}</span>
+        <div className="flex gap-2.5 p-3.5 rounded-xl text-sm items-center animate-fade-in" style={{ background: 'rgba(6,78,59,0.25)', border: '1px solid rgba(52,211,153,0.3)', color: '#6ee7b7' }}>
+          <CheckCircle2 className="w-5 h-5 flex-shrink-0" style={{ color: '#34d399' }} />
+          <span className="font-medium">{message}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="flex gap-2 p-2.5 rounded-lg bg-rose-50 text-rose-800 border border-rose-100 text-xs font-semibold items-center">
-          <AlertCircle className="w-4 h-4 text-rose-500" />
-          <span>{errorMsg}</span>
+        <div className="flex gap-2.5 p-3.5 rounded-xl text-sm items-center animate-fade-in" style={{ background: 'rgba(153,27,27,0.25)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}>
+          <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: '#f87171' }} />
+          <span className="font-medium">{errorMsg}</span>
         </div>
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
-          <label htmlFor="custom_food_name_field" className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+          <label htmlFor="custom_food_name_field" className="block text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#666' }}>
             Food / Dish Name
           </label>
           <input
@@ -57,7 +58,8 @@ export default function CustomFoodForm({ onSuccess, onCancel }) {
             type="text"
             placeholder="e.g. Grilled Chicken Skewers"
             {...register('name')}
-            className="block w-full px-3.5 py-2 text-sm bg-white border border-slate-200 rounded-lg text-slate-705 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all"
+            className="block w-full px-3.5 py-2 text-sm rounded-lg focus:outline-none transition-all placeholder-slate-500"
+            style={{ background: '#222', border: '1px solid #333', color: '#fff' }}
           />
           {errors.name && (
             <p className="text-rose-600 text-[11px] mt-1 font-medium">{errors.name.message}</p>
@@ -65,7 +67,7 @@ export default function CustomFoodForm({ onSuccess, onCancel }) {
         </div>
 
         <div>
-          <label htmlFor="custom_food_calories_field" className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+          <label htmlFor="custom_food_calories_field" className="block text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#666' }}>
             Calorie Content per 100 grams (kcal)
           </label>
           <input
@@ -73,18 +75,22 @@ export default function CustomFoodForm({ onSuccess, onCancel }) {
             type="number"
             placeholder="e.g. 350"
             {...register('calories_per_100g')}
-            className="block w-full px-3.5 py-2 text-sm bg-white border border-slate-200 rounded-lg text-slate-705 focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 transition-all font-mono"
+            className="block w-full px-3.5 py-2 text-sm rounded-lg focus:outline-none transition-all font-mono placeholder-slate-500"
+            style={{ background: '#222', border: '1px solid #333', color: '#fff' }}
           />
           {errors.calories_per_100g && (
             <p className="text-rose-600 text-[11px] mt-1 font-medium">{errors.calories_per_100g.message}</p>
           )}
         </div>
 
-        <div className="flex gap-2 pt-2 border-t border-slate-100">
+        <div className="flex gap-2 pt-4 border-t" style={{ borderColor: '#222' }}>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3.5 rounded-lg text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 transition-colors cursor-pointer shadow-xs disabled:bg-slate-350 disabled:cursor-not-allowed"
+            className="flex-2 flex items-center justify-center gap-1.5 py-2 px-4 rounded-xl text-xs font-bold text-white transition-all cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ background: '#b91c1c' }}
+            onMouseEnter={e => { if (!isSubmitting) e.currentTarget.style.background = '#dc2626'; }}
+            onMouseLeave={e => { if (!isSubmitting) e.currentTarget.style.background = '#b91c1c'; }}
           >
             {isSubmitting ? (
               <>
@@ -98,7 +104,10 @@ export default function CustomFoodForm({ onSuccess, onCancel }) {
             <button
               type="button"
               onClick={onCancel}
-              className="px-3.5 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-650 text-xs font-semibold cursor-pointer text-center"
+              className="flex-1 py-2 px-4 rounded-xl text-xs font-semibold cursor-pointer text-center transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ border: '1px solid #333', color: '#888', background: 'transparent' }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#222'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
             >
               Cancel
             </button>

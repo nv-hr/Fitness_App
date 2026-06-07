@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from '../../../shared/lib/http.js';
+import { apiGet, apiPost, apiDelete } from '../../../shared/lib/http.js';
 
 export async function searchFoods(query) {
   return apiGet(`/api/food/search?q=${encodeURIComponent(query)}`);
@@ -26,4 +26,8 @@ export async function getLogHistory(days = 7) {
 
 export async function getRecentFoods() {
   return apiGet('/api/food/recent');
+}
+
+export async function deleteFoodLog(id) {
+  return apiDelete(`/api/food/log/${id}`);
 }

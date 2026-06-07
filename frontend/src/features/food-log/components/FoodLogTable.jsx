@@ -1,4 +1,4 @@
-import { Sparkles, ArrowRight, Zap, Coffee, Utensils, Moon, Cookie, Plus, AlertCircle } from 'lucide-react';
+import { Sparkles, ArrowRight, Zap, Coffee, Utensils, Moon, Cookie, Plus, AlertCircle, Trash2 } from 'lucide-react';
 
 const mealTypeLabels = {
   breakfast: 'Breakfast',
@@ -16,7 +16,7 @@ const mealIconLabels = {
 
 const mealTypeOrder = ['breakfast', 'lunch', 'dinner', 'snack'];
 
-export default function FoodLogTable({ logs, recentFoods, onQuickAdd }) {
+export default function FoodLogTable({ logs, recentFoods, onQuickAdd, onDelete }) {
   // Group logs by meal_type
   const grouped = {};
   for (const mealType of mealTypeOrder) {
@@ -69,9 +69,20 @@ export default function FoodLogTable({ logs, recentFoods, onQuickAdd }) {
                         className="flex justify-between items-center py-2.5 text-sm border-b last:border-0" style={{ borderColor: '#222' }}
                       >
                         <span className="font-semibold" style={{ color: '#d4d4d8' }}>{log.food_name || log.custom_food_name}</span>
-                        <span className="text-xs font-bold font-mono" style={{ color: '#888' }}>
-                          {log.portion_grams}g <span style={{ color: '#444' }}>•</span> {log.calories} kcal
-                        </span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-bold font-mono" style={{ color: '#888' }}>
+                            {log.portion_grams}g <span style={{ color: '#444' }}>•</span> {log.calories} kcal
+                          </span>
+                          {onDelete && (
+                            <button
+                              onClick={() => onDelete(log.id)}
+                              className="p-1 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-950/20 transition-all cursor-pointer border border-transparent hover:border-red-900/30"
+                              title="Delete food entry"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

@@ -45,12 +45,12 @@ export async function syncItemLoggedState(userId, planDate, mealType, foodId, cl
   const db = clientOverride || pool;
   try {
     const { rows } = await db.query(
-      `SELECT portion_grams
+      `SELECT COALESCE(SUM(portion_grams), 0) as total_logged
        FROM food_logs
        WHERE user_id = $1 AND log_date = $2 AND meal_type = $3 AND food_id = $4`,
       [userId, planDate, mealType, foodId]
     );
-    const loggedPortions = rows.map(r => Number(r.portion_grams));
+    const totalLogged = Number(rows[0].total_logged);
 
     const plan = await findByUserAndDate(userId, planDate, clientOverride, true);
     if (!plan) return null;
@@ -63,8 +63,8 @@ export async function syncItemLoggedState(userId, planDate, mealType, foodId, cl
       if (!Array.isArray(meal.items)) continue;
       for (const item of meal.items) {
         if (item.food_id === foodId) {
-          // Check if there is a log entry with the exact portion_grams of the planned item
-          const shouldBeLogged = loggedPortions.includes(Number(item.portion_grams));
+          // Check if total logged grams is >= planned portion_grams
+          const shouldBeLogged = totalLogged >= Number(item.portion_grams);
           if (item.logged !== shouldBeLogged) {
             item.logged = shouldBeLogged;
             updated = true;
@@ -138,13 +138,13 @@ export async function syncMealPlanLoggedStates(userId, planDate, planData, clien
       for (const item of meal.items) {
         if (item.food_id) {
           const { rows } = await db.query(
-            `SELECT portion_grams
+            `SELECT COALESCE(SUM(portion_grams), 0) as total_logged
              FROM food_logs
              WHERE user_id = $1 AND log_date = $2 AND meal_type = $3 AND food_id = $4`,
             [userId, planDate, meal.meal_type, item.food_id]
           );
-          const loggedPortions = rows.map(r => Number(r.portion_grams));
-          const shouldBeLogged = loggedPortions.includes(Number(item.portion_grams));
+          const totalLogged = Number(rows[0].total_logged);
+          const shouldBeLogged = totalLogged >= Number(item.portion_grams);
           if (item.logged !== shouldBeLogged) {
             item.logged = shouldBeLogged;
             changed = true;

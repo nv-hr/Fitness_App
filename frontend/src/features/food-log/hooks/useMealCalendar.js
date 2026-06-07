@@ -56,6 +56,17 @@ export function useMealCalendar(onDaySelect) {
   const [loggingMeal, setLoggingMeal] = useState(null);
   const [regeneratingCat, setRegeneratingCat] = useState(null);
   const [toast, setToast] = useState(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setRefreshTrigger((prev) => prev + 1);
+    };
+    window.addEventListener('health-system-update', handleUpdate);
+    return () => {
+      window.removeEventListener('health-system-update', handleUpdate);
+    };
+  }, []);
 
   const { remaining: genRetryAfter, setRemaining: setGenRetryAfter } = useCountdownTimer(null);
   const { remaining: swapRetryAfter, setRemaining: setSwapRetryAfter } = useCountdownTimer(null);
@@ -108,7 +119,7 @@ export function useMealCalendar(onDaySelect) {
 
     fetchDayPlan();
     return () => { cancelled = true; };
-  }, [selectedDay]);
+  }, [selectedDay, refreshTrigger]);
 
   // ── Manual full-day regeneration ────────────────────────────────────────────
 

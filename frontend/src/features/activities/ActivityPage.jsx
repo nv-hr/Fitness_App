@@ -82,7 +82,7 @@ export default function ActivityPage() {
           onClick={() => setActiveTab('plan')}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
             activeTab === 'plan'
-              ? 'bg-[#2d2d2d] text-emerald-400 shadow-sm'
+              ? 'bg-[#2d2d2d] text-red-400 shadow-sm'
               : 'text-[#555] hover:text-[#aaa]'
           }`}
         >
@@ -93,7 +93,7 @@ export default function ActivityPage() {
           onClick={() => setActiveTab('log')}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
             activeTab === 'log'
-              ? 'bg-[#2d2d2d] text-emerald-400 shadow-sm'
+              ? 'bg-[#2d2d2d] text-red-400 shadow-sm'
               : 'text-[#555] hover:text-[#aaa]'
           }`}
         >
