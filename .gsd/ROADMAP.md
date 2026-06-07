@@ -25,3 +25,15 @@
 ### Phase 4: Final Polish & Verification
 **Status**: ✅ Complete
 **Objective**: Review the entire frontend for readability and leftover duplication. Ensure all features still work exactly as they did before the refactor.
+
+### Phase 5: Style fixing
+**Status**: ⬜ Not Started
+**Objective**: Fix style and layout on BMI Calculator "Your result" to look like TDEE Calculator "Your daily calory Needs" card. The layout, colour, fontsize need to be the same.
+**Depends on**: Phase 4
+
+**Tasks**:
+- [ ] TBD (run /plan 5 to create)
+
+**Verification**:
+- TBD
+
