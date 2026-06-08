@@ -23,7 +23,6 @@
     "dotenv": "^17.4.0",
     "express": "^5.2.0",
     "express-rate-limit": "^8.5.0",
-    "express-validator": "^7.3.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
@@ -31,7 +30,6 @@
     "openai": "^6.39.1",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
-    "passport-local": "^1.0.0",
     "pg": "^8.21.0"
   },
   "devDependencies": {
