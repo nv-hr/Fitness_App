@@ -10,25 +10,25 @@
 -- ============================================================
 
 DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'intensity_level') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_type t JOIN pg_namespace n ON t.typnamespace = n.oid WHERE t.typname = 'intensity_level' AND n.nspname = current_schema()) THEN
         CREATE TYPE intensity_level AS ENUM ('light', 'moderate', 'vigorous');
     END IF;
 END $$;
 
 DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'gender') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_type t JOIN pg_namespace n ON t.typnamespace = n.oid WHERE t.typname = 'gender' AND n.nspname = current_schema()) THEN
         CREATE TYPE gender AS ENUM ('male', 'female', 'other');
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'fitness_goal') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_type t JOIN pg_namespace n ON t.typnamespace = n.oid WHERE t.typname = 'fitness_goal' AND n.nspname = current_schema()) THEN
         CREATE TYPE fitness_goal AS ENUM ('lose_weight', 'maintain', 'gain_weight');
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'activity_level') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_type t JOIN pg_namespace n ON t.typnamespace = n.oid WHERE t.typname = 'activity_level' AND n.nspname = current_schema()) THEN
         CREATE TYPE activity_level AS ENUM ('sedentary', 'light', 'moderate', 'very_active', 'extra_active');
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'food_category') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_type t JOIN pg_namespace n ON t.typnamespace = n.oid WHERE t.typname = 'food_category' AND n.nspname = current_schema()) THEN
         CREATE TYPE food_category AS ENUM ('proteins', 'carbs', 'vegetables', 'fruits', 'dairy', 'fats', 'drinks', 'other');
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'meal_type') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_type t JOIN pg_namespace n ON t.typnamespace = n.oid WHERE t.typname = 'meal_type' AND n.nspname = current_schema()) THEN
         CREATE TYPE meal_type AS ENUM ('breakfast', 'lunch', 'dinner', 'snack');
     END IF;
 END $$;
