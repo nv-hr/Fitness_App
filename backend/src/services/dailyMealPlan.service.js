@@ -1,7 +1,7 @@
 import { buildPrompt, callLlmApi, getCachedPlan, setCachedPlan, callLlmStream } from './llm.service.js';
 import { findByUserAndDate, upsertPlan } from '../repositories/dailyMealPlan.repository.js';
 import { AppError } from '../utils/errors.js';
-import { fuzzyMatchFoodName, recalculateDayCalories } from './mealPlan.service.js';
+import { buildMealPlanPrompt, generateFallbackMealPlan, fuzzyMatchFoodName, recalculateDayCalories } from './mealPlan/index.js';
 
 const VALID_MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 
