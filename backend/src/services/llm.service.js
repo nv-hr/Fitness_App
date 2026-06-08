@@ -79,7 +79,7 @@ export function buildPrompt(filename, variables) {
   return template;
 }
 
-export function buildSystemPrompt(profile, activityHistory, activities, weekStartDate, availableDays = null) {
+function buildSystemPrompt(profile, activityHistory, activities, weekStartDate, availableDays = null) {
   const historyEntries = activityHistory.slice(-20);
   const topActivityNames = [...new Set(activityHistory.map(a => a.activity_name))].slice(0, 5).join(', ');
   const historyText = historyEntries.length > 0
@@ -221,7 +221,7 @@ export async function callLlmStream(systemPrompt, onChunk, userPrompt = 'Generat
   throw new AppError('LlmAllFailed', 'All LLM models failed', 502);
 }
 
-export function validateActivities(activities, prefix, allowEmpty = false) {
+function validateActivities(activities, prefix, allowEmpty = false) {
   const errors = [];
   if (!Array.isArray(activities)) {
     errors.push(`${prefix}"activities" must be an array`);
@@ -252,7 +252,7 @@ export function validateActivities(activities, prefix, allowEmpty = false) {
   return errors;
 }
 
-export function validatePlanStructure(plan, weekStart, availableDays = null) {
+function validatePlanStructure(plan, weekStart, availableDays = null) {
   const errors = [];
 
   if (!plan) {
@@ -333,7 +333,7 @@ export function isOldFormat(plan) {
   return !!plan && plan.format_version === undefined;
 }
 
-export function fuzzyMatchActivityName(name, dbActivities) {
+function fuzzyMatchActivityName(name, dbActivities) {
   if (!name || typeof name !== 'string') {
     return { matched: false, activity: null, matchType: 'none' };
   }
@@ -371,7 +371,7 @@ export function fuzzyMatchActivityName(name, dbActivities) {
   return { matched: false, activity: null, matchType: 'none' };
 }
 
-export function validateAndFixPlan(plan, dbActivities) {
+function validateAndFixPlan(plan, dbActivities) {
   const errors = [];
 
   if (!plan || !Array.isArray(plan.days)) {
@@ -427,7 +427,7 @@ export function clearCachedPlan(userId, weekStart, planType = 'activity') {
   planCache.del(`plan_${planType}_${userId}_${weekStart}`);
 }
 
-export async function generateFallbackPlan(deps) {
+async function generateFallbackPlan(deps) {
   const { getTopActivities, userId, weekStart, availableDays = 4 } = deps;
 
   let topActivities;
