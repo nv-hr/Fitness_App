@@ -17,3 +17,18 @@
 
 ### Constraints
 - Must not delete the old test suite during the cleanup phase.
+
+## Phase 2 Decisions
+
+**Date:** 2026-06-08
+
+### Scope
+- Separate LLM generation and validation logic into distinct modules.
+- Remove all unused exports definitively.
+
+### Approach
+- Chose: Deep Refactor.
+- Reason: User requested aggressive refactoring to enforce strict boundaries and separation of concerns.
+
+### Constraints
+- Must fix any existing tests that break during the refactoring process rather than ignoring them.

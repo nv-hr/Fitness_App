@@ -131,12 +131,4 @@ export async function googleCallback(req, res, next) {
   }
 }
 
-export default {
-  register,
-  login,
-  logout,
-  getMe,
-  setPassword,
-  googleCallback,
-};
 

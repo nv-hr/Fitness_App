@@ -245,13 +245,3 @@ export async function deleteFoodLog(req, res, next) {
   }
 }
 
-export default {
-  searchFoods,
-  createCustomFood,
-  logFood,
-  getDailySummary,
-  getDailyLogs,
-  getLogHistory,
-  getRecentFoods,
-  deleteFoodLog,
-};
