@@ -23,6 +23,10 @@
 **Status**: ✅ Complete
 **Objective**: Create new, comprehensive tests based on the updated codebase
 
-### Phase 4: Documentation
+### Phase 4: SQL Schema Cleanup
+**Status**: ⬜ Not Started
+**Objective**: Clean up and optimize the SQL schema
+
+### Phase 5: Documentation
 **Status**: ⬜ Not Started
 **Objective**: Create detailed documentation of the backend architecture, APIs, and models
