@@ -32,3 +32,18 @@
 
 ### Constraints
 - Must fix any existing tests that break during the refactoring process rather than ignoring them.
+
+## Phase 3 Decisions
+
+**Date:** 2026-06-08
+
+### Scope
+- Focus on Unit Tests and Integration Tests.
+- Stick with the existing Jest test runner.
+
+### Approach
+- Chose: Mixed Strategy (Unit + Integration tests).
+- Reason: The user prefers running tests against the real cloud database and cloud LLM, even if it costs OpenRouter credits.
+
+### Constraints
+- Do not aggressively mock out the LLM API; allow real OpenRouter API calls during integration testing.

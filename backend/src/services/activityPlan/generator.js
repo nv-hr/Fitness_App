@@ -30,7 +30,7 @@ export function generateFallbackActivityPlan(dbActivities) {
       activity_id: a.id,
       name: a.name,
       duration_min: durationMin,
-      intensity: a.duration_min >= 60 ? 'vigorous' : a.duration_min >= 30 ? 'moderate' : 'light',
+      intensity: durationMin >= 60 ? 'vigorous' : durationMin >= 30 ? 'moderate' : 'light',
       calories_burned: computeCaloriesBurned(a, durationMin),
       logged: false,
     };
