@@ -64,6 +64,11 @@ export async function acquireLock(key, timeout = 15000) {
 
 const promptCache = new Map();
 
+function sanitizeLlmInput(input) {
+  if (typeof input !== 'string') return String(input || '');
+  return input.substring(0, 100).replace(/[<>]/g, '');
+}
+
 export function buildPrompt(filename, variables) {
   if (!promptCache.has(filename)) {
     const filePath = path.join(PROMPTS_DIR, filename);
@@ -107,8 +112,8 @@ function buildSystemPrompt(profile, activityHistory, activities, weekStartDate, 
     heightCm: profile.height_cm,
     age: profile.age,
     gender: profile.gender,
-    fitnessGoal: profile.fitness_goal,
-    activityLevel: profile.activity_level || 'sedentary',
+    fitnessGoal: sanitizeLlmInput(profile.fitness_goal),
+    activityLevel: sanitizeLlmInput(profile.activity_level || 'sedentary'),
     calorieTarget: String(calorieTarget || ''),
     bmr: String(bmr || ''),
     tdee: String(tdee || ''),
@@ -793,8 +798,8 @@ export async function swapActivity(deps, activityId, dayIndex, skipLock = false)
       : ''
 
     // Determine fitness goal and activity level for template variables
-    const fitnessGoal = profile?.fitness_goal || 'maintain'
-    const activityLevel = profile?.activity_level || 'sedentary'
+    const fitnessGoal = sanitizeLlmInput(profile?.fitness_goal || 'maintain')
+    const activityLevel = sanitizeLlmInput(profile?.activity_level || 'sedentary')
 
     // 6. Build swap prompt
     const prompt = buildPrompt('activity-swap-prompt.md', {
