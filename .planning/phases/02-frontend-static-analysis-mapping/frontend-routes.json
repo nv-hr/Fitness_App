@@ -1,0 +1,380 @@
+[
+  {
+    "method": "UNKNOWN",
+    "route": ":param:param",
+    "file": "frontend/src/__tests__/api-integration.test.js",
+    "line": 196,
+    "callee": "fetch"
+  },
+  {
+    "method": "UNKNOWN",
+    "route": ":param:param",
+    "file": "frontend/src/shared/lib/http.js",
+    "line": 27,
+    "callee": "fetch"
+  },
+  {
+    "method": "UNKNOWN",
+    "route": ":param:param",
+    "file": "frontend/src/shared/lib/http.js",
+    "line": 102,
+    "callee": "fetch"
+  },
+  {
+    "method": "UNKNOWN",
+    "route": ":param/api/auth/me",
+    "file": "frontend/src/__tests__/api-integration.test.js",
+    "line": 65,
+    "callee": "fetch"
+  },
+  {
+    "method": "GET",
+    "route": "/api/activities",
+    "file": "frontend/src/features/activities/api/activityApi.js",
+    "line": 4,
+    "callee": "apiGet"
+  },
+  {
+    "method": "GET",
+    "route": "/api/activities/history?days=:param&includeEntries=true",
+    "file": "frontend/src/features/activities/api/activityApi.js",
+    "line": 16,
+    "callee": "apiGet"
+  },
+  {
+    "method": "POST",
+    "route": "/api/activities/log",
+    "file": "frontend/src/features/activities/api/activityApi.js",
+    "line": 8,
+    "callee": "apiPost"
+  },
+  {
+    "method": "DELETE",
+    "route": "/api/activities/log/:param",
+    "file": "frontend/src/features/activities/api/activityApi.js",
+    "line": 20,
+    "callee": "apiDelete"
+  },
+  {
+    "method": "GET",
+    "route": "/api/activities/logs?date=:param",
+    "file": "frontend/src/features/activities/api/activityApi.js",
+    "line": 12,
+    "callee": "apiGet"
+  },
+  {
+    "method": "GET",
+    "route": "/api/activities/summary?date=:param",
+    "file": "frontend/src/features/activities/api/activityApi.js",
+    "line": 24,
+    "callee": "apiGet"
+  },
+  {
+    "method": "GET",
+    "route": "/api/activity-plans:param",
+    "file": "frontend/src/features/activities/api/activityPlanApi.js",
+    "line": 5,
+    "callee": "apiGet"
+  },
+  {
+    "method": "POST",
+    "route": "/api/activity-plans/generate",
+    "file": "frontend/src/features/activities/api/activityPlanApi.js",
+    "line": 9,
+    "callee": "apiPost"
+  },
+  {
+    "method": "POST",
+    "route": "/api/activity-plans/log",
+    "file": "frontend/src/features/activities/api/activityPlanApi.js",
+    "line": 13,
+    "callee": "apiPost"
+  },
+  {
+    "method": "POST",
+    "route": "/api/auth/login",
+    "file": "frontend/src/features/auth/api/authApi.js",
+    "line": 12,
+    "callee": "apiPost"
+  },
+  {
+    "method": "UNKNOWN",
+    "route": "/api/auth/logout",
+    "file": "frontend/src/features/auth/api/authApi.js",
+    "line": 19,
+    "callee": "apiFetch"
+  },
+  {
+    "method": "GET",
+    "route": "/api/auth/me",
+    "file": "frontend/src/features/auth/api/authApi.js",
+    "line": 23,
+    "callee": "apiGet"
+  },
+  {
+    "method": "POST",
+    "route": "/api/auth/register",
+    "file": "frontend/src/features/auth/api/authApi.js",
+    "line": 4,
+    "callee": "apiPost"
+  },
+  {
+    "method": "POST",
+    "route": "/api/auth/set-password",
+    "file": "frontend/src/features/auth/api/authApi.js",
+    "line": 27,
+    "callee": "apiPost"
+  },
+  {
+    "method": "GET",
+    "route": "/api/daily-meal-plans:param",
+    "file": "frontend/src/features/food-log/api/dailyMealPlanApi.js",
+    "line": 5,
+    "callee": "apiGet"
+  },
+  {
+    "method": "POST",
+    "route": "/api/daily-meal-plans/generate",
+    "file": "frontend/src/features/food-log/api/dailyMealPlanApi.js",
+    "line": 9,
+    "callee": "apiPost"
+  },
+  {
+    "method": "GET",
+    "route": "/api/daily-meal-plans/generate-stream",
+    "file": "frontend/src/features/food-log/api/dailyMealPlanApi.js",
+    "line": 13,
+    "callee": "fetchSseStream"
+  },
+  {
+    "method": "POST",
+    "route": "/api/daily-meal-plans/log",
+    "file": "frontend/src/features/food-log/api/dailyMealPlanApi.js",
+    "line": 17,
+    "callee": "apiPost"
+  },
+  {
+    "method": "POST",
+    "route": "/api/daily-meal-plans/regenerate-category",
+    "file": "frontend/src/features/food-log/api/dailyMealPlanApi.js",
+    "line": 25,
+    "callee": "apiPost"
+  },
+  {
+    "method": "GET",
+    "route": "/api/daily-meal-plans/regenerate-category-stream",
+    "file": "frontend/src/features/food-log/api/dailyMealPlanApi.js",
+    "line": 29,
+    "callee": "fetchSseStream"
+  },
+  {
+    "method": "POST",
+    "route": "/api/daily-meal-plans/toggle-item",
+    "file": "frontend/src/features/food-log/api/dailyMealPlanApi.js",
+    "line": 21,
+    "callee": "apiPost"
+  },
+  {
+    "method": "POST",
+    "route": "/api/food",
+    "file": "frontend/src/features/food-log/api/foodLogApi.js",
+    "line": 8,
+    "callee": "apiPost"
+  },
+  {
+    "method": "GET",
+    "route": "/api/food/history?days=:param",
+    "file": "frontend/src/features/food-log/api/foodLogApi.js",
+    "line": 24,
+    "callee": "apiGet"
+  },
+  {
+    "method": "POST",
+    "route": "/api/food/log",
+    "file": "frontend/src/features/food-log/api/foodLogApi.js",
+    "line": 12,
+    "callee": "apiPost"
+  },
+  {
+    "method": "DELETE",
+    "route": "/api/food/log/:param",
+    "file": "frontend/src/features/food-log/api/foodLogApi.js",
+    "line": 32,
+    "callee": "apiDelete"
+  },
+  {
+    "method": "GET",
+    "route": "/api/food/logs?date=:param",
+    "file": "frontend/src/features/food-log/api/foodLogApi.js",
+    "line": 20,
+    "callee": "apiGet"
+  },
+  {
+    "method": "GET",
+    "route": "/api/food/recent",
+    "file": "frontend/src/features/food-log/api/foodLogApi.js",
+    "line": 28,
+    "callee": "apiGet"
+  },
+  {
+    "method": "GET",
+    "route": "/api/food/search?q=:param",
+    "file": "frontend/src/features/food-log/api/foodLogApi.js",
+    "line": 4,
+    "callee": "apiGet"
+  },
+  {
+    "method": "GET",
+    "route": "/api/food/summary?date=:param",
+    "file": "frontend/src/features/food-log/api/foodLogApi.js",
+    "line": 16,
+    "callee": "apiGet"
+  },
+  {
+    "method": "GET",
+    "route": "/api/profile",
+    "file": "frontend/src/features/profile/api/profileApi.js",
+    "line": 32,
+    "callee": "apiGet"
+  },
+  {
+    "method": "POST",
+    "route": "/api/profile",
+    "file": "frontend/src/features/profile/api/profileApi.js",
+    "line": 12,
+    "callee": "apiPost"
+  },
+  {
+    "method": "UNKNOWN",
+    "route": "/api/profile",
+    "file": "frontend/src/features/profile/api/profileApi.js",
+    "line": 46,
+    "callee": "apiFetch"
+  },
+  {
+    "method": "POST",
+    "route": "/api/progress/weight",
+    "file": "frontend/src/features/progress/api/weightApi.js",
+    "line": 4,
+    "callee": "apiPost"
+  },
+  {
+    "method": "GET",
+    "route": "/api/progress/weight?limit=:param",
+    "file": "frontend/src/features/progress/api/weightApi.js",
+    "line": 12,
+    "callee": "apiGet"
+  },
+  {
+    "method": "DELETE",
+    "route": "/api/progress/weight/:param",
+    "file": "frontend/src/features/progress/api/weightApi.js",
+    "line": 16,
+    "callee": "apiDelete"
+  },
+  {
+    "method": "GET",
+    "route": "/api/weekly-plans:param",
+    "file": "frontend/src/features/weekly-plan/api/weeklyPlanApi.js",
+    "line": 5,
+    "callee": "apiGet"
+  },
+  {
+    "method": "GET",
+    "route": "/api/weekly-plans:param",
+    "file": "frontend/src/features/activities/api/activityCalendarApi.js",
+    "line": 5,
+    "callee": "apiGet"
+  },
+  {
+    "method": "POST",
+    "route": "/api/weekly-plans/generate",
+    "file": "frontend/src/features/weekly-plan/api/weeklyPlanApi.js",
+    "line": 9,
+    "callee": "apiPost"
+  },
+  {
+    "method": "POST",
+    "route": "/api/weekly-plans/generate",
+    "file": "frontend/src/features/activities/api/activityCalendarApi.js",
+    "line": 9,
+    "callee": "apiPost"
+  },
+  {
+    "method": "GET",
+    "route": "/api/weekly-plans/generate-stream",
+    "file": "frontend/src/features/activities/api/activityCalendarApi.js",
+    "line": 17,
+    "callee": "fetchSseStream"
+  },
+  {
+    "method": "POST",
+    "route": "/api/weekly-plans/regenerate-day",
+    "file": "frontend/src/features/weekly-plan/api/weeklyPlanApi.js",
+    "line": 16,
+    "callee": "apiPost"
+  },
+  {
+    "method": "POST",
+    "route": "/api/weekly-plans/regenerate-day",
+    "file": "frontend/src/features/activities/api/activityCalendarApi.js",
+    "line": 47,
+    "callee": "apiPost"
+  },
+  {
+    "method": "GET",
+    "route": "/api/weekly-plans/regenerate-day-stream",
+    "file": "frontend/src/features/activities/api/activityCalendarApi.js",
+    "line": 55,
+    "callee": "fetchSseStream"
+  },
+  {
+    "method": "POST",
+    "route": "/api/weekly-plans/swap",
+    "file": "frontend/src/features/weekly-plan/api/weeklyPlanApi.js",
+    "line": 20,
+    "callee": "apiPost"
+  },
+  {
+    "method": "POST",
+    "route": "/api/weekly-plans/swap",
+    "file": "frontend/src/features/activities/api/activityCalendarApi.js",
+    "line": 25,
+    "callee": "apiPost"
+  },
+  {
+    "method": "GET",
+    "route": "/api/weekly-plans/swap-stream",
+    "file": "frontend/src/features/activities/api/activityCalendarApi.js",
+    "line": 29,
+    "callee": "fetchSseStream"
+  },
+  {
+    "method": "POST",
+    "route": "/api/weekly-plans/toggle-complete",
+    "file": "frontend/src/features/activities/api/activityCalendarApi.js",
+    "line": 43,
+    "callee": "apiPost"
+  },
+  {
+    "method": "UNKNOWN",
+    "route": "<dynamic_expression>",
+    "file": "frontend/src/shared/lib/http.js",
+    "line": 64,
+    "callee": "apiFetch"
+  },
+  {
+    "method": "UNKNOWN",
+    "route": "<dynamic_expression>",
+    "file": "frontend/src/shared/lib/http.js",
+    "line": 75,
+    "callee": "apiFetch"
+  },
+  {
+    "method": "UNKNOWN",
+    "route": "<dynamic_expression>",
+    "file": "frontend/src/shared/lib/http.js",
+    "line": 88,
+    "callee": "apiFetch"
+  }
+]
