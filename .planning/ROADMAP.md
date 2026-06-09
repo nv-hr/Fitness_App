@@ -14,8 +14,8 @@ A structured technical debt reduction journey, starting with a comprehensive cod
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: General Codebase Audit** - Identify bugs, performance bottlenecks, and security issues. (completed 2026-06-09)
-- [ ] **Phase 2: Frontend Static Analysis & Mapping** - Map API calls to find unused routes and tables.
-- [ ] **Phase 3: Cleanup & Issue Resolution** - Safely remove dead code/tables and fix discovered issues.
+- [x] **Phase 2: Frontend Static Analysis & Mapping** - Map API calls to find unused routes and tables.
+- [x] **Phase 3: Cleanup & Issue Resolution** - Safely remove dead code/tables and fix discovered issues.
 
 ## Phase Details
 
@@ -50,7 +50,7 @@ Plans:
 
 Plans:
 
-- [ ] 02-01: Run static analysis and map unused routes and tables
+- [x] 02-01: Run static analysis and map unused routes and tables
 
 ### Phase 3: Cleanup & Issue Resolution
 
@@ -67,9 +67,9 @@ Plans:
 
 Plans:
 
-- [ ] 03-01: Safely remove unused backend routes
-- [ ] 03-02: Safely drop unused database tables
-- [ ] 03-03: Implement fixes for critical audit findings
+- [x] 03-01: Safely remove unused backend routes
+- [x] 03-02: Safely drop unused database tables
+- [x] 03-03: Implement fixes for critical audit findings
 
 ## Progress
 
@@ -79,5 +79,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. General Codebase Audit | 4/4 | Complete    | 2026-06-09 |
-| 2. Frontend Static Analysis & Mapping | 0/1 | Not started | - |
-| 3. Cleanup & Issue Resolution | 0/3 | Not started | - |
+| 2. Frontend Static Analysis & Mapping | 1/1 | Complete    | 2026-06-09 |
+| 3. Cleanup & Issue Resolution | 1/1 | Complete    | 2026-06-09 |
