@@ -30,7 +30,8 @@
     "openai": "^6.39.1",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
-    "pg": "^8.21.0"
+    "pg": "^8.21.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "jest": "^30.4.2",
