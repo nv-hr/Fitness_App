@@ -65,17 +65,7 @@ CREATE TABLE public.activities (
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT activities_pkey PRIMARY KEY (id)
 );
-CREATE TABLE public.user_activity_log (
-  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
-  user_id integer NOT NULL,
-  activity_id integer NOT NULL,
-  completed_date date NOT NULL,
-  notes text,
-  created_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT user_activity_log_pkey PRIMARY KEY (id),
-  CONSTRAINT user_activity_log_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
-  CONSTRAINT user_activity_log_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activities(id)
-);
+
 CREATE TABLE public.activity_logs (
   id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
   user_id integer NOT NULL,
@@ -100,17 +90,7 @@ CREATE TABLE public.weekly_plans (
   CONSTRAINT weekly_plans_pkey PRIMARY KEY (id),
   CONSTRAINT weekly_plans_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
-CREATE TABLE public.meal_plans (
-  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
-  user_id integer NOT NULL,
-  week_start date NOT NULL,
-  plan_data jsonb NOT NULL DEFAULT '{}'::jsonb,
-  status text NOT NULL DEFAULT 'active'::text,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT meal_plans_pkey PRIMARY KEY (id),
-  CONSTRAINT meal_plans_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
-);
+
 CREATE TABLE public.activity_plans (
   id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
   user_id integer NOT NULL,
