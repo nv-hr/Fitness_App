@@ -31,7 +31,7 @@ export async function register(req, res, next) {
     return successResponse(res, { user }, 201);
   } catch (err) {
     if (err.name === 'ZodError') {
-      const message = err.errors.map(e => e.message).join(', ');
+      const message = err.issues.map(e => e.message).join(', ');
       return errorResponse(res, message, 400, 'VALIDATION_ERROR');
     }
     if (err instanceof ValidationError) {
@@ -57,7 +57,7 @@ export async function login(req, res, next) {
     return successResponse(res, { user });
   } catch (err) {
     if (err.name === 'ZodError') {
-      const message = err.errors.map(e => e.message).join(', ');
+      const message = err.issues.map(e => e.message).join(', ');
       return errorResponse(res, message, 400, 'VALIDATION_ERROR');
     }
     if (err instanceof AuthenticationError) {

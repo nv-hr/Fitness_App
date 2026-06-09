@@ -1,0 +1,74 @@
+[
+  {
+    "id": "AUDIT-001",
+    "category": "Dependency Scan",
+    "severity": "Low",
+    "component": "frontend/package.json",
+    "description": "No critical or high vulnerabilities found in frontend dependencies during automated scan.",
+    "actionable_fix": "None required at this time.",
+    "confidence_score": 1
+  },
+  {
+    "id": "AUDIT-002",
+    "category": "Dependency Scan",
+    "severity": "Low",
+    "component": "backend/package.json",
+    "description": "No critical or high vulnerabilities found in backend dependencies during automated scan.",
+    "actionable_fix": "None required at this time.",
+    "confidence_score": 1
+  },
+  {
+    "id": "AUDIT-003",
+    "category": "Secret Scan",
+    "severity": "Low",
+    "component": "Global Codebase",
+    "description": "No exposed API keys or hardcoded JWT secrets found during automated scan.",
+    "actionable_fix": "None required at this time.",
+    "confidence_score": 1
+  },
+  {
+    "id": "AUDIT-SEC-001",
+    "category": "Security - Auth",
+    "severity": "High",
+    "component": "backend/src/services/auth.service.js",
+    "description": "Insufficient input validation on email and password in the register function. No regex format check for email and no complexity/length check for password.",
+    "actionable_fix": "Implement strict input validation using a library like Joi or Zod to validate email format, enforce minimum password length (e.g., 8 chars), and sanitize whitespace.",
+    "confidence_score": 1
+  },
+  {
+    "id": "AUDIT-SEC-002",
+    "category": "Security - LLM",
+    "severity": "Medium",
+    "component": "backend/src/services/llm.service.js",
+    "description": "Potential prompt injection surface. The buildPrompt function directly interpolates user profile inputs (like fitness_goal, target_weight_kg) into the LLM system prompt without strict length or sanitization checks.",
+    "actionable_fix": "Add strict length limits and character filtering on all user-controlled text fields before saving to the DB or before building the prompt. Prevent injection payloads like 'Ignore all previous instructions'.",
+    "confidence_score": 0.8
+  },
+  {
+    "id": "AUDIT-PERF-001",
+    "category": "Performance - DB",
+    "severity": "Low",
+    "component": "backend/src/repositories",
+    "description": "Codebase was audited for N+1 query patterns inside loops or Promise.all structures. No N+1 query loops were detected; queries are executed efficiently without batching problems.",
+    "actionable_fix": "None required.",
+    "confidence_score": 1
+  },
+  {
+    "id": "AUDIT-PERF-002",
+    "category": "Performance - Dependencies",
+    "severity": "Low",
+    "component": "backend/package.json",
+    "description": "Backend dependencies were audited. Standard packages (express, pg, bcryptjs, passport) are used without unnecessary bloat.",
+    "actionable_fix": "None required.",
+    "confidence_score": 1
+  },
+  {
+    "id": "AUDIT-PERF-003",
+    "category": "Performance - Dependencies",
+    "severity": "Low",
+    "component": "frontend/package.json",
+    "description": "Frontend dependencies were audited. Modern, lightweight packages (date-fns, react-hook-form, zod, tanstack-query) are in use. No legacy bloat (e.g., moment.js, lodash) was found.",
+    "actionable_fix": "None required.",
+    "confidence_score": 1
+  }
+]

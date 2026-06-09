@@ -50,5 +50,5 @@ describe('POST /api/daily-meal-plans/generate', () => {
     const firstMeal = data.plan.meals[0];
     expect(firstMeal).toHaveProperty('meal_type');
     expect(Array.isArray(firstMeal.items)).toBe(true);
-  }, 45000); // 45s timeout because LLM generation for meal plan can be large
+  }, 90000); // 90s timeout because LLM generation and potential validation retries can take longer than 45s
 });
