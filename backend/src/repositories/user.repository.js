@@ -50,7 +50,7 @@ export async function findByGoogleId(googleId) {
   }
 }
 
-export async function updatePdpConsent(userId, consent) {
+async function updatePdpConsent(userId, consent) {
   try {
     const { rows } = await pool.query(
       'UPDATE users SET pdp_consent = $1, pdp_consent_date = NOW() WHERE id = $2 RETURNING id, pdp_consent, pdp_consent_date',

@@ -1,10 +1,11 @@
 import { pool } from '../config/database.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { getCachedPlan, setCachedPlan, clearCachedPlan } from '../services/llm.service.js';
-import { generateDailyMealPlan, regenerateCategory } from '../services/dailyMealPlan.service.js';
+import { generateDailyMealPlan, regenerateCategory, toggleMealPlanItem } from '../services/dailyMealPlan.service.js';
 import { getProfile } from '../services/profile.service.js';
-import { searchFoods, getLogHistory, batchLogItems, getFoodById, getFoodsByCategory, createFoodLog, deleteFoodLogByPlan } from '../repositories/food.repository.js';
-import { findByUserAndDate, markMealsLogged, markItemLogged, syncMealPlanLoggedStates } from '../repositories/dailyMealPlan.repository.js';
+import { searchFoods, getLogHistory, batchLogItems, getFoodById, createFoodLog, deleteFoodLogByPlan } from '../repositories/food.repository.js';
+import { findByUserAndDate, markMealsLogged, markItemLogged } from '../repositories/dailyMealPlan.repository.js';
+import { syncMealPlanLoggedStates } from '../repositories/mealPlanSync.repository.js';
 
 function isValidDateString(str) {
   if (typeof str !== 'string') return false;
@@ -183,62 +184,12 @@ async function toggleItemLogged(req, res, next) {
       return errorResponse(res, 'logged must be a boolean', 400, 'VALIDATION_ERROR');
     }
 
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      const updated = await markItemLogged(userId, planDate, mealType, foodId, logged, client);
-      if (!updated) {
-        await client.query('ROLLBACK');
-        return errorResponse(res, 'No daily meal plan found for the given date', 404, 'NOT_FOUND');
-      }
-
-      // Sync food_logs table
-      if (logged) {
-        const plan = await findByUserAndDate(userId, planDate, client);
-        if (plan) {
-          const data = plan.plan_data;
-          for (const meal of data.meals) {
-            if (meal.meal_type !== mealType) continue;
-            for (const item of meal.items) {
-              if (item.food_id === foodId) {
-                await createFoodLog(userId, {
-                  foodId: item.food_id,
-                  calories: item.calories,
-                  portionGrams: item.portion_grams,
-                  logDate: planDate,
-                  mealType: meal.meal_type,
-                }, client);
-              }
-            }
-          }
-        }
-      } else {
-        let portionGrams = 0;
-        const plan = await findByUserAndDate(userId, planDate, client);
-        if (plan) {
-          const data = plan.plan_data;
-          for (const meal of data.meals) {
-            if (meal.meal_type !== mealType) continue;
-            for (const item of meal.items) {
-              if (item.food_id === foodId) {
-                portionGrams = item.portion_grams;
-                break;
-              }
-            }
-          }
-        }
-        await deleteFoodLogByPlan(userId, foodId, planDate, mealType, portionGrams, client);
-      }
-
-      await client.query('COMMIT');
-      clearCachedPlan(userId, planDate, 'meal');
-      return successResponse(res, { plan: updated.plan_data });
-    } catch (err) {
-      await client.query('ROLLBACK');
-      throw err;
-    } finally {
-      client.release();
+    const updated = await toggleMealPlanItem(userId, planDate, mealType, foodId, logged);
+    if (!updated) {
+      return errorResponse(res, 'No daily meal plan found for the given date', 404, 'NOT_FOUND');
     }
+    clearCachedPlan(userId, planDate, 'meal');
+    return successResponse(res, { plan: updated.plan_data });
   } catch (err) {
     next(err);
   }

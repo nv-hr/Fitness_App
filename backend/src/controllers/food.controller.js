@@ -4,7 +4,8 @@ import { ValidationError } from '../utils/errors.js';
 import { calculateCalories, validateFoodData, validateCustomFoodData } from '../services/food.service.js';
 import { findByUserId as findProfileByUserId } from '../repositories/profile.repository.js';
 import { calculateTdee, getCalorieTarget } from '../services/profile.service.js';
-import { markItemLogged, syncItemLoggedState } from '../repositories/dailyMealPlan.repository.js';
+import { markItemLogged } from '../repositories/dailyMealPlan.repository.js';
+import { syncItemLoggedState } from '../repositories/mealPlanSync.repository.js';
 import { clearCachedPlan } from '../services/llm.service.js';
 
 const VALID_MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];

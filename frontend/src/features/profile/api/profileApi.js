@@ -3,7 +3,7 @@ import { apiGet, apiPost, apiFetch } from '../../../shared/lib/http.js';
 let profileCache = null;
 let profilePromise = null;
 
-export function clearProfileCache() {
+function clearProfileCache() {
   profileCache = null;
   profilePromise = null;
 }

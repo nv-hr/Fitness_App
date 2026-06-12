@@ -1,4 +1,4 @@
-export function getMonday(date) {
+function getMonday(date) {
   const d = new Date(date);
   const localDay = d.getDay();
   const diff = d.getDate() - localDay + (localDay === 0 ? -6 : 1);

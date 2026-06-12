@@ -1,5 +1,7 @@
 import { buildPrompt, callLlmApi, getCachedPlan, setCachedPlan, callLlmStream } from './llm.service.js';
-import { findByUserAndDate, upsertPlan } from '../repositories/dailyMealPlan.repository.js';
+import { findByUserAndDate, upsertPlan, markItemLogged } from '../repositories/dailyMealPlan.repository.js';
+import { createFoodLog, deleteFoodLogByPlan } from '../repositories/food.repository.js';
+import { pool } from '../config/database.js';
 import { AppError } from '../utils/errors.js';
 import { levenshteinDistance } from '../utils/string.js';
 
@@ -13,7 +15,7 @@ import { levenshteinDistance } from '../utils/string.js';
  * @param {Array<object>} dbFoods - The list of all valid food items from database.
  * @returns {object} Match result containing matched status, matching food object, and match type.
  */
-export function fuzzyMatchFoodName(name, dbFoods) {
+function fuzzyMatchFoodName(name, dbFoods) {
   if (!name || typeof name !== 'string') {
     return { matched: false, food: null, matchType: 'none' };
   }
@@ -50,7 +52,7 @@ export function fuzzyMatchFoodName(name, dbFoods) {
 
 const VALID_MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 
-export function validateDailyMealPlanStructure(plan) {
+function validateDailyMealPlanStructure(plan) {
   const errors = [];
   if (!plan || !Array.isArray(plan.meals)) {
     return { valid: false, errors: ['Plan must have a "meals" array'] };
@@ -94,7 +96,7 @@ export function validateDailyMealPlanStructure(plan) {
  * @param {string} [bmiCategory] - The user's BMI Category.
  * @returns {object} Validated plan, errors, and warnings.
  */
-export function validateAndFixDailyMealPlan(plan, dbFoods, calorieTarget, tdee, bmiCategory) {
+function validateAndFixDailyMealPlan(plan, dbFoods, calorieTarget, tdee, bmiCategory) {
   const errors = [];
   const warnings = [];
   if (!plan || !Array.isArray(plan.meals)) {
@@ -465,4 +467,55 @@ export async function generateDailyMealPlan(deps) {
     console.error('[DailyMealPlan] Failed to persist fallback plan:', err.message);
   }
   return { plan: fallback, fromCache: false, status: 'fallback' };
+}
+
+export async function toggleMealPlanItem(userId, planDate, mealType, foodId, logged) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const updated = await markItemLogged(userId, planDate, mealType, foodId, logged, client);
+    if (!updated) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    if (logged) {
+      const data = updated.plan_data;
+      for (const meal of data.meals) {
+        if (meal.meal_type !== mealType) continue;
+        for (const item of meal.items) {
+          if (item.food_id === foodId) {
+            await createFoodLog(userId, {
+              foodId: item.food_id,
+              calories: item.calories,
+              portionGrams: item.portion_grams,
+              logDate: planDate,
+              mealType: meal.meal_type,
+            }, client);
+          }
+        }
+      }
+    } else {
+      let portionGrams = 0;
+      const data = updated.plan_data;
+      for (const meal of data.meals) {
+        if (meal.meal_type !== mealType) continue;
+        for (const item of meal.items) {
+          if (item.food_id === foodId) {
+            portionGrams = item.portion_grams;
+            break;
+          }
+        }
+      }
+      await deleteFoodLogByPlan(userId, foodId, planDate, mealType, portionGrams, client);
+    }
+
+    await client.query('COMMIT');
+    return updated;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }

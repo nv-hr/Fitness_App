@@ -111,7 +111,7 @@ export async function createTestUser(agent) {
  * @param {import('supertest').SuperAgentTest} agent
  * @returns {Promise<{profile: Object, foodLogId: number|null}>}
  */
-export async function seedTestData(agent) {
+async function seedTestData(agent) {
   // Create profile
   const profileRes = await agent.post('/api/profile').send({
     weightKg: 70,

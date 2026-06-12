@@ -232,7 +232,7 @@ export async function batchLogItems(userId, items, clientOverride) {
  * @param {boolean} filters.is_custom
  * @returns {Promise<number>}
  */
-export async function countFoods({ is_custom }) {
+async function countFoods({ is_custom }) {
   try {
     const { rows } = await pool.query(
       'SELECT COUNT(*) as count FROM foods WHERE is_custom = $1',
@@ -251,7 +251,7 @@ export async function countFoods({ is_custom }) {
  * @param {boolean} filters.is_custom
  * @returns {Promise<number>}
  */
-export async function findByCategory(category, { is_custom } = {}) {
+async function findByCategory(category, { is_custom } = {}) {
   try {
     let query = 'SELECT COUNT(*) as count FROM foods WHERE category = $1';
     const params = [category];
@@ -278,7 +278,7 @@ export async function findByCategory(category, { is_custom } = {}) {
  * @param {number} limit
  * @returns {Promise<Array>}
  */
-export async function getFoodsByCategory(userId, category, limit = 50) {
+async function getFoodsByCategory(userId, category, limit = 50) {
   try {
     const { rows } = await pool.query(
       `SELECT id, name, calories_per_100g, category

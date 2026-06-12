@@ -174,7 +174,7 @@ export async function getActivityHistory(userId, days = 7) {
  * @param {string} endDate
  * @returns {Promise<Array>}
  */
-export async function getActivityLogsInRange(userId, startDate, endDate) {
+async function getActivityLogsInRange(userId, startDate, endDate) {
   try {
     const { rows } = await pool.query(
       `SELECT al.*, a.name as activity_name

@@ -8,7 +8,7 @@ export async function logActivity(data) {
   return apiPost('/api/activities/log', data);
 }
 
-export async function getActivityLogs(date) {
+async function getActivityLogs(date) {
   return apiGet(`/api/activities/logs?date=${encodeURIComponent(date)}`);
 }
 

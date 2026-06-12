@@ -1,0 +1,2697 @@
+{
+  "kind": "dupes",
+  "schema_version": 7,
+  "version": "2.95.0",
+  "elapsed_ms": 64,
+  "clone_groups": [
+    {
+      "instances": [
+        {
+          "file": "backend/src/controllers/activity.controller.js",
+          "start_line": 12,
+          "end_line": 45,
+          "start_col": 0,
+          "end_col": 1,
+          "fragment": "function isDateWithinTimezoneRange(dateStr) {\r\n  const today = new Date();\r\n  const yesterday = new Date(today);\r\n  yesterday.setUTCDate(today.getUTCDate() - 1);\r\n  const tomorrow = new Date(today);\r\n  tomorrow.setUTCDate(today.getUTCDate() + 1);\r\n  \r\n  const todayStr = today.toISOString().split('T')[0];\r\n  const yesterdayStr = yesterday.toISOString().split('T')[0];\r\n  const tomorrowStr = tomorrow.toISOString().split('T')[0];\r\n  \r\n  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr;\r\n}\r\n\r\n/**\r\n * GET /api/activities — Full activity pool filtered by user's goal.\r\n */\r\nasync function getAllActivitiesHandler(req, res, next) {\r\n  try {\r\n    const profile = await findProfileByUserId(req.user.userId);\r\n\r\n    let activities;\r\n    if (profile && profile.fitness_goal) {\r\n      activities = await getAllActivitiesByGoal(req.user.userId, profile.fitness_goal);\r\n    } else {\r\n      // Fallback: return all activities if no profile\r\n      activities = await activityRepo.getAllActivities(['lose_weight', 'maintain', 'gain_weight']);\r\n    }\r\n\r\n    return successResponse(res, { activities, total: activities.length });\r\n  } catch (err) {\r\n    next(err);\r\n  }\r\n}"
+        },
+        {
+          "file": "backend/src/controllers/dailyMealPlan.controller.js",
+          "start_line": 20,
+          "end_line": 64,
+          "start_col": 0,
+          "end_col": 1,
+          "fragment": "function isDateWithinTimezoneRange(dateStr) {\r\n  const today = new Date();\r\n  const yesterday = new Date(today);\r\n  yesterday.setUTCDate(today.getUTCDate() - 1);\r\n  const tomorrow = new Date(today);\r\n  tomorrow.setUTCDate(today.getUTCDate() + 1);\r\n  \r\n  const todayStr = today.toISOString().split('T')[0];\r\n  const yesterdayStr = yesterday.toISOString().split('T')[0];\r\n  const tomorrowStr = tomorrow.toISOString().split('T')[0];\r\n  \r\n  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr;\r\n}\r\n\r\nasync function get(req, res, next) {\r\n  try {\r\n    const userId = req.user.userId;\r\n    let planDate = req.query.date;\r\n    if (planDate && !isValidDateString(planDate)) {\r\n      return errorResponse(res, 'Invalid date format (use YYYY-MM-DD)', 400, 'VALIDATION_ERROR');\r\n    }\r\n    planDate = planDate || getTodayString();\r\n    \r\n    let planData = null;\r\n    const cached = getCachedPlan(userId, planDate, 'meal');\r\n    if (cached && cached.status !== 'fallback') {\r\n      planData = cached;\r\n    } else {\r\n      const dbPlan = await findByUserAndDate(userId, planDate);\r\n      if (dbPlan) {\r\n        planData = dbPlan.plan_data;\r\n      }\r\n    }\r\n\r\n    if (!planData) {\r\n      return successResponse(res, { plan: null, fromCache: false });\r\n    }\r\n\r\n    const syncedPlanData = await syncMealPlanLoggedStates(userId, planDate, planData);\r\n    setCachedPlan(userId, planDate, syncedPlanData, 'meal');\r\n    return successResponse(res, { plan: syncedPlanData, fromCache: false });\r\n  } catch (err) {\r\n    next(err);\r\n  }\r\n}"
+        },
+        {
+          "file": "backend/src/controllers/weeklyPlan.controller.js",
+          "start_line": 59,
+          "end_line": 149,
+          "start_col": 0,
+          "end_col": 1,
+          "fragment": "function isDateWithinTimezoneRange(dateStr) {\r\n  const today = new Date();\r\n  const yesterday = new Date(today);\r\n  yesterday.setUTCDate(today.getUTCDate() - 1);\r\n  const tomorrow = new Date(today);\r\n  tomorrow.setUTCDate(today.getUTCDate() + 1);\r\n\r\n  const todayStr = today.toISOString().split('T')[0];\r\n  const yesterdayStr = yesterday.toISOString().split('T')[0];\r\n  const tomorrowStr = tomorrow.toISOString().split('T')[0];\r\n\r\n  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr;\r\n}\r\n\r\nasync function get(req, res, next) {\r\n  try {\r\n    const userId = req.user.userId;\r\n    let weekStart = req.query.weekStart;\r\n\r\n    if (weekStart && !isValidDateString(weekStart)) {\r\n      return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');\r\n    }\r\n    weekStart = getMonday(weekStart ? new Date(weekStart) : new Date());\r\n\r\n    // Try in-memory cache first (faster, no DB hit)\r\n    const cached = getCachedPlan(userId, weekStart);\r\n    if (cached && cached.status !== 'fallback') {\r\n      // D-01: Check for old-format plan in cache (defensive — migrated plans always\r\n      // have format_version: 1, but old-format plans cached via swapHandler CR-03\r\n      // would lack it).\r\n      if (isOldFormat(cached)) {\r\n        if (!isMigrationOnCooldown(userId, weekStart)) {\r\n          const migrated = await attemptMigration(userId, weekStart);\r\n          if (migrated) {\r\n            setCachedPlan(userId, weekStart, migrated);\r\n            return successResponse(res, { plan: migrated, fromCache: false });\r\n          }\r\n          // CR-01: Record failed migration to enforce cooldown\r\n          migrationFailCooldown.set(`${userId}_${weekStart}`, Date.now());\r\n        }\r\n        // D-03 / CR-06: Return cached plan as-is — do NOT fall through to DB path,\r\n        // which would trigger a second migration attempt on the same request.\r\n        console.warn(`[Migration] LLM failed or cooldown active for user ${userId}, week ${weekStart}. Returning cached old-format plan.`);\r\n      }\r\n      return successResponse(res, { plan: cached, fromCache: true });\r\n    }\r\n\r\n    // Fall back to DB\r\n    const { rows } = await pool.query(\r\n      `SELECT plan_data, status, created_at, updated_at\r\n       FROM weekly_plans\r\n       WHERE user_id = $1 AND week_start = $2\r\n       LIMIT 1`,\r\n      [userId, weekStart]\r\n    );\r\n\r\n    if (rows.length === 0) {\r\n      return successResponse(res, { plan: null, fromCache: false });\r\n    }\r\n\r\n    const row = rows[0];\r\n\r\n    // D-01: Lazy migration — detect old format by absence of format_version\r\n    // If the DB plan_data lacks format_version, trigger silent regeneration.\r\n    if (row.plan_data && isOldFormat(row.plan_data)) {\r\n      if (!isMigrationOnCooldown(userId, weekStart)) {\r\n        const migrated = await attemptMigration(userId, weekStart);\r\n        if (migrated) {\r\n          setCachedPlan(userId, weekStart, migrated);\r\n          return successResponse(res, { plan: migrated, fromCache: false });\r\n        }\r\n        // CR-01: Record failed migration to enforce cooldown\r\n        migrationFailCooldown.set(`${userId}_${weekStart}`, Date.now());\r\n      }\r\n      // D-03: LLM failure — keep old format, try again after cooldown expires\r\n      console.warn(`[Migration] LLM failed or cooldown active for user ${userId}, week ${weekStart}. Returning DB old-format plan.`);\r\n    }\r\n\r\n    const plan = {\r\n      days: row.plan_data?.days || [],\r\n      status: row.status || 'active',\r\n      generated_at: row.plan_data?.generated_at || row.created_at,\r\n    };\r\n\r\n    const syncedPlan = await syncWeeklyPlanCompletedStates(userId, weekStart, plan);\r\n    setCachedPlan(userId, weekStart, syncedPlan);\r\n    return successResponse(res, { plan: syncedPlan, fromCache: false });\r\n  } catch (err) {\r\n    next(err);\r\n  }\r\n}"
+        }
+      ],
+      "token_count": 132,
+      "line_count": 91,
+      "fingerprint": "dup:ea84cb76",
+      "suggested_name": "activities",
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract duplicated code (91 lines, 3 instances) into a shared function"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "instances": [
+        {
+          "file": "backend/src/controllers/activity.controller.js",
+          "start_line": 12,
+          "end_line": 23,
+          "start_col": 0,
+          "end_col": 84,
+          "fragment": "function isDateWithinTimezoneRange(dateStr) {\r\n  const today = new Date();\r\n  const yesterday = new Date(today);\r\n  yesterday.setUTCDate(today.getUTCDate() - 1);\r\n  const tomorrow = new Date(today);\r\n  tomorrow.setUTCDate(today.getUTCDate() + 1);\r\n  \r\n  const todayStr = today.toISOString().split('T')[0];\r\n  const yesterdayStr = yesterday.toISOString().split('T')[0];\r\n  const tomorrowStr = tomorrow.toISOString().split('T')[0];\r\n  \r\n  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr"
+        },
+        {
+          "file": "backend/src/controllers/dailyMealPlan.controller.js",
+          "start_line": 20,
+          "end_line": 31,
+          "start_col": 0,
+          "end_col": 84,
+          "fragment": "function isDateWithinTimezoneRange(dateStr) {\r\n  const today = new Date();\r\n  const yesterday = new Date(today);\r\n  yesterday.setUTCDate(today.getUTCDate() - 1);\r\n  const tomorrow = new Date(today);\r\n  tomorrow.setUTCDate(today.getUTCDate() + 1);\r\n  \r\n  const todayStr = today.toISOString().split('T')[0];\r\n  const yesterdayStr = yesterday.toISOString().split('T')[0];\r\n  const tomorrowStr = tomorrow.toISOString().split('T')[0];\r\n  \r\n  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr"
+        },
+        {
+          "file": "backend/src/controllers/food.controller.js",
+          "start_line": 13,
+          "end_line": 24,
+          "start_col": 0,
+          "end_col": 84,
+          "fragment": "function isDateWithinTimezoneRange(dateStr) {\r\n  const today = new Date();\r\n  const yesterday = new Date(today);\r\n  yesterday.setUTCDate(today.getUTCDate() - 1);\r\n  const tomorrow = new Date(today);\r\n  tomorrow.setUTCDate(today.getUTCDate() + 1);\r\n  \r\n  const todayStr = today.toISOString().split('T')[0];\r\n  const yesterdayStr = yesterday.toISOString().split('T')[0];\r\n  const tomorrowStr = tomorrow.toISOString().split('T')[0];\r\n  \r\n  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr"
+        },
+        {
+          "file": "backend/src/controllers/weeklyPlan.controller.js",
+          "start_line": 59,
+          "end_line": 70,
+          "start_col": 0,
+          "end_col": 84,
+          "fragment": "function isDateWithinTimezoneRange(dateStr) {\r\n  const today = new Date();\r\n  const yesterday = new Date(today);\r\n  yesterday.setUTCDate(today.getUTCDate() - 1);\r\n  const tomorrow = new Date(today);\r\n  tomorrow.setUTCDate(today.getUTCDate() + 1);\r\n\r\n  const todayStr = today.toISOString().split('T')[0];\r\n  const yesterdayStr = yesterday.toISOString().split('T')[0];\r\n  const tomorrowStr = tomorrow.toISOString().split('T')[0];\r\n\r\n  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr"
+        }
+      ],
+      "token_count": 130,
+      "line_count": 12,
+      "fingerprint": "dup:70491171",
+      "suggested_name": "today",
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract duplicated code (12 lines, 4 instances) into a shared function"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "instances": [
+        {
+          "file": "backend/src/controllers/dailyMealPlan.controller.js",
+          "start_line": 236,
+          "end_line": 246,
+          "start_col": 2,
+          "end_col": 63,
+          "fragment": "res.setHeader('Content-Type', 'text/event-stream');\r\n  res.setHeader('Cache-Control', 'no-cache');\r\n  res.setHeader('Connection', 'keep-alive');\r\n  res.flushHeaders();\r\n\r\n  const onChunk = (chunk) => {\r\n    res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\\n\\n`);\r\n  };\r\n\r\n  try {\r\n    const existing = await findByUserAndDate(userId, planDate);"
+        },
+        {
+          "file": "backend/src/controllers/dailyMealPlan.controller.js",
+          "start_line": 285,
+          "end_line": 303,
+          "start_col": 2,
+          "end_col": 7,
+          "fragment": "res.setHeader('Content-Type', 'text/event-stream');\r\n  res.setHeader('Cache-Control', 'no-cache');\r\n  res.setHeader('Connection', 'keep-alive');\r\n  res.flushHeaders();\r\n\r\n  const onChunk = (chunk) => {\r\n    res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\\n\\n`);\r\n  };\r\n\r\n  try {\r\n    const result = await regenerateCategory({\r\n      userId,\r\n      planDate: targetDate,\r\n      mealType,\r\n      getProfile: (id) => getProfile(id),\r\n      getAllFoods: (id) => searchFoods(id, '', 200),\r\n      getLogHistory: (id, days) => getLogHistory(id, days),\r\n      onChunk,\r\n    });"
+        },
+        {
+          "file": "backend/src/controllers/weeklyPlan.controller.js",
+          "start_line": 604,
+          "end_line": 622,
+          "start_col": 2,
+          "end_col": 6,
+          "fragment": "res.setHeader('Content-Type', 'text/event-stream');\r\n  res.setHeader('Cache-Control', 'no-cache');\r\n  res.setHeader('Connection', 'keep-alive');\r\n  res.flushHeaders();\r\n\r\n  const onChunk = (chunk) => {\r\n    res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\\n\\n`);\r\n  };\r\n\r\n  try {\r\n    const deps = {\r\n      getProfile: (id) => findProfileByUserId(id),\r\n      getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),\r\n      getActivities: () => getAllActivities(),\r\n      getTopActivities: (id, limit) => getTopActivities(id, limit),\r\n      userId,\r\n      weekStart: targetWeekStart,\r\n      onChunk,\r\n    };"
+        }
+      ],
+      "token_count": 69,
+      "line_count": 19,
+      "fingerprint": "dup:c3be374a",
+      "suggested_name": "setHeader",
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract duplicated code (19 lines, 3 instances) into a shared function"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "instances": [
+        {
+          "file": "backend/src/controllers/dailyMealPlan.controller.js",
+          "start_line": 261,
+          "end_line": 268,
+          "start_col": 5,
+          "end_col": 3,
+          "fragment": ");\r\n\r\n    res.write(`data: ${JSON.stringify({ type: 'done', plan: result.plan })}\\n\\n`);\r\n    res.end();\r\n  } catch (err) {\r\n    res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\\n\\n`);\r\n    res.end();\r\n  }"
+        },
+        {
+          "file": "backend/src/controllers/dailyMealPlan.controller.js",
+          "start_line": 303,
+          "end_line": 310,
+          "start_col": 5,
+          "end_col": 3,
+          "fragment": ");\r\n\r\n    res.write(`data: ${JSON.stringify({ type: 'done', plan: result.plan })}\\n\\n`);\r\n    res.end();\r\n  } catch (err) {\r\n    res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\\n\\n`);\r\n    res.end();\r\n  }"
+        },
+        {
+          "file": "backend/src/controllers/weeklyPlan.controller.js",
+          "start_line": 732,
+          "end_line": 739,
+          "start_col": 67,
+          "end_col": 3,
+          "fragment": ");\r\n\r\n    res.write(`data: ${JSON.stringify({ type: 'done', plan: result.plan })}\\n\\n`);\r\n    res.end();\r\n  } catch (err) {\r\n    res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\\n\\n`);\r\n    res.end();\r\n  }"
+        }
+      ],
+      "token_count": 64,
+      "line_count": 8,
+      "fingerprint": "dup:11d317a1",
+      "suggested_name": "stringify",
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract duplicated code (8 lines, 3 instances) into a shared function"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "instances": [
+        {
+          "file": "backend/src/controllers/weeklyPlan.controller.js",
+          "start_line": 184,
+          "end_line": 191,
+          "start_col": 44,
+          "end_col": 19,
+          "fragment": "{\r\n      getProfile: (id) => findProfileByUserId(id),\r\n      getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),\r\n      getActivities: () => getAllActivities(),\r\n      getTopActivities: (id, limit) => getTopActivities(id, limit),\r\n      userId,\r\n      weekStart,\r\n      availableDays"
+        },
+        {
+          "file": "backend/src/controllers/weeklyPlan.controller.js",
+          "start_line": 388,
+          "end_line": 395,
+          "start_col": 15,
+          "end_col": 17,
+          "fragment": "{\r\n    getProfile: (id) => findProfileByUserId(id),\r\n    getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),\r\n    getActivities: () => getAllActivities(),\r\n    getTopActivities: (id, limit) => getTopActivities(id, limit),\r\n    userId,\r\n    weekStart,\r\n    availableDays"
+        },
+        {
+          "file": "backend/src/controllers/weeklyPlan.controller.js",
+          "start_line": 567,
+          "end_line": 574,
+          "start_col": 44,
+          "end_col": 19,
+          "fragment": "{\r\n      getProfile: (id) => findProfileByUserId(id),\r\n      getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),\r\n      getActivities: () => getAllActivities(),\r\n      getTopActivities: (id, limit) => getTopActivities(id, limit),\r\n      userId,\r\n      weekStart,\r\n      availableDays"
+        }
+      ],
+      "token_count": 63,
+      "line_count": 8,
+      "fingerprint": "dup:1293abb9",
+      "suggested_name": "getTopActivities",
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract duplicated code (8 lines, 3 instances) into a shared function"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "instances": [
+        {
+          "file": "backend/src/controllers/weeklyPlan.controller.js",
+          "start_line": 211,
+          "end_line": 228,
+          "start_col": 4,
+          "end_col": 6,
+          "fragment": "if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {\r\n      return errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR');\r\n    }\r\n\r\n    let targetWeekStart = weekStart;\r\n    if (targetWeekStart && !isValidDateString(targetWeekStart)) {\r\n      return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');\r\n    }\r\n    targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());\r\n\r\n    const deps = {\r\n      getProfile: (id) => findProfileByUserId(id),\r\n      getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),\r\n      getActivities: () => getAllActivities(),\r\n      getTopActivities: (id, limit) => getTopActivities(id, limit),\r\n      userId,\r\n      weekStart: targetWeekStart,\r\n    };"
+        },
+        {
+          "file": "backend/src/controllers/weeklyPlan.controller.js",
+          "start_line": 262,
+          "end_line": 273,
+          "start_col": 4,
+          "end_col": 52,
+          "fragment": "if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {\r\n      return errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR');\r\n    }\r\n\r\n    // Validate and normalize weekStart\r\n    let targetWeekStart = weekStart;\r\n    if (targetWeekStart && !isValidDateString(targetWeekStart)) {\r\n      return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');\r\n    }\r\n    targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());\r\n\r\n    const targetDateObj = new Date(targetWeekStart);"
+        },
+        {
+          "file": "backend/src/controllers/weeklyPlan.controller.js",
+          "start_line": 656,
+          "end_line": 666,
+          "start_col": 2,
+          "end_col": 50,
+          "fragment": "if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {\r\n    return errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR');\r\n  }\r\n\r\n  let targetWeekStart = weekStart;\r\n  if (targetWeekStart && !isValidDateString(targetWeekStart)) {\r\n    return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');\r\n  }\r\n  targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());\r\n\r\n  const targetDateObj = new Date(targetWeekStart);"
+        }
+      ],
+      "token_count": 80,
+      "line_count": 18,
+      "fingerprint": "dup:dd283016",
+      "suggested_name": "targetWeekStart",
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract duplicated code (18 lines, 3 instances) into a shared function"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "instances": [
+        {
+          "file": "backend/src/repositories/activity.repository.js",
+          "start_line": 147,
+          "end_line": 151,
+          "start_col": 41,
+          "end_col": 51,
+          "fragment": "userId, days = 7) {\r\n  days = Math.min(Math.max(1, Math.floor(days)), 365);\r\n  try {\r\n    const cutoffDate = new Date();\r\n    cutoffDate.setDate(cutoffDate.getDate() - (days"
+        },
+        {
+          "file": "backend/src/repositories/activity.repository.js",
+          "start_line": 340,
+          "end_line": 344,
+          "start_col": 52,
+          "end_col": 51,
+          "fragment": "userId, days = 7) {\r\n  days = Math.min(Math.max(1, Math.floor(days)), 365);\r\n  try {\r\n    const cutoffDate = new Date();\r\n    cutoffDate.setDate(cutoffDate.getDate() - (days"
+        },
+        {
+          "file": "backend/src/repositories/food.repository.js",
+          "start_line": 124,
+          "end_line": 128,
+          "start_col": 36,
+          "end_col": 50,
+          "fragment": "userId, days = 7) {\r\n  days = Math.min(Math.max(1, Math.floor(days)), 365);\r\n  try {\r\n    const cutoffDate = new Date();\r\n    cutoffDate.setDate(cutoffDate.getDate() - days"
+        }
+      ],
+      "token_count": 50,
+      "line_count": 5,
+      "fingerprint": "dup:d67d2989",
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract duplicated code (5 lines, 3 instances) into a shared function"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "instances": [
+        {
+          "file": "backend/src/repositories/activity.repository.js",
+          "start_line": 151,
+          "end_line": 162,
+          "start_col": 56,
+          "end_col": 10,
+          "fragment": ");\r\n    const cutoffStr = cutoffDate.toISOString().split('T')[0];\r\n    const { rows } = await pool.query(\r\n      `SELECT al.logged_date, SUM(al.duration_min) as total_minutes, SUM(al.calories_burned) as total_burned, COUNT(*) as entry_count\r\n       FROM activity_logs al\r\n       WHERE al.user_id = $1 AND al.logged_date >= $2::date\r\n       GROUP BY al.logged_date\r\n       ORDER BY al.logged_date DESC`,\r\n      [userId, cutoffStr]\r\n    );\r\n    return rows.map(r => ({\r\n      ...r"
+        },
+        {
+          "file": "backend/src/repositories/activity.repository.js",
+          "start_line": 344,
+          "end_line": 355,
+          "start_col": 56,
+          "end_col": 10,
+          "fragment": ");\r\n    const cutoffStr = cutoffDate.toISOString().split('T')[0];\r\n    const { rows } = await pool.query(\r\n      `SELECT al.*, a.name as activity_name\r\n       FROM activity_logs al\r\n       JOIN activities a ON al.activity_id = a.id\r\n       WHERE al.user_id = $1 AND al.logged_date >= $2\r\n       ORDER BY al.logged_date DESC, al.created_at DESC`,\r\n      [userId, cutoffStr]\r\n    );\r\n    return rows.map(r => ({\r\n      ...r"
+        },
+        {
+          "file": "backend/src/repositories/food.repository.js",
+          "start_line": 128,
+          "end_line": 158,
+          "start_col": 50,
+          "end_col": 11,
+          "fragment": ");\r\n    const cutoffStr = cutoffDate.toISOString().split('T')[0];\r\n    \r\n    // Why LEFT JOIN and JSON_AGG: We fetch complete food intake details (including names from foods or custom entries)\r\n    // aggregated per day so the UI can display detailed lists inside the history panel in a single request.\r\n    const { rows } = await pool.query(\r\n      `SELECT \r\n         fl.log_date, \r\n         SUM(fl.calories) as total_calories, \r\n         COUNT(*) as entry_count,\r\n         COALESCE(\r\n           JSON_AGG(\r\n             JSON_BUILD_OBJECT(\r\n               'id', fl.id,\r\n               'food_name', COALESCE(f.name, fl.custom_food_name),\r\n               'calories', fl.calories,\r\n               'portion_grams', fl.portion_grams,\r\n               'meal_type', fl.meal_type\r\n             ) ORDER BY fl.meal_type, fl.created_at\r\n           ),\r\n           '[]'::json\r\n         ) as foods\r\n       FROM food_logs fl\r\n       LEFT JOIN foods f ON fl.food_id = f.id\r\n       WHERE fl.user_id = $1 AND fl.log_date >= $2::date\r\n       GROUP BY fl.log_date\r\n       ORDER BY fl.log_date DESC`,\r\n      [userId, cutoffStr]\r\n    );\r\n     return rows.map(r => ({\r\n       ...r"
+        }
+      ],
+      "token_count": 53,
+      "line_count": 31,
+      "fingerprint": "dup:78fb00f4",
+      "suggested_name": "al",
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract duplicated code (31 lines, 3 instances) into a shared function"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "instances": [
+        {
+          "file": "backend/src/services/dailyMealPlan.service.js",
+          "start_line": 403,
+          "end_line": 408,
+          "start_col": 128,
+          "end_col": 9,
+          "fragment": ");\r\n        const cleaned = rawText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\r\n        const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\r\n        if (!jsonMatch) {\r\n          throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);\r\n        }"
+        },
+        {
+          "file": "backend/src/services/llm.service.js",
+          "start_line": 543,
+          "end_line": 548,
+          "start_col": 66,
+          "end_col": 11,
+          "fragment": ");\r\n          const cleaned = rawText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\r\n          const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\r\n          if (!jsonMatch) {\r\n            throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);\r\n          }"
+        },
+        {
+          "file": "backend/src/services/llm.service.js",
+          "start_line": 573,
+          "end_line": 578,
+          "start_col": 78,
+          "end_col": 13,
+          "fragment": ");\r\n            const cleaned = rawText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\r\n            const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\r\n            if (!jsonMatch) {\r\n              throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);\r\n            }"
+        },
+        {
+          "file": "backend/src/services/llm.service.js",
+          "start_line": 604,
+          "end_line": 609,
+          "start_col": 78,
+          "end_col": 13,
+          "fragment": ");\r\n            const cleaned = rawText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\r\n            const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\r\n            if (!jsonMatch) {\r\n              throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);\r\n            }"
+        },
+        {
+          "file": "backend/src/services/llm.service.js",
+          "start_line": 826,
+          "end_line": 831,
+          "start_col": 91,
+          "end_col": 9,
+          "fragment": ");\r\n        const cleaned = rawText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\r\n        const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\r\n        if (!jsonMatch) {\r\n          throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);\r\n        }"
+        }
+      ],
+      "token_count": 57,
+      "line_count": 6,
+      "fingerprint": "dup:5e6c7d4e",
+      "suggested_name": "jsonMatch",
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract duplicated code (6 lines, 5 instances) into a shared function"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "instances": [
+        {
+          "file": "backend/src/services/dailyMealPlan.service.js",
+          "start_line": 404,
+          "end_line": 408,
+          "start_col": 31,
+          "end_col": 9,
+          "fragment": ".replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\r\n        const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\r\n        if (!jsonMatch) {\r\n          throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);\r\n        }"
+        },
+        {
+          "file": "backend/src/services/llm.service.js",
+          "start_line": 148,
+          "end_line": 152,
+          "start_col": 25,
+          "end_col": 3,
+          "fragment": ".replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\r\n  const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\r\n  if (!jsonMatch) {\r\n    throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);\r\n  }"
+        },
+        {
+          "file": "backend/src/services/llm.service.js",
+          "start_line": 544,
+          "end_line": 548,
+          "start_col": 33,
+          "end_col": 11,
+          "fragment": ".replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\r\n          const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\r\n          if (!jsonMatch) {\r\n            throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);\r\n          }"
+        },
+        {
+          "file": "backend/src/services/llm.service.js",
+          "start_line": 574,
+          "end_line": 578,
+          "start_col": 35,
+          "end_col": 13,
+          "fragment": ".replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\r\n            const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\r\n            if (!jsonMatch) {\r\n              throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);\r\n            }"
+        },
+        {
+          "file": "backend/src/services/llm.service.js",
+          "start_line": 605,
+          "end_line": 609,
+          "start_col": 35,
+          "end_col": 13,
+          "fragment": ".replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\r\n            const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\r\n            if (!jsonMatch) {\r\n              throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);\r\n            }"
+        },
+        {
+          "file": "backend/src/services/llm.service.js",
+          "start_line": 827,
+          "end_line": 831,
+          "start_col": 31,
+          "end_col": 9,
+          "fragment": ".replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\r\n        const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\r\n        if (!jsonMatch) {\r\n          throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);\r\n        }"
+        }
+      ],
+      "token_count": 50,
+      "line_count": 5,
+      "fingerprint": "dup:913b334b",
+      "suggested_name": "jsonMatch",
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract duplicated code (5 lines, 6 instances) into a shared function"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "instances": [
+        {
+          "file": "backend/tests/integration/activityPlan.test.js",
+          "start_line": 1,
+          "end_line": 12,
+          "start_col": 0,
+          "end_col": 41,
+          "fragment": "import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';\nimport request from 'supertest';\nimport app from '../../src/app.js';\nimport { startDatabase, stopDatabase, createTestUser } from './helpers.js';\n\nlet agent;\nlet testUser;\n\nbeforeAll(async () => {\n  await startDatabase();\n  agent = request.agent(app);\n  testUser = await createTestUser(agent);"
+        },
+        {
+          "file": "backend/tests/integration/dailyMealPlan.test.js",
+          "start_line": 1,
+          "end_line": 12,
+          "start_col": 0,
+          "end_col": 41,
+          "fragment": "import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';\nimport request from 'supertest';\nimport app from '../../src/app.js';\nimport { startDatabase, stopDatabase, createTestUser } from './helpers.js';\n\nlet agent;\nlet testUser;\n\nbeforeAll(async () => {\n  await startDatabase();\n  agent = request.agent(app);\n  testUser = await createTestUser(agent);"
+        },
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 22,
+          "end_line": 37,
+          "start_col": 0,
+          "end_col": 41,
+          "fragment": "import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';\r\nimport request from 'supertest';\r\nimport app from '../../src/app.js';\r\nimport { startDatabase, stopDatabase, createTestUser } from './helpers.js';\r\n\r\n/** @type {import('supertest').SuperAgentTest} */\r\nlet agent;\r\nlet testUser;\r\n\r\nbeforeAll(async () => {\r\n  // 1. Set up Supabase test schema\r\n  await startDatabase();\r\n\r\n  // 2. Create a fresh authenticated agent for protected routes\r\n  agent = request.agent(app);\r\n  testUser = await createTestUser(agent);"
+        }
+      ],
+      "token_count": 70,
+      "line_count": 16,
+      "fingerprint": "dup:480e84f4",
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract duplicated code (16 lines, 3 instances) into a shared function"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "instances": [
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 161,
+          "end_line": 166,
+          "start_col": 12,
+          "end_col": 5,
+          "fragment": "{ weekStart: '2026-06-01' });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n  });"
+        },
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 286,
+          "end_line": 291,
+          "start_col": 12,
+          "end_col": 5,
+          "fragment": "{ date: 'bad-date' });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n  });"
+        },
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 379,
+          "end_line": 384,
+          "start_col": 12,
+          "end_col": 5,
+          "fragment": "{ date: 'not-a-date', mealTypes: ['breakfast'] });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n  });"
+        }
+      ],
+      "token_count": 55,
+      "line_count": 6,
+      "fingerprint": "dup:e249ae7e",
+      "suggested_name": "toBe",
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract duplicated code (6 lines, 3 instances) into a shared function"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "instances": [
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 171,
+          "end_line": 179,
+          "start_col": 12,
+          "end_col": 5,
+          "fragment": "{ dayIndex: -1 });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/dayIndex/i);\r\n  });\r\n\r\n  it("
+        },
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 182,
+          "end_line": 190,
+          "start_col": 12,
+          "end_col": 5,
+          "fragment": "{ dayIndex: 7 });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/dayIndex/i);\r\n  });\r\n\r\n  it("
+        },
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 193,
+          "end_line": 201,
+          "start_col": 12,
+          "end_col": 5,
+          "fragment": "{ dayIndex: '0' });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/dayIndex/i);\r\n  });\r\n\r\n  it("
+        },
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 204,
+          "end_line": 212,
+          "start_col": 12,
+          "end_col": 5,
+          "fragment": "{ dayIndex: 0, weekStart: 'not-a-date' });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/date/i);\r\n  });\r\n\r\n  it("
+        },
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 215,
+          "end_line": 223,
+          "start_col": 12,
+          "end_col": 5,
+          "fragment": "{ dayIndex: 0, availableDays: 3 });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/availableDays/i);\r\n  });\r\n\r\n  it("
+        },
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 226,
+          "end_line": 234,
+          "start_col": 12,
+          "end_col": 5,
+          "fragment": "{ dayIndex: 0, availableDays: 7 });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/availableDays/i);\r\n  });\r\n\r\n  it("
+        },
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 332,
+          "end_line": 340,
+          "start_col": 12,
+          "end_col": 5,
+          "fragment": "{ date: todayStr });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/mealTypes/i);\r\n  });\r\n\r\n  it("
+        },
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 344,
+          "end_line": 352,
+          "start_col": 12,
+          "end_col": 5,
+          "fragment": "{ date: todayStr, mealTypes: [] });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/mealTypes/i);\r\n  });\r\n\r\n  it("
+        },
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 356,
+          "end_line": 364,
+          "start_col": 12,
+          "end_col": 5,
+          "fragment": "{ date: todayStr, mealTypes: ['invalid_type'] });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/invalid|mealType/i);\r\n  });\r\n\r\n  it("
+        }
+      ],
+      "token_count": 75,
+      "line_count": 9,
+      "fingerprint": "dup:6697efab",
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract duplicated code (9 lines, 9 instances) into a shared function"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "instances": [
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 171,
+          "end_line": 177,
+          "start_col": 12,
+          "end_col": 5,
+          "fragment": "{ dayIndex: -1 });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/dayIndex/i);\r\n  });"
+        },
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 182,
+          "end_line": 188,
+          "start_col": 12,
+          "end_col": 5,
+          "fragment": "{ dayIndex: 7 });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/dayIndex/i);\r\n  });"
+        },
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 193,
+          "end_line": 199,
+          "start_col": 12,
+          "end_col": 5,
+          "fragment": "{ dayIndex: '0' });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/dayIndex/i);\r\n  });"
+        },
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 204,
+          "end_line": 210,
+          "start_col": 12,
+          "end_col": 5,
+          "fragment": "{ dayIndex: 0, weekStart: 'not-a-date' });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/date/i);\r\n  });"
+        },
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 215,
+          "end_line": 221,
+          "start_col": 12,
+          "end_col": 5,
+          "fragment": "{ dayIndex: 0, availableDays: 3 });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/availableDays/i);\r\n  });"
+        },
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 226,
+          "end_line": 232,
+          "start_col": 12,
+          "end_col": 5,
+          "fragment": "{ dayIndex: 0, availableDays: 7 });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/availableDays/i);\r\n  });"
+        },
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 237,
+          "end_line": 243,
+          "start_col": 12,
+          "end_col": 5,
+          "fragment": "{ dayIndex: 0, availableDays: 4.5 });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/availableDays/i);\r\n  });"
+        },
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 332,
+          "end_line": 338,
+          "start_col": 12,
+          "end_col": 5,
+          "fragment": "{ date: todayStr });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/mealTypes/i);\r\n  });"
+        },
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 344,
+          "end_line": 350,
+          "start_col": 12,
+          "end_col": 5,
+          "fragment": "{ date: todayStr, mealTypes: [] });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/mealTypes/i);\r\n  });"
+        },
+        {
+          "file": "backend/tests/integration/remaining-endpoints.test.js",
+          "start_line": 356,
+          "end_line": 362,
+          "start_col": 12,
+          "end_col": 5,
+          "fragment": "{ date: todayStr, mealTypes: ['invalid_type'] });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/invalid|mealType/i);\r\n  });"
+        }
+      ],
+      "token_count": 73,
+      "line_count": 7,
+      "fingerprint": "dup:d3731db3",
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract duplicated code (7 lines, 10 instances) into a shared function"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "instances": [
+        {
+          "file": "frontend/src/__tests__/api-integration.test.js",
+          "start_line": 538,
+          "end_line": 542,
+          "start_col": 77,
+          "end_col": 52,
+          "fragment": ", { cookie });\r\n    expect(status).toBe(200);\r\n    // Backend returns data as the array directly, not wrapped in { logs: [] }\r\n    expect(data).toMatchObject({ success: true, data: expect.any(Array) });\r\n    expect(data.data.length).toBeGreaterThanOrEqual("
+        },
+        {
+          "file": "frontend/src/__tests__/api-integration.test.js",
+          "start_line": 557,
+          "end_line": 562,
+          "start_col": 73,
+          "end_col": 52,
+          "fragment": ", { cookie });\r\n    expect(status).toBe(200);\r\n    // Backend returns data as the array directly, not wrapped in { history: [] }\r\n    expect(data).toMatchObject({ success: true, data: expect.any(Array) });\r\n    // At least today's entry\r\n    expect(data.data.length).toBeGreaterThanOrEqual("
+        },
+        {
+          "file": "frontend/src/__tests__/api-integration.test.js",
+          "start_line": 582,
+          "end_line": 586,
+          "start_col": 65,
+          "end_col": 52,
+          "fragment": ", { cookie });\r\n    expect(status).toBe(200);\r\n    // Backend returns data as the array directly, not wrapped in { foods: [] }\r\n    expect(data).toMatchObject({ success: true, data: expect.any(Array) });\r\n    expect(data.data.length).toBeGreaterThanOrEqual("
+        }
+      ],
+      "token_count": 55,
+      "line_count": 6,
+      "fingerprint": "dup:99f8b097",
+      "suggested_name": "expect",
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract duplicated code (6 lines, 3 instances) into a shared function"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "instances": [
+        {
+          "file": "frontend/src/features/activities/ActivityPage.jsx",
+          "start_line": 40,
+          "end_line": 54,
+          "start_col": 28,
+          "end_col": 9,
+          "fragment": ");\r\n\r\n  useEffect(() => {\r\n    const handleUpdate = () => {\r\n      setRefreshTrigger((prev) => prev + 1);\r\n    };\r\n    window.addEventListener('health-system-update', handleUpdate);\r\n    return () => {\r\n      window.removeEventListener('health-system-update', handleUpdate);\r\n    };\r\n  }, []);\r\n\r\n  const handleMonthChange = useCallback((month) => {\r\n    setCurrentMonth(month);\r\n  }, []);"
+        },
+        {
+          "file": "frontend/src/features/activities/hooks/useActivityCalendar.js",
+          "start_line": 60,
+          "end_line": 72,
+          "start_col": 56,
+          "end_col": 95,
+          "fragment": ");\r\n\r\n  useEffect(() => {\r\n    const handleUpdate = () => {\r\n      setRefreshTrigger((prev) => prev + 1);\r\n    };\r\n    window.addEventListener('health-system-update', handleUpdate);\r\n    return () => {\r\n      window.removeEventListener('health-system-update', handleUpdate);\r\n    };\r\n  }, []);\r\n\r\n  const { remaining: genRetryAfter, setRemaining: setGenRetryAfter } = useCountdownTimer(null);"
+        },
+        {
+          "file": "frontend/src/features/food-log/hooks/useMealCalendar.js",
+          "start_line": 59,
+          "end_line": 71,
+          "start_col": 56,
+          "end_col": 95,
+          "fragment": ");\r\n\r\n  useEffect(() => {\r\n    const handleUpdate = () => {\r\n      setRefreshTrigger((prev) => prev + 1);\r\n    };\r\n    window.addEventListener('health-system-update', handleUpdate);\r\n    return () => {\r\n      window.removeEventListener('health-system-update', handleUpdate);\r\n    };\r\n  }, []);\r\n\r\n  const { remaining: genRetryAfter, setRemaining: setGenRetryAfter } = useCountdownTimer(null);"
+        }
+      ],
+      "token_count": 61,
+      "line_count": 15,
+      "fingerprint": "dup:a95faa69",
+      "suggested_name": "handleUpdate",
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract duplicated code (15 lines, 3 instances) into a shared function"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "instances": [
+        {
+          "file": "frontend/src/features/auth/components/LoginForm.jsx",
+          "start_line": 28,
+          "end_line": 53,
+          "start_col": 59,
+          "end_col": 24,
+          "fragment": ");\r\n    }\r\n  };\r\n\r\n  return (\r\n    <div className=\"space-y-6\">\r\n      <div className=\"text-center\">\r\n        <h2 className=\"font-display font-extrabold text-2xl text-slate-800 tracking-tight\">\r\n          Log In to Your Account\r\n        </h2>\r\n        <p className=\"text-slate-500 text-xs sm:text-sm mt-1.5 leading-relaxed\">\r\n          Take control of your nutrition and daily activity with our automated health platform.\r\n        </p>\r\n      </div>\r\n\r\n      {error && (\r\n        <div className=\"flex gap-2.5 p-3 rounded-xl bg-rose-50 text-rose-700 border border-rose-100 text-xs sm:text-sm items-start\">\r\n          <ShieldAlert className=\"w-5 h-5 flex-shrink-0 text-rose-500 mt-0.5\" />\r\n          <span className=\"font-medium\">{error}</span>\r\n        </div>\r\n      )}\r\n\r\n      <form onSubmit={handleSubmit(onSubmit)} className=\"space-y-4\">\r\n        {/* Email Field */}\r\n        <div>\r\n          <label htmlFor"
+        },
+        {
+          "file": "frontend/src/features/auth/components/RegisterForm.jsx",
+          "start_line": 37,
+          "end_line": 62,
+          "start_col": 89,
+          "end_col": 24,
+          "fragment": ");\r\n    }\r\n  };\r\n\r\n  return (\r\n    <div className=\"space-y-6\">\r\n      <div className=\"text-center\">\r\n        <h2 className=\"font-display font-extrabold text-2xl text-slate-800 tracking-tight\">\r\n          Create a New Account\r\n        </h2>\r\n        <p className=\"text-slate-500 text-xs sm:text-sm mt-1.5 leading-relaxed\">\r\n          Start your healthy journey today, automatically and progressively.\r\n        </p>\r\n      </div>\r\n\r\n      {error && (\r\n        <div className=\"flex gap-2.5 p-3 rounded-xl bg-rose-50 text-rose-700 border border-rose-100 text-xs sm:text-sm items-start\">\r\n          <ShieldAlert className=\"w-5 h-5 flex-shrink-0 text-rose-500 mt-0.5\" />\r\n          <span className=\"font-medium\">{error}</span>\r\n        </div>\r\n      )}\r\n\r\n      <form onSubmit={handleSubmit(onSubmit)} className=\"space-y-4\">\r\n        {/* Email Field */}\r\n        <div>\r\n          <label htmlFor"
+        },
+        {
+          "file": "frontend/src/features/auth/components/SetupPassword.jsx",
+          "start_line": 48,
+          "end_line": 73,
+          "start_col": 56,
+          "end_col": 24,
+          "fragment": ");\n    }\n  };\n\n  return (\n    <div className=\"space-y-6\">\n      <div className=\"text-center\">\n        <h2 className=\"font-display font-extrabold text-2xl text-slate-800 tracking-tight\">\n          Secure Your Account\n        </h2>\n        <p className=\"text-slate-500 text-xs sm:text-sm mt-1.5 leading-relaxed\">\n          Create a password for your account and consent to the data processing policy to access FitLife.\n        </p>\n      </div>\n\n      {error && (\n        <div className=\"flex gap-2.5 p-3 rounded-xl bg-rose-50 text-rose-700 border border-rose-100 text-xs sm:text-sm items-start\">\n          <ShieldAlert className=\"w-5 h-5 flex-shrink-0 text-rose-500 mt-0.5\" />\n          <span className=\"font-medium\">{error}</span>\n        </div>\n      )}\n\n      <form onSubmit={handleSubmit(onSubmit)} className=\"space-y-4\">\n        {/* Password Field */}\n        <div>\n          <label htmlFor"
+        }
+      ],
+      "token_count": 76,
+      "line_count": 26,
+      "fingerprint": "dup:f54cb077",
+      "suggested_name": "text",
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract duplicated code (26 lines, 3 instances) into a shared function"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "instances": [
+        {
+          "file": "frontend/src/features/progress/components/__tests__/TrendPredictionCard.test.jsx",
+          "start_line": 15,
+          "end_line": 26,
+          "start_col": 0,
+          "end_col": 3,
+          "fragment": "const today = new Date();\r\n\r\nfunction makeEntry(daysAgo, weight) {\r\n  const d = new Date(today);\r\n  d.setDate(d.getDate() - daysAgo);\r\n  return {\r\n    id: daysAgo,\r\n    weight_kg: String(weight),\r\n    logged_date: d.toISOString().split('T')[0],\r\n    source: 'manual',\r\n    notes: null,\r\n  }"
+        },
+        {
+          "file": "frontend/src/features/progress/components/__tests__/WeightTrendChart.test.jsx",
+          "start_line": 18,
+          "end_line": 29,
+          "start_col": 0,
+          "end_col": 3,
+          "fragment": "const today = new Date();\r\n\r\nfunction makeEntry(daysAgo, weight) {\r\n  const d = new Date(today);\r\n  d.setDate(d.getDate() - daysAgo);\r\n  return {\r\n    id: daysAgo,\r\n    weight_kg: String(weight),\r\n    logged_date: d.toISOString().split('T')[0],\r\n    source: 'manual',\r\n    notes: null,\r\n  }"
+        },
+        {
+          "file": "frontend/src/features/progress/hooks/__tests__/useTrendPrediction.test.js",
+          "start_line": 5,
+          "end_line": 16,
+          "start_col": 0,
+          "end_col": 3,
+          "fragment": "const today = new Date();\r\n\r\nfunction makeEntry(daysAgo, weight) {\r\n  const d = new Date(today);\r\n  d.setDate(d.getDate() - daysAgo);\r\n  return {\r\n    id: daysAgo,\r\n    weight_kg: String(weight),\r\n    logged_date: d.toISOString().split('T')[0],\r\n    source: 'manual',\r\n    notes: null,\r\n  }"
+        }
+      ],
+      "token_count": 73,
+      "line_count": 12,
+      "fingerprint": "dup:100c52b7",
+      "suggested_name": "daysAgo",
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract duplicated code (12 lines, 3 instances) into a shared function"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "instances": [
+        {
+          "file": "frontend/src/features/progress/components/__tests__/TrendPredictionCard.test.jsx",
+          "start_line": 134,
+          "end_line": 152,
+          "start_col": 39,
+          "end_col": 54,
+          "fragment": "{\r\n      ...defaultPrediction,\r\n      direction: 'losing',\r\n      rateKgPerWeek: -0.5,\r\n      colorStatus: 'green',\r\n      statusLabel: 'On Track',\r\n      noGoalSet: false,\r\n    });\r\n    render(\r\n      React.createElement(TrendPredictionCard, {\r\n        profile: {\r\n          target_weight_kg: 70,\r\n          target_date: '2026-12-31',\r\n          fitness_goal: 'lose_weight',\r\n        },\r\n      })\r\n    );\r\n    await waitFor(() => {\r\n      expect(screen.getByText(/Losing/)).toBeTruthy();"
+        },
+        {
+          "file": "frontend/src/features/progress/components/__tests__/TrendPredictionCard.test.jsx",
+          "start_line": 361,
+          "end_line": 380,
+          "start_col": 39,
+          "end_col": 69,
+          "fragment": "{\r\n      ...defaultPrediction,\r\n      noGoalSet: false,\r\n      colorStatus: 'green',\r\n      statusLabel: 'On Track',\r\n      estimatedDate,\r\n      direction: 'losing',\r\n      rateKgPerWeek: -0.5,\r\n    });\r\n    render(\r\n      React.createElement(TrendPredictionCard, {\r\n        profile: {\r\n          target_weight_kg: 70,\r\n          target_date: '2026-12-31',\r\n          fitness_goal: 'lose_weight',\r\n        },\r\n      })\r\n    );\r\n    await waitFor(() => {\r\n      expect(screen.getByText(/Estimated completion:/)).toBeTruthy();"
+        },
+        {
+          "file": "frontend/src/features/progress/components/__tests__/TrendPredictionCard.test.jsx",
+          "start_line": 396,
+          "end_line": 413,
+          "start_col": 39,
+          "end_col": 59,
+          "fragment": "{\r\n      ...defaultPrediction,\r\n      noGoalSet: false,\r\n      colorStatus: 'green',\r\n      statusLabel: 'On Track',\r\n      confidence: 0.87,\r\n    });\r\n    render(\r\n      React.createElement(TrendPredictionCard, {\r\n        profile: {\r\n          target_weight_kg: 70,\r\n          target_date: '2026-12-31',\r\n          fitness_goal: 'lose_weight',\r\n        },\r\n      })\r\n    );\r\n    await waitFor(() => {\r\n      expect(screen.getByText(/Confidence:/)).toBeTruthy();"
+        }
+      ],
+      "token_count": 50,
+      "line_count": 20,
+      "fingerprint": "dup:f6d08874",
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract duplicated code (20 lines, 3 instances) into a shared function"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "instances": [
+        {
+          "file": "frontend/src/shared/calendar/__tests__/useMonthData.test.js",
+          "start_line": 113,
+          "end_line": 120,
+          "start_col": 62,
+          "end_col": 7,
+          "fragment": ");\r\n    const { result } = renderHook(() => useMonthData(mockDate, fetchWeekFn), {\r\n      wrapper: createWrapper(),\r\n    });\r\n\r\n    await waitFor(() => {\r\n      expect(result.current.loading).toBe(false);\r\n    });"
+        },
+        {
+          "file": "frontend/src/shared/calendar/__tests__/useMonthData.test.js",
+          "start_line": 159,
+          "end_line": 166,
+          "start_col": 62,
+          "end_col": 7,
+          "fragment": ");\r\n    const { result } = renderHook(() => useMonthData(mockDate, fetchWeekFn), {\r\n      wrapper: createWrapper(),\r\n    });\r\n\r\n    await waitFor(() => {\r\n      expect(result.current.loading).toBe(false);\r\n    });"
+        },
+        {
+          "file": "frontend/src/shared/calendar/__tests__/useMonthData.test.js",
+          "start_line": 231,
+          "end_line": 238,
+          "start_col": 72,
+          "end_col": 7,
+          "fragment": ");\r\n    const { result } = renderHook(() => useMonthData(mockDate, fetchWeekFn), {\r\n      wrapper: createWrapper(),\r\n    });\r\n\r\n    await waitFor(() => {\r\n      expect(result.current.loading).toBe(false);\r\n    });"
+        }
+      ],
+      "token_count": 55,
+      "line_count": 8,
+      "fingerprint": "dup:aa68c01b",
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract duplicated code (8 lines, 3 instances) into a shared function"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    }
+  ],
+  "clone_families": [
+    {
+      "files": [
+        "backend/src/controllers/activity.controller.js",
+        "backend/src/controllers/dailyMealPlan.controller.js",
+        "backend/src/controllers/food.controller.js",
+        "backend/src/controllers/weeklyPlan.controller.js"
+      ],
+      "groups": [
+        {
+          "instances": [
+            {
+              "file": "backend/src/controllers/activity.controller.js",
+              "start_line": 12,
+              "end_line": 23,
+              "start_col": 0,
+              "end_col": 84,
+              "fragment": "function isDateWithinTimezoneRange(dateStr) {\r\n  const today = new Date();\r\n  const yesterday = new Date(today);\r\n  yesterday.setUTCDate(today.getUTCDate() - 1);\r\n  const tomorrow = new Date(today);\r\n  tomorrow.setUTCDate(today.getUTCDate() + 1);\r\n  \r\n  const todayStr = today.toISOString().split('T')[0];\r\n  const yesterdayStr = yesterday.toISOString().split('T')[0];\r\n  const tomorrowStr = tomorrow.toISOString().split('T')[0];\r\n  \r\n  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr"
+            },
+            {
+              "file": "backend/src/controllers/dailyMealPlan.controller.js",
+              "start_line": 20,
+              "end_line": 31,
+              "start_col": 0,
+              "end_col": 84,
+              "fragment": "function isDateWithinTimezoneRange(dateStr) {\r\n  const today = new Date();\r\n  const yesterday = new Date(today);\r\n  yesterday.setUTCDate(today.getUTCDate() - 1);\r\n  const tomorrow = new Date(today);\r\n  tomorrow.setUTCDate(today.getUTCDate() + 1);\r\n  \r\n  const todayStr = today.toISOString().split('T')[0];\r\n  const yesterdayStr = yesterday.toISOString().split('T')[0];\r\n  const tomorrowStr = tomorrow.toISOString().split('T')[0];\r\n  \r\n  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr"
+            },
+            {
+              "file": "backend/src/controllers/food.controller.js",
+              "start_line": 13,
+              "end_line": 24,
+              "start_col": 0,
+              "end_col": 84,
+              "fragment": "function isDateWithinTimezoneRange(dateStr) {\r\n  const today = new Date();\r\n  const yesterday = new Date(today);\r\n  yesterday.setUTCDate(today.getUTCDate() - 1);\r\n  const tomorrow = new Date(today);\r\n  tomorrow.setUTCDate(today.getUTCDate() + 1);\r\n  \r\n  const todayStr = today.toISOString().split('T')[0];\r\n  const yesterdayStr = yesterday.toISOString().split('T')[0];\r\n  const tomorrowStr = tomorrow.toISOString().split('T')[0];\r\n  \r\n  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr"
+            },
+            {
+              "file": "backend/src/controllers/weeklyPlan.controller.js",
+              "start_line": 59,
+              "end_line": 70,
+              "start_col": 0,
+              "end_col": 84,
+              "fragment": "function isDateWithinTimezoneRange(dateStr) {\r\n  const today = new Date();\r\n  const yesterday = new Date(today);\r\n  yesterday.setUTCDate(today.getUTCDate() - 1);\r\n  const tomorrow = new Date(today);\r\n  tomorrow.setUTCDate(today.getUTCDate() + 1);\r\n\r\n  const todayStr = today.toISOString().split('T')[0];\r\n  const yesterdayStr = yesterday.toISOString().split('T')[0];\r\n  const tomorrowStr = tomorrow.toISOString().split('T')[0];\r\n\r\n  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr"
+            }
+          ],
+          "token_count": 130,
+          "line_count": 12,
+          "fingerprint": "dup:70491171",
+          "suggested_name": "today",
+          "actions": [
+            {
+              "type": "extract-shared",
+              "auto_fixable": false,
+              "description": "Extract duplicated code (12 lines, 4 instances) into a shared function"
+            },
+            {
+              "type": "suppress-line",
+              "auto_fixable": false,
+              "description": "Suppress with an inline comment above the duplicated code",
+              "comment": "// fallow-ignore-next-line code-duplication"
+            }
+          ]
+        }
+      ],
+      "total_duplicated_lines": 12,
+      "total_duplicated_tokens": 130,
+      "suggestions": [
+        {
+          "kind": "ExtractFunction",
+          "description": "Extract shared function (12 lines) from activity.controller.js, dailyMealPlan.controller.js, food.controller.js, weeklyPlan.controller.js",
+          "estimated_savings": 36
+        }
+      ],
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract 1 duplicated code block (12 lines) into a shared module",
+          "note": "These clone groups share the same files, indicating a structural relationship; refactor together"
+        },
+        {
+          "type": "apply-suggestion",
+          "auto_fixable": false,
+          "description": "Extract shared function (12 lines) from activity.controller.js, dailyMealPlan.controller.js, food.controller.js, weeklyPlan.controller.js"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "files": [
+        "backend/src/controllers/activity.controller.js",
+        "backend/src/controllers/dailyMealPlan.controller.js",
+        "backend/src/controllers/weeklyPlan.controller.js"
+      ],
+      "groups": [
+        {
+          "instances": [
+            {
+              "file": "backend/src/controllers/activity.controller.js",
+              "start_line": 12,
+              "end_line": 45,
+              "start_col": 0,
+              "end_col": 1,
+              "fragment": "function isDateWithinTimezoneRange(dateStr) {\r\n  const today = new Date();\r\n  const yesterday = new Date(today);\r\n  yesterday.setUTCDate(today.getUTCDate() - 1);\r\n  const tomorrow = new Date(today);\r\n  tomorrow.setUTCDate(today.getUTCDate() + 1);\r\n  \r\n  const todayStr = today.toISOString().split('T')[0];\r\n  const yesterdayStr = yesterday.toISOString().split('T')[0];\r\n  const tomorrowStr = tomorrow.toISOString().split('T')[0];\r\n  \r\n  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr;\r\n}\r\n\r\n/**\r\n * GET /api/activities — Full activity pool filtered by user's goal.\r\n */\r\nasync function getAllActivitiesHandler(req, res, next) {\r\n  try {\r\n    const profile = await findProfileByUserId(req.user.userId);\r\n\r\n    let activities;\r\n    if (profile && profile.fitness_goal) {\r\n      activities = await getAllActivitiesByGoal(req.user.userId, profile.fitness_goal);\r\n    } else {\r\n      // Fallback: return all activities if no profile\r\n      activities = await activityRepo.getAllActivities(['lose_weight', 'maintain', 'gain_weight']);\r\n    }\r\n\r\n    return successResponse(res, { activities, total: activities.length });\r\n  } catch (err) {\r\n    next(err);\r\n  }\r\n}"
+            },
+            {
+              "file": "backend/src/controllers/dailyMealPlan.controller.js",
+              "start_line": 20,
+              "end_line": 64,
+              "start_col": 0,
+              "end_col": 1,
+              "fragment": "function isDateWithinTimezoneRange(dateStr) {\r\n  const today = new Date();\r\n  const yesterday = new Date(today);\r\n  yesterday.setUTCDate(today.getUTCDate() - 1);\r\n  const tomorrow = new Date(today);\r\n  tomorrow.setUTCDate(today.getUTCDate() + 1);\r\n  \r\n  const todayStr = today.toISOString().split('T')[0];\r\n  const yesterdayStr = yesterday.toISOString().split('T')[0];\r\n  const tomorrowStr = tomorrow.toISOString().split('T')[0];\r\n  \r\n  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr;\r\n}\r\n\r\nasync function get(req, res, next) {\r\n  try {\r\n    const userId = req.user.userId;\r\n    let planDate = req.query.date;\r\n    if (planDate && !isValidDateString(planDate)) {\r\n      return errorResponse(res, 'Invalid date format (use YYYY-MM-DD)', 400, 'VALIDATION_ERROR');\r\n    }\r\n    planDate = planDate || getTodayString();\r\n    \r\n    let planData = null;\r\n    const cached = getCachedPlan(userId, planDate, 'meal');\r\n    if (cached && cached.status !== 'fallback') {\r\n      planData = cached;\r\n    } else {\r\n      const dbPlan = await findByUserAndDate(userId, planDate);\r\n      if (dbPlan) {\r\n        planData = dbPlan.plan_data;\r\n      }\r\n    }\r\n\r\n    if (!planData) {\r\n      return successResponse(res, { plan: null, fromCache: false });\r\n    }\r\n\r\n    const syncedPlanData = await syncMealPlanLoggedStates(userId, planDate, planData);\r\n    setCachedPlan(userId, planDate, syncedPlanData, 'meal');\r\n    return successResponse(res, { plan: syncedPlanData, fromCache: false });\r\n  } catch (err) {\r\n    next(err);\r\n  }\r\n}"
+            },
+            {
+              "file": "backend/src/controllers/weeklyPlan.controller.js",
+              "start_line": 59,
+              "end_line": 149,
+              "start_col": 0,
+              "end_col": 1,
+              "fragment": "function isDateWithinTimezoneRange(dateStr) {\r\n  const today = new Date();\r\n  const yesterday = new Date(today);\r\n  yesterday.setUTCDate(today.getUTCDate() - 1);\r\n  const tomorrow = new Date(today);\r\n  tomorrow.setUTCDate(today.getUTCDate() + 1);\r\n\r\n  const todayStr = today.toISOString().split('T')[0];\r\n  const yesterdayStr = yesterday.toISOString().split('T')[0];\r\n  const tomorrowStr = tomorrow.toISOString().split('T')[0];\r\n\r\n  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr;\r\n}\r\n\r\nasync function get(req, res, next) {\r\n  try {\r\n    const userId = req.user.userId;\r\n    let weekStart = req.query.weekStart;\r\n\r\n    if (weekStart && !isValidDateString(weekStart)) {\r\n      return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');\r\n    }\r\n    weekStart = getMonday(weekStart ? new Date(weekStart) : new Date());\r\n\r\n    // Try in-memory cache first (faster, no DB hit)\r\n    const cached = getCachedPlan(userId, weekStart);\r\n    if (cached && cached.status !== 'fallback') {\r\n      // D-01: Check for old-format plan in cache (defensive — migrated plans always\r\n      // have format_version: 1, but old-format plans cached via swapHandler CR-03\r\n      // would lack it).\r\n      if (isOldFormat(cached)) {\r\n        if (!isMigrationOnCooldown(userId, weekStart)) {\r\n          const migrated = await attemptMigration(userId, weekStart);\r\n          if (migrated) {\r\n            setCachedPlan(userId, weekStart, migrated);\r\n            return successResponse(res, { plan: migrated, fromCache: false });\r\n          }\r\n          // CR-01: Record failed migration to enforce cooldown\r\n          migrationFailCooldown.set(`${userId}_${weekStart}`, Date.now());\r\n        }\r\n        // D-03 / CR-06: Return cached plan as-is — do NOT fall through to DB path,\r\n        // which would trigger a second migration attempt on the same request.\r\n        console.warn(`[Migration] LLM failed or cooldown active for user ${userId}, week ${weekStart}. Returning cached old-format plan.`);\r\n      }\r\n      return successResponse(res, { plan: cached, fromCache: true });\r\n    }\r\n\r\n    // Fall back to DB\r\n    const { rows } = await pool.query(\r\n      `SELECT plan_data, status, created_at, updated_at\r\n       FROM weekly_plans\r\n       WHERE user_id = $1 AND week_start = $2\r\n       LIMIT 1`,\r\n      [userId, weekStart]\r\n    );\r\n\r\n    if (rows.length === 0) {\r\n      return successResponse(res, { plan: null, fromCache: false });\r\n    }\r\n\r\n    const row = rows[0];\r\n\r\n    // D-01: Lazy migration — detect old format by absence of format_version\r\n    // If the DB plan_data lacks format_version, trigger silent regeneration.\r\n    if (row.plan_data && isOldFormat(row.plan_data)) {\r\n      if (!isMigrationOnCooldown(userId, weekStart)) {\r\n        const migrated = await attemptMigration(userId, weekStart);\r\n        if (migrated) {\r\n          setCachedPlan(userId, weekStart, migrated);\r\n          return successResponse(res, { plan: migrated, fromCache: false });\r\n        }\r\n        // CR-01: Record failed migration to enforce cooldown\r\n        migrationFailCooldown.set(`${userId}_${weekStart}`, Date.now());\r\n      }\r\n      // D-03: LLM failure — keep old format, try again after cooldown expires\r\n      console.warn(`[Migration] LLM failed or cooldown active for user ${userId}, week ${weekStart}. Returning DB old-format plan.`);\r\n    }\r\n\r\n    const plan = {\r\n      days: row.plan_data?.days || [],\r\n      status: row.status || 'active',\r\n      generated_at: row.plan_data?.generated_at || row.created_at,\r\n    };\r\n\r\n    const syncedPlan = await syncWeeklyPlanCompletedStates(userId, weekStart, plan);\r\n    setCachedPlan(userId, weekStart, syncedPlan);\r\n    return successResponse(res, { plan: syncedPlan, fromCache: false });\r\n  } catch (err) {\r\n    next(err);\r\n  }\r\n}"
+            }
+          ],
+          "token_count": 132,
+          "line_count": 91,
+          "fingerprint": "dup:ea84cb76",
+          "suggested_name": "activities",
+          "actions": [
+            {
+              "type": "extract-shared",
+              "auto_fixable": false,
+              "description": "Extract duplicated code (91 lines, 3 instances) into a shared function"
+            },
+            {
+              "type": "suppress-line",
+              "auto_fixable": false,
+              "description": "Suppress with an inline comment above the duplicated code",
+              "comment": "// fallow-ignore-next-line code-duplication"
+            }
+          ]
+        }
+      ],
+      "total_duplicated_lines": 91,
+      "total_duplicated_tokens": 132,
+      "suggestions": [
+        {
+          "kind": "ExtractModule",
+          "description": "Extract 1 shared clone group (91 lines) from activity.controller.js, dailyMealPlan.controller.js, weeklyPlan.controller.js into backend\\src\\controllers",
+          "estimated_savings": 182
+        }
+      ],
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract 1 duplicated code block (91 lines) into a shared module",
+          "note": "These clone groups share the same files, indicating a structural relationship; refactor together"
+        },
+        {
+          "type": "apply-suggestion",
+          "auto_fixable": false,
+          "description": "Extract 1 shared clone group (91 lines) from activity.controller.js, dailyMealPlan.controller.js, weeklyPlan.controller.js into backend\\src\\controllers"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "files": [
+        "backend/src/controllers/dailyMealPlan.controller.js",
+        "backend/src/controllers/weeklyPlan.controller.js"
+      ],
+      "groups": [
+        {
+          "instances": [
+            {
+              "file": "backend/src/controllers/dailyMealPlan.controller.js",
+              "start_line": 236,
+              "end_line": 246,
+              "start_col": 2,
+              "end_col": 63,
+              "fragment": "res.setHeader('Content-Type', 'text/event-stream');\r\n  res.setHeader('Cache-Control', 'no-cache');\r\n  res.setHeader('Connection', 'keep-alive');\r\n  res.flushHeaders();\r\n\r\n  const onChunk = (chunk) => {\r\n    res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\\n\\n`);\r\n  };\r\n\r\n  try {\r\n    const existing = await findByUserAndDate(userId, planDate);"
+            },
+            {
+              "file": "backend/src/controllers/dailyMealPlan.controller.js",
+              "start_line": 285,
+              "end_line": 303,
+              "start_col": 2,
+              "end_col": 7,
+              "fragment": "res.setHeader('Content-Type', 'text/event-stream');\r\n  res.setHeader('Cache-Control', 'no-cache');\r\n  res.setHeader('Connection', 'keep-alive');\r\n  res.flushHeaders();\r\n\r\n  const onChunk = (chunk) => {\r\n    res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\\n\\n`);\r\n  };\r\n\r\n  try {\r\n    const result = await regenerateCategory({\r\n      userId,\r\n      planDate: targetDate,\r\n      mealType,\r\n      getProfile: (id) => getProfile(id),\r\n      getAllFoods: (id) => searchFoods(id, '', 200),\r\n      getLogHistory: (id, days) => getLogHistory(id, days),\r\n      onChunk,\r\n    });"
+            },
+            {
+              "file": "backend/src/controllers/weeklyPlan.controller.js",
+              "start_line": 604,
+              "end_line": 622,
+              "start_col": 2,
+              "end_col": 6,
+              "fragment": "res.setHeader('Content-Type', 'text/event-stream');\r\n  res.setHeader('Cache-Control', 'no-cache');\r\n  res.setHeader('Connection', 'keep-alive');\r\n  res.flushHeaders();\r\n\r\n  const onChunk = (chunk) => {\r\n    res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\\n\\n`);\r\n  };\r\n\r\n  try {\r\n    const deps = {\r\n      getProfile: (id) => findProfileByUserId(id),\r\n      getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),\r\n      getActivities: () => getAllActivities(),\r\n      getTopActivities: (id, limit) => getTopActivities(id, limit),\r\n      userId,\r\n      weekStart: targetWeekStart,\r\n      onChunk,\r\n    };"
+            }
+          ],
+          "token_count": 69,
+          "line_count": 19,
+          "fingerprint": "dup:c3be374a",
+          "suggested_name": "setHeader",
+          "actions": [
+            {
+              "type": "extract-shared",
+              "auto_fixable": false,
+              "description": "Extract duplicated code (19 lines, 3 instances) into a shared function"
+            },
+            {
+              "type": "suppress-line",
+              "auto_fixable": false,
+              "description": "Suppress with an inline comment above the duplicated code",
+              "comment": "// fallow-ignore-next-line code-duplication"
+            }
+          ]
+        },
+        {
+          "instances": [
+            {
+              "file": "backend/src/controllers/dailyMealPlan.controller.js",
+              "start_line": 261,
+              "end_line": 268,
+              "start_col": 5,
+              "end_col": 3,
+              "fragment": ");\r\n\r\n    res.write(`data: ${JSON.stringify({ type: 'done', plan: result.plan })}\\n\\n`);\r\n    res.end();\r\n  } catch (err) {\r\n    res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\\n\\n`);\r\n    res.end();\r\n  }"
+            },
+            {
+              "file": "backend/src/controllers/dailyMealPlan.controller.js",
+              "start_line": 303,
+              "end_line": 310,
+              "start_col": 5,
+              "end_col": 3,
+              "fragment": ");\r\n\r\n    res.write(`data: ${JSON.stringify({ type: 'done', plan: result.plan })}\\n\\n`);\r\n    res.end();\r\n  } catch (err) {\r\n    res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\\n\\n`);\r\n    res.end();\r\n  }"
+            },
+            {
+              "file": "backend/src/controllers/weeklyPlan.controller.js",
+              "start_line": 732,
+              "end_line": 739,
+              "start_col": 67,
+              "end_col": 3,
+              "fragment": ");\r\n\r\n    res.write(`data: ${JSON.stringify({ type: 'done', plan: result.plan })}\\n\\n`);\r\n    res.end();\r\n  } catch (err) {\r\n    res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\\n\\n`);\r\n    res.end();\r\n  }"
+            }
+          ],
+          "token_count": 64,
+          "line_count": 8,
+          "fingerprint": "dup:11d317a1",
+          "suggested_name": "stringify",
+          "actions": [
+            {
+              "type": "extract-shared",
+              "auto_fixable": false,
+              "description": "Extract duplicated code (8 lines, 3 instances) into a shared function"
+            },
+            {
+              "type": "suppress-line",
+              "auto_fixable": false,
+              "description": "Suppress with an inline comment above the duplicated code",
+              "comment": "// fallow-ignore-next-line code-duplication"
+            }
+          ]
+        }
+      ],
+      "total_duplicated_lines": 27,
+      "total_duplicated_tokens": 133,
+      "suggestions": [
+        {
+          "kind": "ExtractFunction",
+          "description": "Extract shared function (19 lines) from dailyMealPlan.controller.js, dailyMealPlan.controller.js, weeklyPlan.controller.js",
+          "estimated_savings": 38
+        },
+        {
+          "kind": "ExtractFunction",
+          "description": "Extract shared function (8 lines) from dailyMealPlan.controller.js, dailyMealPlan.controller.js, weeklyPlan.controller.js",
+          "estimated_savings": 16
+        }
+      ],
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract 2 duplicated code blocks (27 lines) into a shared module",
+          "note": "These clone groups share the same files, indicating a structural relationship; refactor together"
+        },
+        {
+          "type": "apply-suggestion",
+          "auto_fixable": false,
+          "description": "Extract shared function (19 lines) from dailyMealPlan.controller.js, dailyMealPlan.controller.js, weeklyPlan.controller.js"
+        },
+        {
+          "type": "apply-suggestion",
+          "auto_fixable": false,
+          "description": "Extract shared function (8 lines) from dailyMealPlan.controller.js, dailyMealPlan.controller.js, weeklyPlan.controller.js"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "files": [
+        "backend/src/controllers/weeklyPlan.controller.js"
+      ],
+      "groups": [
+        {
+          "instances": [
+            {
+              "file": "backend/src/controllers/weeklyPlan.controller.js",
+              "start_line": 184,
+              "end_line": 191,
+              "start_col": 44,
+              "end_col": 19,
+              "fragment": "{\r\n      getProfile: (id) => findProfileByUserId(id),\r\n      getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),\r\n      getActivities: () => getAllActivities(),\r\n      getTopActivities: (id, limit) => getTopActivities(id, limit),\r\n      userId,\r\n      weekStart,\r\n      availableDays"
+            },
+            {
+              "file": "backend/src/controllers/weeklyPlan.controller.js",
+              "start_line": 388,
+              "end_line": 395,
+              "start_col": 15,
+              "end_col": 17,
+              "fragment": "{\r\n    getProfile: (id) => findProfileByUserId(id),\r\n    getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),\r\n    getActivities: () => getAllActivities(),\r\n    getTopActivities: (id, limit) => getTopActivities(id, limit),\r\n    userId,\r\n    weekStart,\r\n    availableDays"
+            },
+            {
+              "file": "backend/src/controllers/weeklyPlan.controller.js",
+              "start_line": 567,
+              "end_line": 574,
+              "start_col": 44,
+              "end_col": 19,
+              "fragment": "{\r\n      getProfile: (id) => findProfileByUserId(id),\r\n      getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),\r\n      getActivities: () => getAllActivities(),\r\n      getTopActivities: (id, limit) => getTopActivities(id, limit),\r\n      userId,\r\n      weekStart,\r\n      availableDays"
+            }
+          ],
+          "token_count": 63,
+          "line_count": 8,
+          "fingerprint": "dup:1293abb9",
+          "suggested_name": "getTopActivities",
+          "actions": [
+            {
+              "type": "extract-shared",
+              "auto_fixable": false,
+              "description": "Extract duplicated code (8 lines, 3 instances) into a shared function"
+            },
+            {
+              "type": "suppress-line",
+              "auto_fixable": false,
+              "description": "Suppress with an inline comment above the duplicated code",
+              "comment": "// fallow-ignore-next-line code-duplication"
+            }
+          ]
+        },
+        {
+          "instances": [
+            {
+              "file": "backend/src/controllers/weeklyPlan.controller.js",
+              "start_line": 211,
+              "end_line": 228,
+              "start_col": 4,
+              "end_col": 6,
+              "fragment": "if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {\r\n      return errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR');\r\n    }\r\n\r\n    let targetWeekStart = weekStart;\r\n    if (targetWeekStart && !isValidDateString(targetWeekStart)) {\r\n      return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');\r\n    }\r\n    targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());\r\n\r\n    const deps = {\r\n      getProfile: (id) => findProfileByUserId(id),\r\n      getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),\r\n      getActivities: () => getAllActivities(),\r\n      getTopActivities: (id, limit) => getTopActivities(id, limit),\r\n      userId,\r\n      weekStart: targetWeekStart,\r\n    };"
+            },
+            {
+              "file": "backend/src/controllers/weeklyPlan.controller.js",
+              "start_line": 262,
+              "end_line": 273,
+              "start_col": 4,
+              "end_col": 52,
+              "fragment": "if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {\r\n      return errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR');\r\n    }\r\n\r\n    // Validate and normalize weekStart\r\n    let targetWeekStart = weekStart;\r\n    if (targetWeekStart && !isValidDateString(targetWeekStart)) {\r\n      return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');\r\n    }\r\n    targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());\r\n\r\n    const targetDateObj = new Date(targetWeekStart);"
+            },
+            {
+              "file": "backend/src/controllers/weeklyPlan.controller.js",
+              "start_line": 656,
+              "end_line": 666,
+              "start_col": 2,
+              "end_col": 50,
+              "fragment": "if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {\r\n    return errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR');\r\n  }\r\n\r\n  let targetWeekStart = weekStart;\r\n  if (targetWeekStart && !isValidDateString(targetWeekStart)) {\r\n    return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');\r\n  }\r\n  targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());\r\n\r\n  const targetDateObj = new Date(targetWeekStart);"
+            }
+          ],
+          "token_count": 80,
+          "line_count": 18,
+          "fingerprint": "dup:dd283016",
+          "suggested_name": "targetWeekStart",
+          "actions": [
+            {
+              "type": "extract-shared",
+              "auto_fixable": false,
+              "description": "Extract duplicated code (18 lines, 3 instances) into a shared function"
+            },
+            {
+              "type": "suppress-line",
+              "auto_fixable": false,
+              "description": "Suppress with an inline comment above the duplicated code",
+              "comment": "// fallow-ignore-next-line code-duplication"
+            }
+          ]
+        }
+      ],
+      "total_duplicated_lines": 26,
+      "total_duplicated_tokens": 143,
+      "suggestions": [
+        {
+          "kind": "ExtractFunction",
+          "description": "Extract shared function (18 lines) from weeklyPlan.controller.js, weeklyPlan.controller.js, weeklyPlan.controller.js",
+          "estimated_savings": 36
+        },
+        {
+          "kind": "ExtractFunction",
+          "description": "Extract shared function (8 lines) from weeklyPlan.controller.js, weeklyPlan.controller.js, weeklyPlan.controller.js",
+          "estimated_savings": 16
+        }
+      ],
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract 2 duplicated code blocks (26 lines) into a shared module",
+          "note": "These clone groups share the same files, indicating a structural relationship; refactor together"
+        },
+        {
+          "type": "apply-suggestion",
+          "auto_fixable": false,
+          "description": "Extract shared function (18 lines) from weeklyPlan.controller.js, weeklyPlan.controller.js, weeklyPlan.controller.js"
+        },
+        {
+          "type": "apply-suggestion",
+          "auto_fixable": false,
+          "description": "Extract shared function (8 lines) from weeklyPlan.controller.js, weeklyPlan.controller.js, weeklyPlan.controller.js"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "files": [
+        "backend/src/repositories/activity.repository.js",
+        "backend/src/repositories/food.repository.js"
+      ],
+      "groups": [
+        {
+          "instances": [
+            {
+              "file": "backend/src/repositories/activity.repository.js",
+              "start_line": 147,
+              "end_line": 151,
+              "start_col": 41,
+              "end_col": 51,
+              "fragment": "userId, days = 7) {\r\n  days = Math.min(Math.max(1, Math.floor(days)), 365);\r\n  try {\r\n    const cutoffDate = new Date();\r\n    cutoffDate.setDate(cutoffDate.getDate() - (days"
+            },
+            {
+              "file": "backend/src/repositories/activity.repository.js",
+              "start_line": 340,
+              "end_line": 344,
+              "start_col": 52,
+              "end_col": 51,
+              "fragment": "userId, days = 7) {\r\n  days = Math.min(Math.max(1, Math.floor(days)), 365);\r\n  try {\r\n    const cutoffDate = new Date();\r\n    cutoffDate.setDate(cutoffDate.getDate() - (days"
+            },
+            {
+              "file": "backend/src/repositories/food.repository.js",
+              "start_line": 124,
+              "end_line": 128,
+              "start_col": 36,
+              "end_col": 50,
+              "fragment": "userId, days = 7) {\r\n  days = Math.min(Math.max(1, Math.floor(days)), 365);\r\n  try {\r\n    const cutoffDate = new Date();\r\n    cutoffDate.setDate(cutoffDate.getDate() - days"
+            }
+          ],
+          "token_count": 50,
+          "line_count": 5,
+          "fingerprint": "dup:d67d2989",
+          "actions": [
+            {
+              "type": "extract-shared",
+              "auto_fixable": false,
+              "description": "Extract duplicated code (5 lines, 3 instances) into a shared function"
+            },
+            {
+              "type": "suppress-line",
+              "auto_fixable": false,
+              "description": "Suppress with an inline comment above the duplicated code",
+              "comment": "// fallow-ignore-next-line code-duplication"
+            }
+          ]
+        },
+        {
+          "instances": [
+            {
+              "file": "backend/src/repositories/activity.repository.js",
+              "start_line": 151,
+              "end_line": 162,
+              "start_col": 56,
+              "end_col": 10,
+              "fragment": ");\r\n    const cutoffStr = cutoffDate.toISOString().split('T')[0];\r\n    const { rows } = await pool.query(\r\n      `SELECT al.logged_date, SUM(al.duration_min) as total_minutes, SUM(al.calories_burned) as total_burned, COUNT(*) as entry_count\r\n       FROM activity_logs al\r\n       WHERE al.user_id = $1 AND al.logged_date >= $2::date\r\n       GROUP BY al.logged_date\r\n       ORDER BY al.logged_date DESC`,\r\n      [userId, cutoffStr]\r\n    );\r\n    return rows.map(r => ({\r\n      ...r"
+            },
+            {
+              "file": "backend/src/repositories/activity.repository.js",
+              "start_line": 344,
+              "end_line": 355,
+              "start_col": 56,
+              "end_col": 10,
+              "fragment": ");\r\n    const cutoffStr = cutoffDate.toISOString().split('T')[0];\r\n    const { rows } = await pool.query(\r\n      `SELECT al.*, a.name as activity_name\r\n       FROM activity_logs al\r\n       JOIN activities a ON al.activity_id = a.id\r\n       WHERE al.user_id = $1 AND al.logged_date >= $2\r\n       ORDER BY al.logged_date DESC, al.created_at DESC`,\r\n      [userId, cutoffStr]\r\n    );\r\n    return rows.map(r => ({\r\n      ...r"
+            },
+            {
+              "file": "backend/src/repositories/food.repository.js",
+              "start_line": 128,
+              "end_line": 158,
+              "start_col": 50,
+              "end_col": 11,
+              "fragment": ");\r\n    const cutoffStr = cutoffDate.toISOString().split('T')[0];\r\n    \r\n    // Why LEFT JOIN and JSON_AGG: We fetch complete food intake details (including names from foods or custom entries)\r\n    // aggregated per day so the UI can display detailed lists inside the history panel in a single request.\r\n    const { rows } = await pool.query(\r\n      `SELECT \r\n         fl.log_date, \r\n         SUM(fl.calories) as total_calories, \r\n         COUNT(*) as entry_count,\r\n         COALESCE(\r\n           JSON_AGG(\r\n             JSON_BUILD_OBJECT(\r\n               'id', fl.id,\r\n               'food_name', COALESCE(f.name, fl.custom_food_name),\r\n               'calories', fl.calories,\r\n               'portion_grams', fl.portion_grams,\r\n               'meal_type', fl.meal_type\r\n             ) ORDER BY fl.meal_type, fl.created_at\r\n           ),\r\n           '[]'::json\r\n         ) as foods\r\n       FROM food_logs fl\r\n       LEFT JOIN foods f ON fl.food_id = f.id\r\n       WHERE fl.user_id = $1 AND fl.log_date >= $2::date\r\n       GROUP BY fl.log_date\r\n       ORDER BY fl.log_date DESC`,\r\n      [userId, cutoffStr]\r\n    );\r\n     return rows.map(r => ({\r\n       ...r"
+            }
+          ],
+          "token_count": 53,
+          "line_count": 31,
+          "fingerprint": "dup:78fb00f4",
+          "suggested_name": "al",
+          "actions": [
+            {
+              "type": "extract-shared",
+              "auto_fixable": false,
+              "description": "Extract duplicated code (31 lines, 3 instances) into a shared function"
+            },
+            {
+              "type": "suppress-line",
+              "auto_fixable": false,
+              "description": "Suppress with an inline comment above the duplicated code",
+              "comment": "// fallow-ignore-next-line code-duplication"
+            }
+          ]
+        }
+      ],
+      "total_duplicated_lines": 36,
+      "total_duplicated_tokens": 103,
+      "suggestions": [
+        {
+          "kind": "ExtractFunction",
+          "description": "Extract shared function (31 lines) from activity.repository.js, activity.repository.js, food.repository.js",
+          "estimated_savings": 62
+        },
+        {
+          "kind": "ExtractFunction",
+          "description": "Extract shared function (5 lines) from activity.repository.js, activity.repository.js, food.repository.js",
+          "estimated_savings": 10
+        }
+      ],
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract 2 duplicated code blocks (36 lines) into a shared module",
+          "note": "These clone groups share the same files, indicating a structural relationship; refactor together"
+        },
+        {
+          "type": "apply-suggestion",
+          "auto_fixable": false,
+          "description": "Extract shared function (31 lines) from activity.repository.js, activity.repository.js, food.repository.js"
+        },
+        {
+          "type": "apply-suggestion",
+          "auto_fixable": false,
+          "description": "Extract shared function (5 lines) from activity.repository.js, activity.repository.js, food.repository.js"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "files": [
+        "backend/src/services/dailyMealPlan.service.js",
+        "backend/src/services/llm.service.js"
+      ],
+      "groups": [
+        {
+          "instances": [
+            {
+              "file": "backend/src/services/dailyMealPlan.service.js",
+              "start_line": 403,
+              "end_line": 408,
+              "start_col": 128,
+              "end_col": 9,
+              "fragment": ");\r\n        const cleaned = rawText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\r\n        const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\r\n        if (!jsonMatch) {\r\n          throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);\r\n        }"
+            },
+            {
+              "file": "backend/src/services/llm.service.js",
+              "start_line": 543,
+              "end_line": 548,
+              "start_col": 66,
+              "end_col": 11,
+              "fragment": ");\r\n          const cleaned = rawText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\r\n          const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\r\n          if (!jsonMatch) {\r\n            throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);\r\n          }"
+            },
+            {
+              "file": "backend/src/services/llm.service.js",
+              "start_line": 573,
+              "end_line": 578,
+              "start_col": 78,
+              "end_col": 13,
+              "fragment": ");\r\n            const cleaned = rawText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\r\n            const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\r\n            if (!jsonMatch) {\r\n              throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);\r\n            }"
+            },
+            {
+              "file": "backend/src/services/llm.service.js",
+              "start_line": 604,
+              "end_line": 609,
+              "start_col": 78,
+              "end_col": 13,
+              "fragment": ");\r\n            const cleaned = rawText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\r\n            const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\r\n            if (!jsonMatch) {\r\n              throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);\r\n            }"
+            },
+            {
+              "file": "backend/src/services/llm.service.js",
+              "start_line": 826,
+              "end_line": 831,
+              "start_col": 91,
+              "end_col": 9,
+              "fragment": ");\r\n        const cleaned = rawText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\r\n        const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\r\n        if (!jsonMatch) {\r\n          throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);\r\n        }"
+            }
+          ],
+          "token_count": 57,
+          "line_count": 6,
+          "fingerprint": "dup:5e6c7d4e",
+          "suggested_name": "jsonMatch",
+          "actions": [
+            {
+              "type": "extract-shared",
+              "auto_fixable": false,
+              "description": "Extract duplicated code (6 lines, 5 instances) into a shared function"
+            },
+            {
+              "type": "suppress-line",
+              "auto_fixable": false,
+              "description": "Suppress with an inline comment above the duplicated code",
+              "comment": "// fallow-ignore-next-line code-duplication"
+            }
+          ]
+        },
+        {
+          "instances": [
+            {
+              "file": "backend/src/services/dailyMealPlan.service.js",
+              "start_line": 404,
+              "end_line": 408,
+              "start_col": 31,
+              "end_col": 9,
+              "fragment": ".replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\r\n        const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\r\n        if (!jsonMatch) {\r\n          throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);\r\n        }"
+            },
+            {
+              "file": "backend/src/services/llm.service.js",
+              "start_line": 148,
+              "end_line": 152,
+              "start_col": 25,
+              "end_col": 3,
+              "fragment": ".replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\r\n  const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\r\n  if (!jsonMatch) {\r\n    throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);\r\n  }"
+            },
+            {
+              "file": "backend/src/services/llm.service.js",
+              "start_line": 544,
+              "end_line": 548,
+              "start_col": 33,
+              "end_col": 11,
+              "fragment": ".replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\r\n          const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\r\n          if (!jsonMatch) {\r\n            throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);\r\n          }"
+            },
+            {
+              "file": "backend/src/services/llm.service.js",
+              "start_line": 574,
+              "end_line": 578,
+              "start_col": 35,
+              "end_col": 13,
+              "fragment": ".replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\r\n            const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\r\n            if (!jsonMatch) {\r\n              throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);\r\n            }"
+            },
+            {
+              "file": "backend/src/services/llm.service.js",
+              "start_line": 605,
+              "end_line": 609,
+              "start_col": 35,
+              "end_col": 13,
+              "fragment": ".replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\r\n            const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\r\n            if (!jsonMatch) {\r\n              throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);\r\n            }"
+            },
+            {
+              "file": "backend/src/services/llm.service.js",
+              "start_line": 827,
+              "end_line": 831,
+              "start_col": 31,
+              "end_col": 9,
+              "fragment": ".replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\r\n        const jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\r\n        if (!jsonMatch) {\r\n          throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);\r\n        }"
+            }
+          ],
+          "token_count": 50,
+          "line_count": 5,
+          "fingerprint": "dup:913b334b",
+          "suggested_name": "jsonMatch",
+          "actions": [
+            {
+              "type": "extract-shared",
+              "auto_fixable": false,
+              "description": "Extract duplicated code (5 lines, 6 instances) into a shared function"
+            },
+            {
+              "type": "suppress-line",
+              "auto_fixable": false,
+              "description": "Suppress with an inline comment above the duplicated code",
+              "comment": "// fallow-ignore-next-line code-duplication"
+            }
+          ]
+        }
+      ],
+      "total_duplicated_lines": 11,
+      "total_duplicated_tokens": 107,
+      "suggestions": [
+        {
+          "kind": "ExtractFunction",
+          "description": "Extract shared function (6 lines) from dailyMealPlan.service.js, llm.service.js, llm.service.js, llm.service.js, llm.service.js",
+          "estimated_savings": 24
+        },
+        {
+          "kind": "ExtractFunction",
+          "description": "Extract shared function (5 lines) from dailyMealPlan.service.js, llm.service.js, llm.service.js, llm.service.js, llm.service.js, llm.service.js",
+          "estimated_savings": 25
+        }
+      ],
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract 2 duplicated code blocks (11 lines) into a shared module",
+          "note": "These clone groups share the same files, indicating a structural relationship; refactor together"
+        },
+        {
+          "type": "apply-suggestion",
+          "auto_fixable": false,
+          "description": "Extract shared function (6 lines) from dailyMealPlan.service.js, llm.service.js, llm.service.js, llm.service.js, llm.service.js"
+        },
+        {
+          "type": "apply-suggestion",
+          "auto_fixable": false,
+          "description": "Extract shared function (5 lines) from dailyMealPlan.service.js, llm.service.js, llm.service.js, llm.service.js, llm.service.js, llm.service.js"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "files": [
+        "backend/tests/integration/activityPlan.test.js",
+        "backend/tests/integration/dailyMealPlan.test.js",
+        "backend/tests/integration/remaining-endpoints.test.js"
+      ],
+      "groups": [
+        {
+          "instances": [
+            {
+              "file": "backend/tests/integration/activityPlan.test.js",
+              "start_line": 1,
+              "end_line": 12,
+              "start_col": 0,
+              "end_col": 41,
+              "fragment": "import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';\nimport request from 'supertest';\nimport app from '../../src/app.js';\nimport { startDatabase, stopDatabase, createTestUser } from './helpers.js';\n\nlet agent;\nlet testUser;\n\nbeforeAll(async () => {\n  await startDatabase();\n  agent = request.agent(app);\n  testUser = await createTestUser(agent);"
+            },
+            {
+              "file": "backend/tests/integration/dailyMealPlan.test.js",
+              "start_line": 1,
+              "end_line": 12,
+              "start_col": 0,
+              "end_col": 41,
+              "fragment": "import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';\nimport request from 'supertest';\nimport app from '../../src/app.js';\nimport { startDatabase, stopDatabase, createTestUser } from './helpers.js';\n\nlet agent;\nlet testUser;\n\nbeforeAll(async () => {\n  await startDatabase();\n  agent = request.agent(app);\n  testUser = await createTestUser(agent);"
+            },
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 22,
+              "end_line": 37,
+              "start_col": 0,
+              "end_col": 41,
+              "fragment": "import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';\r\nimport request from 'supertest';\r\nimport app from '../../src/app.js';\r\nimport { startDatabase, stopDatabase, createTestUser } from './helpers.js';\r\n\r\n/** @type {import('supertest').SuperAgentTest} */\r\nlet agent;\r\nlet testUser;\r\n\r\nbeforeAll(async () => {\r\n  // 1. Set up Supabase test schema\r\n  await startDatabase();\r\n\r\n  // 2. Create a fresh authenticated agent for protected routes\r\n  agent = request.agent(app);\r\n  testUser = await createTestUser(agent);"
+            }
+          ],
+          "token_count": 70,
+          "line_count": 16,
+          "fingerprint": "dup:480e84f4",
+          "actions": [
+            {
+              "type": "extract-shared",
+              "auto_fixable": false,
+              "description": "Extract duplicated code (16 lines, 3 instances) into a shared function"
+            },
+            {
+              "type": "suppress-line",
+              "auto_fixable": false,
+              "description": "Suppress with an inline comment above the duplicated code",
+              "comment": "// fallow-ignore-next-line code-duplication"
+            }
+          ]
+        }
+      ],
+      "total_duplicated_lines": 16,
+      "total_duplicated_tokens": 70,
+      "suggestions": [
+        {
+          "kind": "ExtractFunction",
+          "description": "Extract shared function (16 lines) from activityPlan.test.js, dailyMealPlan.test.js, remaining-endpoints.test.js",
+          "estimated_savings": 32
+        }
+      ],
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract 1 duplicated code block (16 lines) into a shared module",
+          "note": "These clone groups share the same files, indicating a structural relationship; refactor together"
+        },
+        {
+          "type": "apply-suggestion",
+          "auto_fixable": false,
+          "description": "Extract shared function (16 lines) from activityPlan.test.js, dailyMealPlan.test.js, remaining-endpoints.test.js"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "files": [
+        "backend/tests/integration/remaining-endpoints.test.js"
+      ],
+      "groups": [
+        {
+          "instances": [
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 161,
+              "end_line": 166,
+              "start_col": 12,
+              "end_col": 5,
+              "fragment": "{ weekStart: '2026-06-01' });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n  });"
+            },
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 286,
+              "end_line": 291,
+              "start_col": 12,
+              "end_col": 5,
+              "fragment": "{ date: 'bad-date' });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n  });"
+            },
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 379,
+              "end_line": 384,
+              "start_col": 12,
+              "end_col": 5,
+              "fragment": "{ date: 'not-a-date', mealTypes: ['breakfast'] });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n  });"
+            }
+          ],
+          "token_count": 55,
+          "line_count": 6,
+          "fingerprint": "dup:e249ae7e",
+          "suggested_name": "toBe",
+          "actions": [
+            {
+              "type": "extract-shared",
+              "auto_fixable": false,
+              "description": "Extract duplicated code (6 lines, 3 instances) into a shared function"
+            },
+            {
+              "type": "suppress-line",
+              "auto_fixable": false,
+              "description": "Suppress with an inline comment above the duplicated code",
+              "comment": "// fallow-ignore-next-line code-duplication"
+            }
+          ]
+        },
+        {
+          "instances": [
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 171,
+              "end_line": 179,
+              "start_col": 12,
+              "end_col": 5,
+              "fragment": "{ dayIndex: -1 });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/dayIndex/i);\r\n  });\r\n\r\n  it("
+            },
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 182,
+              "end_line": 190,
+              "start_col": 12,
+              "end_col": 5,
+              "fragment": "{ dayIndex: 7 });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/dayIndex/i);\r\n  });\r\n\r\n  it("
+            },
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 193,
+              "end_line": 201,
+              "start_col": 12,
+              "end_col": 5,
+              "fragment": "{ dayIndex: '0' });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/dayIndex/i);\r\n  });\r\n\r\n  it("
+            },
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 204,
+              "end_line": 212,
+              "start_col": 12,
+              "end_col": 5,
+              "fragment": "{ dayIndex: 0, weekStart: 'not-a-date' });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/date/i);\r\n  });\r\n\r\n  it("
+            },
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 215,
+              "end_line": 223,
+              "start_col": 12,
+              "end_col": 5,
+              "fragment": "{ dayIndex: 0, availableDays: 3 });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/availableDays/i);\r\n  });\r\n\r\n  it("
+            },
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 226,
+              "end_line": 234,
+              "start_col": 12,
+              "end_col": 5,
+              "fragment": "{ dayIndex: 0, availableDays: 7 });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/availableDays/i);\r\n  });\r\n\r\n  it("
+            },
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 332,
+              "end_line": 340,
+              "start_col": 12,
+              "end_col": 5,
+              "fragment": "{ date: todayStr });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/mealTypes/i);\r\n  });\r\n\r\n  it("
+            },
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 344,
+              "end_line": 352,
+              "start_col": 12,
+              "end_col": 5,
+              "fragment": "{ date: todayStr, mealTypes: [] });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/mealTypes/i);\r\n  });\r\n\r\n  it("
+            },
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 356,
+              "end_line": 364,
+              "start_col": 12,
+              "end_col": 5,
+              "fragment": "{ date: todayStr, mealTypes: ['invalid_type'] });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/invalid|mealType/i);\r\n  });\r\n\r\n  it("
+            }
+          ],
+          "token_count": 75,
+          "line_count": 9,
+          "fingerprint": "dup:6697efab",
+          "actions": [
+            {
+              "type": "extract-shared",
+              "auto_fixable": false,
+              "description": "Extract duplicated code (9 lines, 9 instances) into a shared function"
+            },
+            {
+              "type": "suppress-line",
+              "auto_fixable": false,
+              "description": "Suppress with an inline comment above the duplicated code",
+              "comment": "// fallow-ignore-next-line code-duplication"
+            }
+          ]
+        },
+        {
+          "instances": [
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 171,
+              "end_line": 177,
+              "start_col": 12,
+              "end_col": 5,
+              "fragment": "{ dayIndex: -1 });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/dayIndex/i);\r\n  });"
+            },
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 182,
+              "end_line": 188,
+              "start_col": 12,
+              "end_col": 5,
+              "fragment": "{ dayIndex: 7 });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/dayIndex/i);\r\n  });"
+            },
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 193,
+              "end_line": 199,
+              "start_col": 12,
+              "end_col": 5,
+              "fragment": "{ dayIndex: '0' });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/dayIndex/i);\r\n  });"
+            },
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 204,
+              "end_line": 210,
+              "start_col": 12,
+              "end_col": 5,
+              "fragment": "{ dayIndex: 0, weekStart: 'not-a-date' });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/date/i);\r\n  });"
+            },
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 215,
+              "end_line": 221,
+              "start_col": 12,
+              "end_col": 5,
+              "fragment": "{ dayIndex: 0, availableDays: 3 });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/availableDays/i);\r\n  });"
+            },
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 226,
+              "end_line": 232,
+              "start_col": 12,
+              "end_col": 5,
+              "fragment": "{ dayIndex: 0, availableDays: 7 });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/availableDays/i);\r\n  });"
+            },
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 237,
+              "end_line": 243,
+              "start_col": 12,
+              "end_col": 5,
+              "fragment": "{ dayIndex: 0, availableDays: 4.5 });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/availableDays/i);\r\n  });"
+            },
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 332,
+              "end_line": 338,
+              "start_col": 12,
+              "end_col": 5,
+              "fragment": "{ date: todayStr });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/mealTypes/i);\r\n  });"
+            },
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 344,
+              "end_line": 350,
+              "start_col": 12,
+              "end_col": 5,
+              "fragment": "{ date: todayStr, mealTypes: [] });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/mealTypes/i);\r\n  });"
+            },
+            {
+              "file": "backend/tests/integration/remaining-endpoints.test.js",
+              "start_line": 356,
+              "end_line": 362,
+              "start_col": 12,
+              "end_col": 5,
+              "fragment": "{ date: todayStr, mealTypes: ['invalid_type'] });\r\n\r\n    expect(res.status).toBe(400);\r\n    expect(res.body.success).toBe(false);\r\n    expect(res.body.error.code).toBe('VALIDATION_ERROR');\r\n    expect(res.body.error.message).toMatch(/invalid|mealType/i);\r\n  });"
+            }
+          ],
+          "token_count": 73,
+          "line_count": 7,
+          "fingerprint": "dup:d3731db3",
+          "actions": [
+            {
+              "type": "extract-shared",
+              "auto_fixable": false,
+              "description": "Extract duplicated code (7 lines, 10 instances) into a shared function"
+            },
+            {
+              "type": "suppress-line",
+              "auto_fixable": false,
+              "description": "Suppress with an inline comment above the duplicated code",
+              "comment": "// fallow-ignore-next-line code-duplication"
+            }
+          ]
+        }
+      ],
+      "total_duplicated_lines": 22,
+      "total_duplicated_tokens": 203,
+      "suggestions": [
+        {
+          "kind": "ExtractFunction",
+          "description": "Extract shared function (9 lines) from remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js",
+          "estimated_savings": 72
+        },
+        {
+          "kind": "ExtractFunction",
+          "description": "Extract shared function (7 lines) from remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js",
+          "estimated_savings": 63
+        },
+        {
+          "kind": "ExtractFunction",
+          "description": "Extract shared function (6 lines) from remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js",
+          "estimated_savings": 12
+        }
+      ],
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract 3 duplicated code blocks (22 lines) into a shared module",
+          "note": "These clone groups share the same files, indicating a structural relationship; refactor together"
+        },
+        {
+          "type": "apply-suggestion",
+          "auto_fixable": false,
+          "description": "Extract shared function (9 lines) from remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js"
+        },
+        {
+          "type": "apply-suggestion",
+          "auto_fixable": false,
+          "description": "Extract shared function (7 lines) from remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js"
+        },
+        {
+          "type": "apply-suggestion",
+          "auto_fixable": false,
+          "description": "Extract shared function (6 lines) from remaining-endpoints.test.js, remaining-endpoints.test.js, remaining-endpoints.test.js"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "files": [
+        "frontend/src/__tests__/api-integration.test.js"
+      ],
+      "groups": [
+        {
+          "instances": [
+            {
+              "file": "frontend/src/__tests__/api-integration.test.js",
+              "start_line": 538,
+              "end_line": 542,
+              "start_col": 77,
+              "end_col": 52,
+              "fragment": ", { cookie });\r\n    expect(status).toBe(200);\r\n    // Backend returns data as the array directly, not wrapped in { logs: [] }\r\n    expect(data).toMatchObject({ success: true, data: expect.any(Array) });\r\n    expect(data.data.length).toBeGreaterThanOrEqual("
+            },
+            {
+              "file": "frontend/src/__tests__/api-integration.test.js",
+              "start_line": 557,
+              "end_line": 562,
+              "start_col": 73,
+              "end_col": 52,
+              "fragment": ", { cookie });\r\n    expect(status).toBe(200);\r\n    // Backend returns data as the array directly, not wrapped in { history: [] }\r\n    expect(data).toMatchObject({ success: true, data: expect.any(Array) });\r\n    // At least today's entry\r\n    expect(data.data.length).toBeGreaterThanOrEqual("
+            },
+            {
+              "file": "frontend/src/__tests__/api-integration.test.js",
+              "start_line": 582,
+              "end_line": 586,
+              "start_col": 65,
+              "end_col": 52,
+              "fragment": ", { cookie });\r\n    expect(status).toBe(200);\r\n    // Backend returns data as the array directly, not wrapped in { foods: [] }\r\n    expect(data).toMatchObject({ success: true, data: expect.any(Array) });\r\n    expect(data.data.length).toBeGreaterThanOrEqual("
+            }
+          ],
+          "token_count": 55,
+          "line_count": 6,
+          "fingerprint": "dup:99f8b097",
+          "suggested_name": "expect",
+          "actions": [
+            {
+              "type": "extract-shared",
+              "auto_fixable": false,
+              "description": "Extract duplicated code (6 lines, 3 instances) into a shared function"
+            },
+            {
+              "type": "suppress-line",
+              "auto_fixable": false,
+              "description": "Suppress with an inline comment above the duplicated code",
+              "comment": "// fallow-ignore-next-line code-duplication"
+            }
+          ]
+        }
+      ],
+      "total_duplicated_lines": 6,
+      "total_duplicated_tokens": 55,
+      "suggestions": [
+        {
+          "kind": "ExtractFunction",
+          "description": "Extract shared function (6 lines) from api-integration.test.js, api-integration.test.js, api-integration.test.js",
+          "estimated_savings": 12
+        }
+      ],
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract 1 duplicated code block (6 lines) into a shared module",
+          "note": "These clone groups share the same files, indicating a structural relationship; refactor together"
+        },
+        {
+          "type": "apply-suggestion",
+          "auto_fixable": false,
+          "description": "Extract shared function (6 lines) from api-integration.test.js, api-integration.test.js, api-integration.test.js"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "files": [
+        "frontend/src/features/activities/ActivityPage.jsx",
+        "frontend/src/features/activities/hooks/useActivityCalendar.js",
+        "frontend/src/features/food-log/hooks/useMealCalendar.js"
+      ],
+      "groups": [
+        {
+          "instances": [
+            {
+              "file": "frontend/src/features/activities/ActivityPage.jsx",
+              "start_line": 40,
+              "end_line": 54,
+              "start_col": 28,
+              "end_col": 9,
+              "fragment": ");\r\n\r\n  useEffect(() => {\r\n    const handleUpdate = () => {\r\n      setRefreshTrigger((prev) => prev + 1);\r\n    };\r\n    window.addEventListener('health-system-update', handleUpdate);\r\n    return () => {\r\n      window.removeEventListener('health-system-update', handleUpdate);\r\n    };\r\n  }, []);\r\n\r\n  const handleMonthChange = useCallback((month) => {\r\n    setCurrentMonth(month);\r\n  }, []);"
+            },
+            {
+              "file": "frontend/src/features/activities/hooks/useActivityCalendar.js",
+              "start_line": 60,
+              "end_line": 72,
+              "start_col": 56,
+              "end_col": 95,
+              "fragment": ");\r\n\r\n  useEffect(() => {\r\n    const handleUpdate = () => {\r\n      setRefreshTrigger((prev) => prev + 1);\r\n    };\r\n    window.addEventListener('health-system-update', handleUpdate);\r\n    return () => {\r\n      window.removeEventListener('health-system-update', handleUpdate);\r\n    };\r\n  }, []);\r\n\r\n  const { remaining: genRetryAfter, setRemaining: setGenRetryAfter } = useCountdownTimer(null);"
+            },
+            {
+              "file": "frontend/src/features/food-log/hooks/useMealCalendar.js",
+              "start_line": 59,
+              "end_line": 71,
+              "start_col": 56,
+              "end_col": 95,
+              "fragment": ");\r\n\r\n  useEffect(() => {\r\n    const handleUpdate = () => {\r\n      setRefreshTrigger((prev) => prev + 1);\r\n    };\r\n    window.addEventListener('health-system-update', handleUpdate);\r\n    return () => {\r\n      window.removeEventListener('health-system-update', handleUpdate);\r\n    };\r\n  }, []);\r\n\r\n  const { remaining: genRetryAfter, setRemaining: setGenRetryAfter } = useCountdownTimer(null);"
+            }
+          ],
+          "token_count": 61,
+          "line_count": 15,
+          "fingerprint": "dup:a95faa69",
+          "suggested_name": "handleUpdate",
+          "actions": [
+            {
+              "type": "extract-shared",
+              "auto_fixable": false,
+              "description": "Extract duplicated code (15 lines, 3 instances) into a shared function"
+            },
+            {
+              "type": "suppress-line",
+              "auto_fixable": false,
+              "description": "Suppress with an inline comment above the duplicated code",
+              "comment": "// fallow-ignore-next-line code-duplication"
+            }
+          ]
+        }
+      ],
+      "total_duplicated_lines": 15,
+      "total_duplicated_tokens": 61,
+      "suggestions": [
+        {
+          "kind": "ExtractFunction",
+          "description": "Extract shared function (15 lines) from ActivityPage.jsx, useActivityCalendar.js, useMealCalendar.js",
+          "estimated_savings": 30
+        }
+      ],
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract 1 duplicated code block (15 lines) into a shared module",
+          "note": "These clone groups share the same files, indicating a structural relationship; refactor together"
+        },
+        {
+          "type": "apply-suggestion",
+          "auto_fixable": false,
+          "description": "Extract shared function (15 lines) from ActivityPage.jsx, useActivityCalendar.js, useMealCalendar.js"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "files": [
+        "frontend/src/features/auth/components/LoginForm.jsx",
+        "frontend/src/features/auth/components/RegisterForm.jsx",
+        "frontend/src/features/auth/components/SetupPassword.jsx"
+      ],
+      "groups": [
+        {
+          "instances": [
+            {
+              "file": "frontend/src/features/auth/components/LoginForm.jsx",
+              "start_line": 28,
+              "end_line": 53,
+              "start_col": 59,
+              "end_col": 24,
+              "fragment": ");\r\n    }\r\n  };\r\n\r\n  return (\r\n    <div className=\"space-y-6\">\r\n      <div className=\"text-center\">\r\n        <h2 className=\"font-display font-extrabold text-2xl text-slate-800 tracking-tight\">\r\n          Log In to Your Account\r\n        </h2>\r\n        <p className=\"text-slate-500 text-xs sm:text-sm mt-1.5 leading-relaxed\">\r\n          Take control of your nutrition and daily activity with our automated health platform.\r\n        </p>\r\n      </div>\r\n\r\n      {error && (\r\n        <div className=\"flex gap-2.5 p-3 rounded-xl bg-rose-50 text-rose-700 border border-rose-100 text-xs sm:text-sm items-start\">\r\n          <ShieldAlert className=\"w-5 h-5 flex-shrink-0 text-rose-500 mt-0.5\" />\r\n          <span className=\"font-medium\">{error}</span>\r\n        </div>\r\n      )}\r\n\r\n      <form onSubmit={handleSubmit(onSubmit)} className=\"space-y-4\">\r\n        {/* Email Field */}\r\n        <div>\r\n          <label htmlFor"
+            },
+            {
+              "file": "frontend/src/features/auth/components/RegisterForm.jsx",
+              "start_line": 37,
+              "end_line": 62,
+              "start_col": 89,
+              "end_col": 24,
+              "fragment": ");\r\n    }\r\n  };\r\n\r\n  return (\r\n    <div className=\"space-y-6\">\r\n      <div className=\"text-center\">\r\n        <h2 className=\"font-display font-extrabold text-2xl text-slate-800 tracking-tight\">\r\n          Create a New Account\r\n        </h2>\r\n        <p className=\"text-slate-500 text-xs sm:text-sm mt-1.5 leading-relaxed\">\r\n          Start your healthy journey today, automatically and progressively.\r\n        </p>\r\n      </div>\r\n\r\n      {error && (\r\n        <div className=\"flex gap-2.5 p-3 rounded-xl bg-rose-50 text-rose-700 border border-rose-100 text-xs sm:text-sm items-start\">\r\n          <ShieldAlert className=\"w-5 h-5 flex-shrink-0 text-rose-500 mt-0.5\" />\r\n          <span className=\"font-medium\">{error}</span>\r\n        </div>\r\n      )}\r\n\r\n      <form onSubmit={handleSubmit(onSubmit)} className=\"space-y-4\">\r\n        {/* Email Field */}\r\n        <div>\r\n          <label htmlFor"
+            },
+            {
+              "file": "frontend/src/features/auth/components/SetupPassword.jsx",
+              "start_line": 48,
+              "end_line": 73,
+              "start_col": 56,
+              "end_col": 24,
+              "fragment": ");\n    }\n  };\n\n  return (\n    <div className=\"space-y-6\">\n      <div className=\"text-center\">\n        <h2 className=\"font-display font-extrabold text-2xl text-slate-800 tracking-tight\">\n          Secure Your Account\n        </h2>\n        <p className=\"text-slate-500 text-xs sm:text-sm mt-1.5 leading-relaxed\">\n          Create a password for your account and consent to the data processing policy to access FitLife.\n        </p>\n      </div>\n\n      {error && (\n        <div className=\"flex gap-2.5 p-3 rounded-xl bg-rose-50 text-rose-700 border border-rose-100 text-xs sm:text-sm items-start\">\n          <ShieldAlert className=\"w-5 h-5 flex-shrink-0 text-rose-500 mt-0.5\" />\n          <span className=\"font-medium\">{error}</span>\n        </div>\n      )}\n\n      <form onSubmit={handleSubmit(onSubmit)} className=\"space-y-4\">\n        {/* Password Field */}\n        <div>\n          <label htmlFor"
+            }
+          ],
+          "token_count": 76,
+          "line_count": 26,
+          "fingerprint": "dup:f54cb077",
+          "suggested_name": "text",
+          "actions": [
+            {
+              "type": "extract-shared",
+              "auto_fixable": false,
+              "description": "Extract duplicated code (26 lines, 3 instances) into a shared function"
+            },
+            {
+              "type": "suppress-line",
+              "auto_fixable": false,
+              "description": "Suppress with an inline comment above the duplicated code",
+              "comment": "// fallow-ignore-next-line code-duplication"
+            }
+          ]
+        }
+      ],
+      "total_duplicated_lines": 26,
+      "total_duplicated_tokens": 76,
+      "suggestions": [
+        {
+          "kind": "ExtractFunction",
+          "description": "Extract shared function (26 lines) from LoginForm.jsx, RegisterForm.jsx, SetupPassword.jsx",
+          "estimated_savings": 52
+        }
+      ],
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract 1 duplicated code block (26 lines) into a shared module",
+          "note": "These clone groups share the same files, indicating a structural relationship; refactor together"
+        },
+        {
+          "type": "apply-suggestion",
+          "auto_fixable": false,
+          "description": "Extract shared function (26 lines) from LoginForm.jsx, RegisterForm.jsx, SetupPassword.jsx"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "files": [
+        "frontend/src/features/progress/components/__tests__/TrendPredictionCard.test.jsx"
+      ],
+      "groups": [
+        {
+          "instances": [
+            {
+              "file": "frontend/src/features/progress/components/__tests__/TrendPredictionCard.test.jsx",
+              "start_line": 134,
+              "end_line": 152,
+              "start_col": 39,
+              "end_col": 54,
+              "fragment": "{\r\n      ...defaultPrediction,\r\n      direction: 'losing',\r\n      rateKgPerWeek: -0.5,\r\n      colorStatus: 'green',\r\n      statusLabel: 'On Track',\r\n      noGoalSet: false,\r\n    });\r\n    render(\r\n      React.createElement(TrendPredictionCard, {\r\n        profile: {\r\n          target_weight_kg: 70,\r\n          target_date: '2026-12-31',\r\n          fitness_goal: 'lose_weight',\r\n        },\r\n      })\r\n    );\r\n    await waitFor(() => {\r\n      expect(screen.getByText(/Losing/)).toBeTruthy();"
+            },
+            {
+              "file": "frontend/src/features/progress/components/__tests__/TrendPredictionCard.test.jsx",
+              "start_line": 361,
+              "end_line": 380,
+              "start_col": 39,
+              "end_col": 69,
+              "fragment": "{\r\n      ...defaultPrediction,\r\n      noGoalSet: false,\r\n      colorStatus: 'green',\r\n      statusLabel: 'On Track',\r\n      estimatedDate,\r\n      direction: 'losing',\r\n      rateKgPerWeek: -0.5,\r\n    });\r\n    render(\r\n      React.createElement(TrendPredictionCard, {\r\n        profile: {\r\n          target_weight_kg: 70,\r\n          target_date: '2026-12-31',\r\n          fitness_goal: 'lose_weight',\r\n        },\r\n      })\r\n    );\r\n    await waitFor(() => {\r\n      expect(screen.getByText(/Estimated completion:/)).toBeTruthy();"
+            },
+            {
+              "file": "frontend/src/features/progress/components/__tests__/TrendPredictionCard.test.jsx",
+              "start_line": 396,
+              "end_line": 413,
+              "start_col": 39,
+              "end_col": 59,
+              "fragment": "{\r\n      ...defaultPrediction,\r\n      noGoalSet: false,\r\n      colorStatus: 'green',\r\n      statusLabel: 'On Track',\r\n      confidence: 0.87,\r\n    });\r\n    render(\r\n      React.createElement(TrendPredictionCard, {\r\n        profile: {\r\n          target_weight_kg: 70,\r\n          target_date: '2026-12-31',\r\n          fitness_goal: 'lose_weight',\r\n        },\r\n      })\r\n    );\r\n    await waitFor(() => {\r\n      expect(screen.getByText(/Confidence:/)).toBeTruthy();"
+            }
+          ],
+          "token_count": 50,
+          "line_count": 20,
+          "fingerprint": "dup:f6d08874",
+          "actions": [
+            {
+              "type": "extract-shared",
+              "auto_fixable": false,
+              "description": "Extract duplicated code (20 lines, 3 instances) into a shared function"
+            },
+            {
+              "type": "suppress-line",
+              "auto_fixable": false,
+              "description": "Suppress with an inline comment above the duplicated code",
+              "comment": "// fallow-ignore-next-line code-duplication"
+            }
+          ]
+        }
+      ],
+      "total_duplicated_lines": 20,
+      "total_duplicated_tokens": 50,
+      "suggestions": [
+        {
+          "kind": "ExtractFunction",
+          "description": "Extract shared function (20 lines) from TrendPredictionCard.test.jsx, TrendPredictionCard.test.jsx, TrendPredictionCard.test.jsx",
+          "estimated_savings": 40
+        }
+      ],
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract 1 duplicated code block (20 lines) into a shared module",
+          "note": "These clone groups share the same files, indicating a structural relationship; refactor together"
+        },
+        {
+          "type": "apply-suggestion",
+          "auto_fixable": false,
+          "description": "Extract shared function (20 lines) from TrendPredictionCard.test.jsx, TrendPredictionCard.test.jsx, TrendPredictionCard.test.jsx"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "files": [
+        "frontend/src/features/progress/components/__tests__/TrendPredictionCard.test.jsx",
+        "frontend/src/features/progress/components/__tests__/WeightTrendChart.test.jsx",
+        "frontend/src/features/progress/hooks/__tests__/useTrendPrediction.test.js"
+      ],
+      "groups": [
+        {
+          "instances": [
+            {
+              "file": "frontend/src/features/progress/components/__tests__/TrendPredictionCard.test.jsx",
+              "start_line": 15,
+              "end_line": 26,
+              "start_col": 0,
+              "end_col": 3,
+              "fragment": "const today = new Date();\r\n\r\nfunction makeEntry(daysAgo, weight) {\r\n  const d = new Date(today);\r\n  d.setDate(d.getDate() - daysAgo);\r\n  return {\r\n    id: daysAgo,\r\n    weight_kg: String(weight),\r\n    logged_date: d.toISOString().split('T')[0],\r\n    source: 'manual',\r\n    notes: null,\r\n  }"
+            },
+            {
+              "file": "frontend/src/features/progress/components/__tests__/WeightTrendChart.test.jsx",
+              "start_line": 18,
+              "end_line": 29,
+              "start_col": 0,
+              "end_col": 3,
+              "fragment": "const today = new Date();\r\n\r\nfunction makeEntry(daysAgo, weight) {\r\n  const d = new Date(today);\r\n  d.setDate(d.getDate() - daysAgo);\r\n  return {\r\n    id: daysAgo,\r\n    weight_kg: String(weight),\r\n    logged_date: d.toISOString().split('T')[0],\r\n    source: 'manual',\r\n    notes: null,\r\n  }"
+            },
+            {
+              "file": "frontend/src/features/progress/hooks/__tests__/useTrendPrediction.test.js",
+              "start_line": 5,
+              "end_line": 16,
+              "start_col": 0,
+              "end_col": 3,
+              "fragment": "const today = new Date();\r\n\r\nfunction makeEntry(daysAgo, weight) {\r\n  const d = new Date(today);\r\n  d.setDate(d.getDate() - daysAgo);\r\n  return {\r\n    id: daysAgo,\r\n    weight_kg: String(weight),\r\n    logged_date: d.toISOString().split('T')[0],\r\n    source: 'manual',\r\n    notes: null,\r\n  }"
+            }
+          ],
+          "token_count": 73,
+          "line_count": 12,
+          "fingerprint": "dup:100c52b7",
+          "suggested_name": "daysAgo",
+          "actions": [
+            {
+              "type": "extract-shared",
+              "auto_fixable": false,
+              "description": "Extract duplicated code (12 lines, 3 instances) into a shared function"
+            },
+            {
+              "type": "suppress-line",
+              "auto_fixable": false,
+              "description": "Suppress with an inline comment above the duplicated code",
+              "comment": "// fallow-ignore-next-line code-duplication"
+            }
+          ]
+        }
+      ],
+      "total_duplicated_lines": 12,
+      "total_duplicated_tokens": 73,
+      "suggestions": [
+        {
+          "kind": "ExtractFunction",
+          "description": "Extract shared function (12 lines) from TrendPredictionCard.test.jsx, WeightTrendChart.test.jsx, useTrendPrediction.test.js",
+          "estimated_savings": 24
+        }
+      ],
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract 1 duplicated code block (12 lines) into a shared module",
+          "note": "These clone groups share the same files, indicating a structural relationship; refactor together"
+        },
+        {
+          "type": "apply-suggestion",
+          "auto_fixable": false,
+          "description": "Extract shared function (12 lines) from TrendPredictionCard.test.jsx, WeightTrendChart.test.jsx, useTrendPrediction.test.js"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    },
+    {
+      "files": [
+        "frontend/src/shared/calendar/__tests__/useMonthData.test.js"
+      ],
+      "groups": [
+        {
+          "instances": [
+            {
+              "file": "frontend/src/shared/calendar/__tests__/useMonthData.test.js",
+              "start_line": 113,
+              "end_line": 120,
+              "start_col": 62,
+              "end_col": 7,
+              "fragment": ");\r\n    const { result } = renderHook(() => useMonthData(mockDate, fetchWeekFn), {\r\n      wrapper: createWrapper(),\r\n    });\r\n\r\n    await waitFor(() => {\r\n      expect(result.current.loading).toBe(false);\r\n    });"
+            },
+            {
+              "file": "frontend/src/shared/calendar/__tests__/useMonthData.test.js",
+              "start_line": 159,
+              "end_line": 166,
+              "start_col": 62,
+              "end_col": 7,
+              "fragment": ");\r\n    const { result } = renderHook(() => useMonthData(mockDate, fetchWeekFn), {\r\n      wrapper: createWrapper(),\r\n    });\r\n\r\n    await waitFor(() => {\r\n      expect(result.current.loading).toBe(false);\r\n    });"
+            },
+            {
+              "file": "frontend/src/shared/calendar/__tests__/useMonthData.test.js",
+              "start_line": 231,
+              "end_line": 238,
+              "start_col": 72,
+              "end_col": 7,
+              "fragment": ");\r\n    const { result } = renderHook(() => useMonthData(mockDate, fetchWeekFn), {\r\n      wrapper: createWrapper(),\r\n    });\r\n\r\n    await waitFor(() => {\r\n      expect(result.current.loading).toBe(false);\r\n    });"
+            }
+          ],
+          "token_count": 55,
+          "line_count": 8,
+          "fingerprint": "dup:aa68c01b",
+          "actions": [
+            {
+              "type": "extract-shared",
+              "auto_fixable": false,
+              "description": "Extract duplicated code (8 lines, 3 instances) into a shared function"
+            },
+            {
+              "type": "suppress-line",
+              "auto_fixable": false,
+              "description": "Suppress with an inline comment above the duplicated code",
+              "comment": "// fallow-ignore-next-line code-duplication"
+            }
+          ]
+        }
+      ],
+      "total_duplicated_lines": 8,
+      "total_duplicated_tokens": 55,
+      "suggestions": [
+        {
+          "kind": "ExtractFunction",
+          "description": "Extract shared function (8 lines) from useMonthData.test.js, useMonthData.test.js, useMonthData.test.js",
+          "estimated_savings": 16
+        }
+      ],
+      "actions": [
+        {
+          "type": "extract-shared",
+          "auto_fixable": false,
+          "description": "Extract 1 duplicated code block (8 lines) into a shared module",
+          "note": "These clone groups share the same files, indicating a structural relationship; refactor together"
+        },
+        {
+          "type": "apply-suggestion",
+          "auto_fixable": false,
+          "description": "Extract shared function (8 lines) from useMonthData.test.js, useMonthData.test.js, useMonthData.test.js"
+        },
+        {
+          "type": "suppress-line",
+          "auto_fixable": false,
+          "description": "Suppress with an inline comment above the duplicated code",
+          "comment": "// fallow-ignore-next-line code-duplication"
+        }
+      ]
+    }
+  ],
+  "stats": {
+    "total_files": 147,
+    "files_with_clones": 43,
+    "total_lines": 19123,
+    "duplicated_lines": 2867,
+    "total_tokens": 95635,
+    "duplicated_tokens": 11435,
+    "clone_groups": 20,
+    "clone_instances": 79,
+    "duplication_percentage": 14.992417507713224,
+    "clone_groups_below_min_occurrences": 88
+  },
+  "next_steps": [
+    {
+      "id": "trace-clone",
+      "command": "fallow dupes --trace dup:100c52b7",
+      "reason": "see sibling locations and an extract-function suggestion"
+    },
+    {
+      "id": "audit-changed",
+      "command": "fallow audit",
+      "reason": "gate only the files your branch changed (auto-detects the base)"
+    }
+  ],
+  "_meta": {
+    "telemetry": {
+      "analysis_run_id": "run_743566af64a70e44"
+    }
+  }
+}

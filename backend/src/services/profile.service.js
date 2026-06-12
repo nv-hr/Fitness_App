@@ -75,7 +75,7 @@ export function calculateTdee(weightKg, heightCm, age, gender, activityLevel) {
  * @param {number} tdee
  * @returns {{min: number, max: number}}
  */
-export function getTdeeRange(tdee) {
+function getTdeeRange(tdee) {
   return { min: Math.round(tdee * 0.9), max: Math.round(tdee * 1.1) };
 }
 

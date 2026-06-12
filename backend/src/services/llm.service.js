@@ -414,7 +414,7 @@ function validateAndFixPlan(plan, dbActivities) {
   return { valid: errors.length === 0, plan, errors };
 }
 
-export function buildCorrectionPrompt(validationErrors) {
+function buildCorrectionPrompt(validationErrors) {
   return buildPrompt('correction-prompt.md', {
     validationErrors: validationErrors.join('\n'),
   });

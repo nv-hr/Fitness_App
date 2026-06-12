@@ -1,0 +1,56 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "entry": [
+    "src/index.{ts,tsx,js,jsx}",
+    "src/main.{ts,tsx,js,jsx}"
+  ],
+  "workspaces": {
+    "packages": [
+      "frontend",
+      "backend"
+    ]
+  },
+  "duplicates": {
+    // Hide pair-only clones; focus on widespread copy-paste
+    // worth refactoring. Lower to 2 to report every duplicate pair.
+    "minOccurrences": 3
+    // Common additions (uncomment to enable):
+    // "ignore": [
+    //   "**/lib/**",          // for repos that publish transpiled output to lib/
+    //   "**/legacy/**",       // for repos with legacy-build artifacts
+    //   "**/__generated__/**", // Relay, GraphQL Code Generator
+    //   "**/generated/**"     // OpenAPI, Protobuf codegen
+    // ]
+  },
+  "rules": {},
+  "ignoreExports": [
+    {
+      "file": "backend/src/controllers/food.controller.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "backend/src/repositories/food.repository.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "backend/src/controllers/profile.controller.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "backend/src/services/profile.service.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "backend/src/services/food.service.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "backend/src/controllers/auth.controller.js",
+      "exports": ["*"]
+    },
+    {
+      "file": "backend/src/services/auth.service.js",
+      "exports": ["*"]
+    }
+  ]
+}
