@@ -8,6 +8,16 @@ A full-stack fitness application that allows users to track their body metrics, 
 
 Streamlining the process of tracking fitness progress with intelligent, AI-driven recommendations and tracking capabilities. 
 
+## Current Milestone: v1.1 Code Deduplication and Cleanup
+
+**Goal:** Find duplicated and dead code on the frontend and backend, enforcing the DRY (Don't Repeat Yourself) principle.
+
+**Target features:**
+- Identify and remove duplicated code in the frontend
+- Identify and remove duplicated code in the backend
+- Identify and remove dead code in both environments
+- Enforce DRY principles via refactoring
+
 ## Requirements
 
 ### Validated
@@ -28,6 +38,10 @@ Streamlining the process of tracking fitness progress with intelligent, AI-drive
 - [ ] Static analysis of the frontend to map API usage and trace calls to backend routes
 - [ ] Remove unused backend routes and DB tables that are no longer referenced by the frontend
 - [ ] Fix discovered issues and remove dead code
+- [ ] Identify and remove duplicated code in the frontend
+- [ ] Identify and remove duplicated code in the backend
+- [ ] Identify and remove dead code in both environments
+- [ ] Enforce DRY principles via refactoring
 
 ### Out of Scope
 
@@ -55,7 +69,7 @@ Streamlining the process of tracking fitness progress with intelligent, AI-drive
 | Static Analysis for cleanup | The most reliable way to find dead routes and tables is mapping frontend API usage | — Pending |
 
 ---
-*Last updated: 2026-06-08 after project initialization*
+*Last updated: 2026-06-12 after milestone v1.1 initialization*
 
 ## Evolution
 
