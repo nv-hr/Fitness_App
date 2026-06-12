@@ -1,4 +1,5 @@
 import { Flame, Target, ShieldAlert, Heart, CheckCircle2 } from 'lucide-react';
+import { MetricItem, Card } from '../../../shared/ui/index.js';
 
 export default function CalorieSummary({ totalConsumed, calorieTarget, remaining, isExtremeDeficit }) {
   const progressPercent = calorieTarget > 0 ? Math.min((totalConsumed / calorieTarget) * 100, 100) : 0;
@@ -22,40 +23,19 @@ export default function CalorieSummary({ totalConsumed, calorieTarget, remaining
     statusIcon = <ShieldAlert className="w-4 h-4 text-amber-500" />;
   }
   return (
-    <div className={`p-6 rounded-2xl border transition-all duration-300 ${cardBg}`}>
+    <Card className={cardBg}>
       {/* Top metrics grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
         {/* Consumed */}
-        <div className="space-y-1">
-          <p className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-            <Flame className="w-3.5 h-3.5 text-orange-500" /> Consumed
-          </p>
-          <p className="text-xl sm:text-2xl font-display font-black text-white">
-            {totalConsumed} <span className="text-xs sm:text-sm font-sans font-medium text-slate-500">kcal</span>
-          </p>
-        </div>
+        <MetricItem icon={<Flame className="w-3.5 h-3.5 text-orange-500" />} label="Consumed" value={totalConsumed} unit="kcal" />
 
         {/* Target */}
         {calorieTarget && (
-          <div className="space-y-1">
-            <p className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-              <Target className="w-3.5 h-3.5 text-emerald-500" /> TDEE Target
-            </p>
-            <p className="text-xl sm:text-2xl font-display font-black text-white">
-              {calorieTarget} <span className="text-xs sm:text-sm font-sans font-medium text-slate-500">kcal</span>
-            </p>
-          </div>
+          <MetricItem icon={<Target className="w-3.5 h-3.5 text-emerald-500" />} label="TDEE Target" value={calorieTarget} unit="kcal" />
         )}
 
         {/* Percentage of progression */}
-        <div className="col-span-2 sm:col-span-1 space-y-1">
-          <p className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-            <Heart className="w-3.5 h-3.5 text-rose-500 animate-pulse" /> Calorie Ratio
-          </p>
-          <p className="text-xl sm:text-2xl font-display font-black text-white">
-            {progressPercent.toFixed(0)} <span className="text-xs sm:text-sm font-sans font-medium text-slate-500">%</span>
-          </p>
-        </div>
+        <MetricItem className="col-span-2 sm:col-span-1" icon={<Heart className="w-3.5 h-3.5 text-rose-500 animate-pulse" />} label="Calorie Ratio" value={progressPercent.toFixed(0)} unit="%" />
       </div>
 
       {/* Visual meter progress bar */}
@@ -95,6 +75,6 @@ export default function CalorieSummary({ totalConsumed, calorieTarget, remaining
           </p>
         </div>
       )}
-    </div>
+    </Card>
   );
 }
