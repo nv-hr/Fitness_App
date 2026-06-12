@@ -1,0 +1,8 @@
+{
+  "ignoreExports": [
+    "createCustomFood",
+    "getDailyLogs",
+    "getProfile",
+    "login"
+  ]
+}

@@ -12,6 +12,8 @@ import {
   deleteActivityLogByPlan,
 } from '../repositories/activity.repository.js';
 import { findByUserAndWeek, upsertPlan, syncWeeklyPlanCompletedStates } from '../repositories/weeklyPlan.repository.js';
+import { isDateWithinTimezoneRange } from '../utils/date.utils.js';
+import { setupSSE } from '../utils/sse.utils.js';
 
 // CR-01: Migration failure cooldown — prevents infinite retry on every GET
 // when LLM is unavailable. After a failed attempt, subsequent requests
@@ -56,18 +58,18 @@ function getMonday(date) {
   return d.toISOString().split('T')[0];
 }
 
-function isDateWithinTimezoneRange(dateStr) {
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setUTCDate(today.getUTCDate() - 1);
-  const tomorrow = new Date(today);
-  tomorrow.setUTCDate(today.getUTCDate() + 1);
-
-  const todayStr = today.toISOString().split('T')[0];
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
-
-  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr;
+function validateWeekAndDay(weekStart, dayIndex, res) {
+  if (dayIndex !== undefined) {
+    if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {
+      return { error: errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR') };
+    }
+  }
+  let targetWeekStart = weekStart;
+  if (targetWeekStart && !isValidDateString(targetWeekStart)) {
+    return { error: errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR') };
+  }
+  targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());
+  return { targetWeekStart };
 }
 
 async function get(req, res, next) {
@@ -75,10 +77,9 @@ async function get(req, res, next) {
     const userId = req.user.userId;
     let weekStart = req.query.weekStart;
 
-    if (weekStart && !isValidDateString(weekStart)) {
-      return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
-    }
-    weekStart = getMonday(weekStart ? new Date(weekStart) : new Date());
+    const validated = validateWeekAndDay(weekStart, undefined, res);
+    if (validated.error) return validated.error;
+    weekStart = validated.targetWeekStart;
 
     // Try in-memory cache first (faster, no DB hit)
     const cached = getCachedPlan(userId, weekStart);
@@ -153,10 +154,9 @@ async function generate(req, res, next) {
     const userId = req.user.userId;
     let weekStart = req.body.weekStart;
 
-    if (weekStart && !isValidDateString(weekStart)) {
-      return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
-    }
-    weekStart = getMonday(weekStart ? new Date(weekStart) : new Date());
+    const validated = validateWeekAndDay(weekStart, undefined, res);
+    if (validated.error) return validated.error;
+    weekStart = validated.targetWeekStart;
 
     // Extract and validate availableDays (4-6 range, default 4)
     let availableDays = req.body.availableDays;
@@ -208,15 +208,9 @@ async function regenerateDayHandler(req, res, next) {
     const userId = req.user.userId;
     const { weekStart, dayIndex, availableDays } = req.body;
 
-    if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {
-      return errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR');
-    }
-
-    let targetWeekStart = weekStart;
-    if (targetWeekStart && !isValidDateString(targetWeekStart)) {
-      return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
-    }
-    targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());
+    const validated = validateWeekAndDay(weekStart, dayIndex, res);
+    if (validated.error) return validated.error;
+    let targetWeekStart = validated.targetWeekStart;
 
     const deps = {
       getProfile: (id) => findProfileByUserId(id),
@@ -258,17 +252,9 @@ async function swapHandler(req, res, next) {
       return errorResponse(res, 'activityId must be a positive integer', 400, 'VALIDATION_ERROR');
     }
 
-    // Validate dayIndex
-    if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {
-      return errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR');
-    }
-
-    // Validate and normalize weekStart
-    let targetWeekStart = weekStart;
-    if (targetWeekStart && !isValidDateString(targetWeekStart)) {
-      return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
-    }
-    targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());
+    const validated = validateWeekAndDay(weekStart, dayIndex, res);
+    if (validated.error) return validated.error;
+    let targetWeekStart = validated.targetWeekStart;
 
     const targetDateObj = new Date(targetWeekStart);
     targetDateObj.setUTCDate(targetDateObj.getUTCDate() + dayIndex);
@@ -425,15 +411,9 @@ async function toggleComplete(req, res, next) {
     const userId = req.user.userId;
     const { weekStart, dayIndex, activityId, completed } = req.body;
 
-    // Validate weekStart
-    if (!weekStart || !isValidDateString(weekStart)) {
-      return errorResponse(res, 'Invalid or missing weekStart date', 400, 'VALIDATION_ERROR');
-    }
-
-    // Validate dayIndex
-    if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {
-      return errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR');
-    }
+    const validated = validateWeekAndDay(weekStart, dayIndex, res);
+    if (validated.error) return validated.error;
+    const targetWeekStart = validated.targetWeekStart;
 
     // Validate activityId
     if (activityId === undefined || activityId === null) {
@@ -444,9 +424,6 @@ async function toggleComplete(req, res, next) {
     if (typeof completed !== 'boolean') {
       return errorResponse(res, 'completed must be a boolean', 400, 'VALIDATION_ERROR');
     }
-
-    // Normalize weekStart
-    const targetWeekStart = getMonday(weekStart ? new Date(weekStart) : new Date());
 
     // Check cache first (fast path — plan may have been generated this session)
     let planData = getCachedPlan(userId, targetWeekStart);
@@ -525,10 +502,9 @@ async function generateStream(req, res, next) {
   const userId = req.user.userId;
   let weekStart = req.body.weekStart;
 
-  if (weekStart && !isValidDateString(weekStart)) {
-    return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
-  }
-  weekStart = getMonday(weekStart ? new Date(weekStart) : new Date());
+  const validated = validateWeekAndDay(weekStart, undefined, res);
+  if (validated.error) return validated.error;
+  weekStart = validated.targetWeekStart;
 
   let availableDays = req.body.availableDays;
   if (availableDays !== undefined && availableDays !== null) {
@@ -542,14 +518,7 @@ async function generateStream(req, res, next) {
   const force = req.body.force === true;
   console.log(`[DEBUG] generateStream called for user ${userId}, weekStart ${weekStart}, force=${force}`, req.body);
 
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-
-  const onChunk = (chunk) => {
-    res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
-  };
+  const onChunk = setupSSE(res);
 
   try {
     if (!force) {
@@ -591,24 +560,11 @@ async function regenerateDayStream(req, res, next) {
   const userId = req.user.userId;
   const { weekStart, dayIndex, availableDays } = req.body;
 
-  if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {
-    return errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR');
-  }
+  const validated = validateWeekAndDay(weekStart, dayIndex, res);
+  if (validated.error) return validated.error;
+  let targetWeekStart = validated.targetWeekStart;
 
-  let targetWeekStart = weekStart;
-  if (targetWeekStart && !isValidDateString(targetWeekStart)) {
-    return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
-  }
-  targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());
-
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-
-  const onChunk = (chunk) => {
-    res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
-  };
+  const onChunk = setupSSE(res);
 
   try {
     const deps = {
@@ -653,15 +609,9 @@ async function swapStream(req, res, next) {
   if (typeof activityId !== 'number' || activityId < 1) {
     return errorResponse(res, 'activityId must be a positive integer', 400, 'VALIDATION_ERROR');
   }
-  if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {
-    return errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR');
-  }
-
-  let targetWeekStart = weekStart;
-  if (targetWeekStart && !isValidDateString(targetWeekStart)) {
-    return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
-  }
-  targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());
+  const validated = validateWeekAndDay(weekStart, dayIndex, res);
+  if (validated.error) return validated.error;
+  let targetWeekStart = validated.targetWeekStart;
 
   const targetDateObj = new Date(targetWeekStart);
   targetDateObj.setUTCDate(targetDateObj.getUTCDate() + dayIndex);
@@ -669,14 +619,7 @@ async function swapStream(req, res, next) {
   if (!isDateWithinTimezoneRange(targetDateStr)) {
     return errorResponse(res, 'Can only swap activities for today (considering timezone differences)', 400, 'VALIDATION_ERROR');
   }
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-
-  const onChunk = (chunk) => {
-    res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
-  };
+  const onChunk = setupSSE(res);
 
   const lockKey = `swap_${userId}_${targetWeekStart}`;
   const release = await acquireLock(lockKey);

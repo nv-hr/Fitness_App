@@ -1,3 +1,6 @@
+/**
+ * @deprecated Unused export. Retained for backward compatibility.
+ */
 export function validateActivityPlanStructure(plan, planDate) {
   const errors = [];
   if (!plan || !Array.isArray(plan.activities)) {

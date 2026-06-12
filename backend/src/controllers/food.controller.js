@@ -1,7 +1,7 @@
 import * as foodRepo from '../repositories/food.repository.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { ValidationError } from '../utils/errors.js';
-import { calculateCalories, validateFoodData, validateCustomFoodData } from '../services/food.service.js';
+import { calculateCalories, validateCustomFoodData } from '../services/food.service.js';
 import { findByUserId as findProfileByUserId } from '../repositories/profile.repository.js';
 import { calculateTdee, getCalorieTarget } from '../services/profile.service.js';
 import { markItemLogged } from '../repositories/dailyMealPlan.repository.js';
@@ -10,19 +10,7 @@ import { clearCachedPlan } from '../services/llm.service.js';
 
 const VALID_MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 
-function isDateWithinTimezoneRange(dateStr) {
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setUTCDate(today.getUTCDate() - 1);
-  const tomorrow = new Date(today);
-  tomorrow.setUTCDate(today.getUTCDate() + 1);
-  
-  const todayStr = today.toISOString().split('T')[0];
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
-  
-  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr;
-}
+import { isDateWithinTimezoneRange } from '../utils/date.utils.js';
 
 /**
  * GET /api/food/search?q= — Search foods by name (FOOD-01, FOOD-02).

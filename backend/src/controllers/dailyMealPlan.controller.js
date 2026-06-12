@@ -17,19 +17,8 @@ function getTodayString() {
   return new Date().toISOString().split('T')[0];
 }
 
-function isDateWithinTimezoneRange(dateStr) {
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setUTCDate(today.getUTCDate() - 1);
-  const tomorrow = new Date(today);
-  tomorrow.setUTCDate(today.getUTCDate() + 1);
-  
-  const todayStr = today.toISOString().split('T')[0];
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
-  
-  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr;
-}
+import { isDateWithinTimezoneRange } from '../utils/date.utils.js';
+import { setupSSE } from '../utils/sse.utils.js';
 
 async function get(req, res, next) {
   try {
@@ -233,14 +222,7 @@ async function generateStream(req, res, next) {
   }
   planDate = planDate || getTodayString();
 
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-
-  const onChunk = (chunk) => {
-    res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
-  };
+  const onChunk = setupSSE(res);
 
   try {
     const existing = await findByUserAndDate(userId, planDate);
@@ -282,14 +264,7 @@ async function regenerateCategoryStream(req, res, next) {
     return errorResponse(res, `Invalid mealType "${mealType}"`, 400, 'VALIDATION_ERROR');
   }
 
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-
-  const onChunk = (chunk) => {
-    res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
-  };
+  const onChunk = setupSSE(res);
 
   try {
     const result = await regenerateCategory({

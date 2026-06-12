@@ -1,5 +1,6 @@
 import { pool } from '../config/database.js';
 import { AppError } from '../utils/errors.js';
+import { getHistoryCutoffStr } from '../utils/date.utils.js';
 
 /**
  * Search foods by name (seeded + user's custom foods).
@@ -122,11 +123,8 @@ export async function getDailyTotal(userId, logDate) {
  * @returns {Promise<Array>}
  */
 export async function getLogHistory(userId, days = 7) {
-  days = Math.min(Math.max(1, Math.floor(days)), 365);
   try {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-    const cutoffStr = cutoffDate.toISOString().split('T')[0];
+    const cutoffStr = getHistoryCutoffStr(days, false);
     
     // Why LEFT JOIN and JSON_AGG: We fetch complete food intake details (including names from foods or custom entries)
     // aggregated per day so the UI can display detailed lists inside the history panel in a single request.

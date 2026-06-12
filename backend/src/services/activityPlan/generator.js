@@ -12,6 +12,9 @@ function pickRandom(arr, count) {
   return shuffled.slice(0, count);
 }
 
+/**
+ * @deprecated Unused export. Retained for backward compatibility.
+ */
 export function generateFallbackActivityPlan(dbActivities) {
   if (!dbActivities || dbActivities.length === 0) {
     return {

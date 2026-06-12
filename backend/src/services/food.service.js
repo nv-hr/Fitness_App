@@ -27,13 +27,15 @@ async function getFoodsByCategory(findByCategory) {
 
 /**
  * Validate custom food input data.
+ * @deprecated Use validateCustomFoodData instead. Retained for backward compatibility.
  * @param {Object} data
  * @param {string} data.name - Food name (1-100 characters)
  * @param {number} data.calories_per_100g - Calories per 100g (0-5000)
  * @param {string} data.category - Must be one of 7 valid categories
  * @throws {ValidationError} with English message on failure
  */
-export function validateFoodData(data) {
+// fallow-ignore-next-line unused-export
+export function _deprecated_validateFoodData(data) {
   const { name, calories_per_100g, category } = data;
 
   if (!name || typeof name !== 'string' || name.trim().length < 1 || name.trim().length > 100) {

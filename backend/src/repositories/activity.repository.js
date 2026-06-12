@@ -1,5 +1,6 @@
 import { pool } from '../config/database.js';
 import { AppError } from '../utils/errors.js';
+import { getHistoryCutoffStr } from '../utils/date.utils.js';
 
 /**
  * Get random activities filtered by goal tags (D-45: goal-filtered daily shuffle).
@@ -145,11 +146,8 @@ export async function getActivityLogsByDate(userId, date) {
  * @returns {Promise<Array>}
  */
 export async function getActivityHistory(userId, days = 7) {
-  days = Math.min(Math.max(1, Math.floor(days)), 365);
   try {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - (days - 1));
-    const cutoffStr = cutoffDate.toISOString().split('T')[0];
+    const cutoffStr = getHistoryCutoffStr(days, true);
     const { rows } = await pool.query(
       `SELECT al.logged_date, SUM(al.duration_min) as total_minutes, SUM(al.calories_burned) as total_burned, COUNT(*) as entry_count
        FROM activity_logs al
@@ -338,11 +336,8 @@ export async function getDailyActivityTotal(userId, date) {
  * @returns {Promise<Array>}
  */
 export async function getActivityHistoryWithEntries(userId, days = 7) {
-  days = Math.min(Math.max(1, Math.floor(days)), 365);
   try {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - (days - 1));
-    const cutoffStr = cutoffDate.toISOString().split('T')[0];
+    const cutoffStr = getHistoryCutoffStr(days, true);
     const { rows } = await pool.query(
       `SELECT al.*, a.name as activity_name
        FROM activity_logs al
