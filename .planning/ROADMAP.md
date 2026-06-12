@@ -5,7 +5,7 @@
 | # | Phase | Goal | Requirements | Success Criteria |
 |---|-------|------|--------------|------------------|
 | 4 | Frontend Static Analysis & Deduplication | 2/3 | In Progress|  |
-| 5 | Backend Static Analysis & Deduplication | Identify unused/duplicated code in backend and refactor shared services | BE-01, BE-02, BE-03 | 3 |
+| 5 | Backend Static Analysis & Deduplication | 1/1 | Complete   | 2026-06-12 |
 
 ### Phase Details
 
