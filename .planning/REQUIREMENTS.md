@@ -17,4 +17,5 @@
 - Rewriting the application using a different framework. The goal is refactoring the existing React + Express stack, not replacing it.
 
 ## Traceability
-<!-- Will be filled by roadmap -->
+- **FE-01**, **FE-02**, **FE-03** -> Phase 4
+- **BE-01**, **BE-02**, **BE-03** -> Phase 5

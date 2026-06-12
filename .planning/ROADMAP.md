@@ -1,24 +1,26 @@
-# Roadmap: Fitness App Refactoring & Cleanup
+# Roadmap v1.1
 
-## Milestones
+**2 phases** | **6 requirements mapped** | All covered ✓
 
-- ✅ **v1.0 milestone** — Phases 1-3 (shipped 2026-06-12)
+| # | Phase | Goal | Requirements | Success Criteria |
+|---|-------|------|--------------|------------------|
+| 4 | Frontend Static Analysis & Deduplication | Identify unused/duplicated code in frontend and refactor shared UI/logic | FE-01, FE-02, FE-03 | 3 |
+| 5 | Backend Static Analysis & Deduplication | Identify unused/duplicated code in backend and refactor shared services | BE-01, BE-02, BE-03 | 3 |
 
-## Phases
+### Phase Details
 
-<details>
-<summary>✅ v1.0 milestone (Phases 1-3) — SHIPPED 2026-06-12</summary>
+**Phase 4: Frontend Static Analysis & Deduplication**
+Goal: Identify unused/duplicated code in frontend and refactor shared UI/logic
+Requirements: FE-01, FE-02, FE-03
+Success criteria:
+1. Use fallow or eslint to identify dead and duplicate code
+2. Dead frontend code removed
+3. Duplicated UI components extracted into shared components
 
-- [x] Phase 1: General Codebase Audit (4/4 plans) — completed 2026-06-09
-- [x] Phase 2: Frontend Static Analysis & Mapping (1/1 plans) — completed 2026-06-09
-- [x] Phase 3: Cleanup & Issue Resolution (1/1 plans) — completed 2026-06-12
-
-</details>
-
-## Progress
-
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|----------------|--------|-----------|
-| 1. General Codebase Audit | v1.0 | 4/4 | Complete | 2026-06-09 |
-| 2. Frontend Static Analysis & Mapping | v1.0 | 1/1 | Complete | 2026-06-09 |
-| 3. Cleanup & Issue Resolution | v1.0 | 1/1 | Complete | 2026-06-12 |
+**Phase 5: Backend Static Analysis & Deduplication**
+Goal: Identify unused/duplicated code in backend and refactor shared services
+Requirements: BE-01, BE-02, BE-03
+Success criteria:
+1. Use static analysis to find dead and duplicate backend code
+2. Dead backend code removed
+3. Duplicated route handlers and queries extracted to shared modules
