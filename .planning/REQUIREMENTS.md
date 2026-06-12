@@ -12,14 +12,14 @@ Requirements for the current refactoring and cleanup effort. Each maps to roadma
 - [x] **AUDIT-01**: Perform a general codebase audit for performance bottlenecks
 - [x] **AUDIT-02**: Perform a general codebase audit for hidden bugs and logic errors
 - [x] **AUDIT-03**: Perform a general codebase audit for security vulnerabilities
-- [ ] **AUDIT-04**: Implement fixes for all critical and high-priority issues discovered during the audit
+- [x] **AUDIT-04**: Implement fixes for all critical and high-priority issues discovered during the audit
 
 ### Refactoring & Cleanup
 
 - [ ] **RFACT-01**: Statically map all frontend API calls to corresponding backend routes
 - [ ] **RFACT-02**: Identify and document unused backend routes and database tables
-- [ ] **RFACT-03**: Safely remove unused backend routes and associated dead code
-- [ ] **RFACT-04**: Safely drop unused database tables and clean up the database schema
+- [x] **RFACT-03**: Safely remove unused backend routes and associated dead code
+- [x] **RFACT-04**: Safely drop unused database tables and clean up the database schema
 
 ## v2 Requirements
 
@@ -46,11 +46,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUDIT-01 | Phase 1 | Complete |
 | AUDIT-02 | Phase 1 | Complete |
 | AUDIT-03 | Phase 1 | Complete |
-| AUDIT-04 | Phase 2 | Pending |
+| AUDIT-04 | Phase 2 | Complete |
 | RFACT-01 | Phase 3 | Pending |
 | RFACT-02 | Phase 3 | Pending |
-| RFACT-03 | Phase 4 | Pending |
-| RFACT-04 | Phase 4 | Pending |
+| RFACT-03 | Phase 4 | Complete |
+| RFACT-04 | Phase 4 | Complete |
 
 **Coverage:**
 
