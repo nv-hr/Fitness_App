@@ -17,7 +17,7 @@
  * @param {React.ReactNode} props.children  - The actual input/select element.
  * @returns {JSX.Element}
  */
-function FormField({ label, id, error, icon, children }) {
+export default function FormField({ label, id, error, icon, children }) {
   return (
     <div>
       <label
