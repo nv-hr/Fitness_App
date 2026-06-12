@@ -5,7 +5,7 @@ export async function getWeeklyPlan(weekStart) {
   return apiGet(`/api/weekly-plans${params}`);
 }
 
-async function generateWeeklyPlan(weekStart, availableDays, force) {
+export async function generateWeeklyPlan(weekStart, availableDays, force) {
   return apiPost('/api/weekly-plans/generate', {
     weekStart,
     ...(availableDays != null && { availableDays }),
@@ -21,7 +21,7 @@ export function generateWeeklyPlanStream(weekStart, availableDays, force, onChun
   }, onChunk, onDone, onError);
 }
 
-async function swapActivity(weekStart, activityId, dayIndex) {
+export async function swapActivity(weekStart, activityId, dayIndex) {
   return apiPost('/api/weekly-plans/swap', { weekStart, activityId, dayIndex });
 }
 
@@ -43,7 +43,7 @@ export async function toggleActivityComplete(weekStart, dayIndex, activityId, co
   return apiPost('/api/weekly-plans/toggle-complete', { weekStart, dayIndex, activityId, completed });
 }
 
-async function regenerateDay(weekStart, dayIndex, availableDays) {
+export async function regenerateDay(weekStart, dayIndex, availableDays) {
   return apiPost('/api/weekly-plans/regenerate-day', {
     weekStart,
     dayIndex,
@@ -51,7 +51,7 @@ async function regenerateDay(weekStart, dayIndex, availableDays) {
   });
 }
 
-function regenerateDayStream(weekStart, dayIndex, availableDays, onChunk, onDone, onError) {
+export function regenerateDayStream(weekStart, dayIndex, availableDays, onChunk, onDone, onError) {
   return fetchSseStream('/api/weekly-plans/regenerate-day-stream', {
     weekStart,
     dayIndex,
