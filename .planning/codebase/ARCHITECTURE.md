@@ -1,18 +1,21 @@
-# System Architecture
+# Architecture
 
-The application is structured as a full-stack monorepo with distinct frontend and backend workspaces.
+## High-Level Architecture
+The project is a monorepo containing a full-stack web application:
+- **Frontend**: Single Page Application built with React and Vite. It communicates with the backend via REST API. Features are organized modularly (auth, food-log, activities, profile, progress).
+- **Backend**: RESTful API built with Express 5 using ESM. It acts as the orchestration layer and data provider.
+- **Database**: PostgreSQL hosted on Supabase.
 
-## Frontend Workspace (`/frontend`)
-- A React Single Page Application (SPA) built with Vite.
-- Communicates with the backend REST API.
-- Uses TailwindCSS for styling and motion for animations.
+## Backend Architecture
+Follows a layered approach:
+- `routes/`: Defines the API endpoints.
+- `controllers/`: Handles incoming requests and orchestrates logic.
+- `middlewares/`: Handles cross-cutting concerns like auth, validation, error handling.
+- `services/`: Contains core business logic and integration with external APIs (like OpenRouter).
+- `repositories/`: Handles raw database queries using the `pg` driver without an ORM.
 
-## Backend Workspace (`/backend`)
-- An Express.js REST API server.
-- Handles business logic, database interactions, and external API calls (e.g., Google Gemini).
-- Contains a `prompts` directory, indicating prompt engineering is centralized here.
-
-## Communication
-- Frontend runs on a development server (default port 3000, exposed to 0.0.0.0).
-- Backend runs on a separate development server (port 3001).
-- They likely communicate via HTTP REST endpoints.
+## Frontend Architecture
+Follows feature-based folder structure:
+- `app/`: Global providers and routing setup.
+- `features/`: Specific domain modules (e.g., auth, calendar, food-log).
+- `shared/`: Shared components, utilities, and hooks across features.

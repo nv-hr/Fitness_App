@@ -1,6 +1,5 @@
-# External Integrations
+# Integrations
 
-## Google Gemini API
-- **SDK**: `@google/genai`
-- **Usage**: Used in the backend to provide AI-powered features for the fitness app (likely workout generation, diet plans, chat, etc.).
-- **Configuration**: Uses `.env` for managing API keys (e.g., `GEMINI_API_KEY`).
+- **Google OAuth 2.0**: Used via Passport for user authentication.
+- **Supabase PostgreSQL**: Used as the primary relational database.
+- **OpenRouter API**: Used for accessing LLMs to generate personalized activity and meal plans.
