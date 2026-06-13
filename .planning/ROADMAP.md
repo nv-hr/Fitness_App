@@ -1,30 +1,35 @@
-# Roadmap v1.1
+# Roadmap: Fitness App
 
-**2 phases** | **6 requirements mapped** | All covered ✓
+## Milestones
 
-| # | Phase | Goal | Requirements | Success Criteria |
-|---|-------|------|--------------|------------------|
-| 4 | Frontend Static Analysis & Deduplication | 2/3 | In Progress|  |
-| 5 | Backend Static Analysis & Deduplication | 1/1 | Complete   | 2026-06-12 |
+- ✅ **v1.0** — Phases 1-3 (shipped 2026-06-12)
+- ✅ **v1.1 Static Analysis & Deduplication** — Phases 4-5 (shipped 2026-06-13)
 
-### Phase Details
+## Phases
 
-### Phase 4: Frontend Static Analysis & Deduplication
+<details>
+<summary>✅ v1.0 (Phases 1-3) — SHIPPED 2026-06-12</summary>
 
-**Goal**: Identify unused/duplicated code in frontend and refactor shared UI/logic
-**Requirements**: FE-01, FE-02, FE-03
-**Success Criteria**:
+- [x] Phase 1: General Codebase Audit
+- [x] Phase 2: Frontend Static Analysis Mapping
+- [x] Phase 3: Cleanup Issue Resolution
 
-1. Use fallow or eslint to identify dead and duplicate code
-2. Dead frontend code removed
-3. Duplicated UI components extracted into shared components
+</details>
 
-### Phase 5: Backend Static Analysis & Deduplication
+<details>
+<summary>✅ v1.1 Static Analysis & Deduplication (Phases 4-5) — SHIPPED 2026-06-13</summary>
 
-**Goal**: Identify unused/duplicated code in backend and refactor shared services
-**Requirements**: BE-01, BE-02, BE-03
-**Success Criteria**:
+- [x] Phase 4: Frontend Static Analysis & Deduplication (3/3 plans) — completed 2026-06-13
+- [x] Phase 5: Backend Static Analysis & Deduplication (1/1 plan) — completed 2026-06-13
 
-1. Use static analysis to find dead and duplicate backend code
-2. Dead backend code removed
-3. Duplicated route handlers and queries extracted to shared modules
+</details>
+
+## Progress
+
+| Phase             | Milestone | Plans Complete | Status      | Completed  |
+| ----------------- | --------- | -------------- | ----------- | ---------- |
+| 1. General Codebase Audit | v1.0 | - | Complete | 2026-06-12 |
+| 2. Frontend Static Analysis Mapping | v1.0 | - | Complete | 2026-06-12 |
+| 3. Cleanup Issue Resolution | v1.0 | - | Complete | 2026-06-12 |
+| 4. Frontend Static Analysis & Deduplication | v1.1 | 3/3 | Complete | 2026-06-13 |
+| 5. Backend Static Analysis & Deduplication | v1.1 | 1/1 | Complete | 2026-06-13 |
