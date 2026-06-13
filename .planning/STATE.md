@@ -36,3 +36,9 @@ Last activity: 2026-06-12 -- Phase 05 marked complete
 ## Operator Next Steps
 
 - Start the next milestone with /gsd-new-milestone
+
+## Quick Tasks Completed
+
+| Date | Slug | Description |
+| ---- | ---- | ----------- |
+| 2026-06-13 | remove-deprecated-tests | Remove deprecated feature test on frontend and backend |
