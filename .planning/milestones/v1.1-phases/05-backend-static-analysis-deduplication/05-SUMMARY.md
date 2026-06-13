@@ -1,3 +1,6 @@
+---
+requirements_completed: [BE-01, BE-02, BE-03]
+---
 # Plan 05 Summary
 
 ## Objective
