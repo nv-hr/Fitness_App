@@ -17,26 +17,26 @@ describe('ActivityLogForm', () => {
 
   test('has duration input of type number', () => {
     render(<ActivityLogForm activity={mockActivity} onSubmit={vi.fn()} onCancel={vi.fn()} />);
-    const input = screen.getByLabelText('Duration (minutes)');
+    const input = screen.getByLabelText('Workout Duration (minutes)');
     expect(input).toHaveAttribute('type', 'number');
   });
 
   test('duration input has min=1 and max=1440', () => {
     render(<ActivityLogForm activity={mockActivity} onSubmit={vi.fn()} onCancel={vi.fn()} />);
-    const input = screen.getByLabelText('Duration (minutes)');
+    const input = screen.getByLabelText('Workout Duration (minutes)');
     expect(input).toHaveAttribute('min', '1');
     expect(input).toHaveAttribute('max', '1440');
   });
 
   test('has intensity select element', () => {
     render(<ActivityLogForm activity={mockActivity} onSubmit={vi.fn()} onCancel={vi.fn()} />);
-    expect(screen.getByLabelText('Intensity')).toBeInTheDocument();
-    expect(screen.getByLabelText('Intensity').tagName).toBe('SELECT');
+    expect(screen.getByLabelText('Physical Intensity')).toBeInTheDocument();
+    expect(screen.getByLabelText('Physical Intensity').tagName).toBe('SELECT');
   });
 
   test('intensity options include Light, Moderate, Vigorous', () => {
     render(<ActivityLogForm activity={mockActivity} onSubmit={vi.fn()} onCancel={vi.fn()} />);
-    const select = screen.getByLabelText('Intensity');
+    const select = screen.getByLabelText('Physical Intensity');
     expect(select).toContainHTML('value="light"');
     expect(select).toContainHTML('value="moderate"');
     expect(select).toContainHTML('value="vigorous"');
@@ -44,13 +44,13 @@ describe('ActivityLogForm', () => {
 
   test('has date input of type date', () => {
     render(<ActivityLogForm activity={mockActivity} onSubmit={vi.fn()} onCancel={vi.fn()} />);
-    const input = screen.getByLabelText('Date');
+    const input = screen.getByLabelText('Log Date');
     expect(input).toHaveAttribute('type', 'date');
   });
 
   test('renders "Estimated calories burned" preview', () => {
     render(<ActivityLogForm activity={mockActivity} onSubmit={vi.fn()} onCancel={vi.fn()} />);
-    expect(screen.getByText(/Estimated calories burned/)).toBeInTheDocument();
+    expect(screen.getByText(/Estimated Calories Burned/i)).toBeInTheDocument();
   });
 
   test('has "Log Activity" submit button and "Cancel" button', () => {

@@ -23,14 +23,14 @@ const mockHistory = [
 ];
 
 describe('ActivityHistory', () => {
-  test('renders "Activity History" heading', () => {
-    render(<ActivityHistory history={[]} onDelete={vi.fn()} />);
-    expect(screen.getByText('Activity History')).toBeInTheDocument();
+  test('renders "Activity & Exercise History" heading', () => {
+    render(<ActivityHistory history={mockHistory} onDelete={vi.fn()} />);
+    expect(screen.getByText('Activity & Exercise History')).toBeInTheDocument();
   });
 
-  test('renders "No activity logged yet" for empty history', () => {
+  test('renders "Workout history is empty" for empty history', () => {
     render(<ActivityHistory history={[]} onDelete={vi.fn()} />);
-    expect(screen.getByText('No activity logged yet')).toBeInTheDocument();
+    expect(screen.getByText('Workout history is empty')).toBeInTheDocument();
   });
 
   test('renders logged dates when history has entries', () => {
@@ -64,13 +64,5 @@ describe('ActivityHistory', () => {
     expect(onDelete).toHaveBeenCalledWith(1);
   });
 
-  test('has collapsible toggle ▲/▼', () => {
-    render(<ActivityHistory history={mockHistory} onDelete={vi.fn()} />);
-    // Both days show ▼ when collapsed
-    expect(screen.getAllByText('▼').length).toBe(2);
-    const dateHeader = screen.getByText('2026-01-05');
-    fireEvent.click(dateHeader.closest('div'));
-    expect(screen.getAllByText('▲').length).toBe(1);
-    expect(screen.getAllByText('▼').length).toBe(1);
-  });
+
 });

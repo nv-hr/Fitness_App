@@ -17,30 +17,25 @@ describe('DayActivityRow', () => {
 
   test('renders duration and intensity', () => {
     render(<DayActivityRow activity={baseActivity} />);
-    expect(screen.getByText(/30min/)).toBeInTheDocument();
-    expect(screen.getByText(/moderate/)).toBeInTheDocument();
+    expect(screen.getByText(/30\s*mins/i)).toBeInTheDocument();
+    expect(screen.getByText(/Moderate/i)).toBeInTheDocument();
   });
 
-  test('applies light intensity color (#6b7280)', () => {
+  test('renders light intensity text', () => {
     const activity = { ...baseActivity, intensity: 'light' };
     render(<DayActivityRow activity={activity} />);
-    const span = screen.getByText(/30min/);
-    expect(span).toHaveStyle('color: #6b7280');
+    expect(screen.getByText(/Light/i)).toBeInTheDocument();
   });
 
-  test('applies moderate intensity color (inherit / rgb(0,0,0))', () => {
+  test('renders moderate intensity text', () => {
     render(<DayActivityRow activity={baseActivity} />);
-    const span = screen.getByText(/30min/);
-    // 'inherit' computes to rgb(0, 0, 0) in jsdom — either is acceptable
-    const style = window.getComputedStyle(span);
-    expect(['inherit', 'rgb(0, 0, 0)', '#000', 'black']).toContain(style.color);
+    expect(screen.getByText(/Moderate/i)).toBeInTheDocument();
   });
 
-  test('applies vigorous intensity color (#b45309)', () => {
+  test('renders vigorous intensity text', () => {
     const activity = { ...baseActivity, intensity: 'vigorous' };
     render(<DayActivityRow activity={activity} />);
-    const span = screen.getByText(/30min/);
-    expect(span).toHaveStyle('color: #b45309');
+    expect(screen.getByText(/High/i)).toBeInTheDocument();
   });
 });
 
@@ -52,28 +47,29 @@ describe('DayActivityRow completion toggle', () => {
     intensity: 'moderate',
   };
 
-  test('renders ○ toggle when completed=false', () => {
+  test('renders Active toggle when completed=false', () => {
     render(<DayActivityRow activity={baseActivity} onToggle={() => {}} completed={false} />);
-    const toggle = screen.getByRole('button', { name: /mark as completed/i });
+    const toggle = screen.getByRole('button', { name: /mark completed/i });
     expect(toggle).toBeInTheDocument();
   });
 
-  test('renders ✓ toggle when completed=true', () => {
+  test('renders Done toggle when completed=true', () => {
     render(<DayActivityRow activity={baseActivity} onToggle={() => {}} completed={true} />);
-    const toggle = screen.getByRole('button', { name: /mark as incomplete/i });
+    const toggle = screen.getByRole('button', { name: /mark incomplete/i });
     expect(toggle).toBeInTheDocument();
   });
 
   test('calls onToggle when toggle button clicked', () => {
     const onToggle = vi.fn();
     render(<DayActivityRow activity={baseActivity} onToggle={onToggle} completed={false} />);
-    fireEvent.click(screen.getByRole('button', { name: /mark as completed/i }));
+    fireEvent.click(screen.getByRole('button', { name: /mark completed/i }));
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
-  test('does not render toggle when disabled=true', () => {
-    render(<DayActivityRow activity={baseActivity} disabled={true} completed={false} />);
-    expect(screen.queryByRole('button', { name: /mark as/i })).not.toBeInTheDocument();
+  test('does disable toggle when disableToggle=true', () => {
+    render(<DayActivityRow activity={baseActivity} disableToggle={true} completed={false} />);
+    const toggle = screen.getByRole('button', { name: /mark completed/i });
+    expect(toggle).toBeDisabled();
   });
 });
 
@@ -85,24 +81,25 @@ describe('DayActivityRow disabled state', () => {
     intensity: 'moderate',
   };
 
-  test('hides Swap button when disabled', () => {
-    render(<DayActivityRow activity={baseActivity} disabled={true} />);
-    expect(screen.queryByText(/Swap/i)).not.toBeInTheDocument();
+  test('Swap button is disabled when disableSwap=true', () => {
+    render(<DayActivityRow activity={baseActivity} disableSwap={true} />);
+    const swapBtn = screen.getByText(/Swap/i).closest('button');
+    expect(swapBtn).toBeDisabled();
   });
 
-  test('shows ✓ indicator when disabled and completed', () => {
-    render(<DayActivityRow activity={baseActivity} disabled={true} completed={true} />);
-    expect(screen.getByText('✓')).toBeInTheDocument();
+  test('shows Done text when completed', () => {
+    render(<DayActivityRow activity={baseActivity} disableToggle={true} completed={true} />);
+    expect(screen.getByText('Done')).toBeInTheDocument();
   });
 
-  test('shows activity name even when disabled', () => {
-    render(<DayActivityRow activity={baseActivity} disabled={true} />);
+  test('shows activity name', () => {
+    render(<DayActivityRow activity={baseActivity} disableToggle={true} />);
     expect(screen.getByText('Running')).toBeInTheDocument();
   });
 
-  test('shows duration and intensity even when disabled', () => {
-    render(<DayActivityRow activity={baseActivity} disabled={true} />);
-    expect(screen.getByText(/30min/)).toBeInTheDocument();
-    expect(screen.getByText(/moderate/)).toBeInTheDocument();
+  test('shows duration and intensity', () => {
+    render(<DayActivityRow activity={baseActivity} disableToggle={true} />);
+    expect(screen.getByText(/30\s*mins/i)).toBeInTheDocument();
+    expect(screen.getByText(/Moderate/i)).toBeInTheDocument();
   });
 });

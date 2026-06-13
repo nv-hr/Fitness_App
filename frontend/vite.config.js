@@ -81,6 +81,11 @@ function rolldownCompatPlugin() {
 
 export default defineConfig({
   plugins: [tailwindcss(), react(), esToolkitCompatPlugin()],
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/setupTests.js'],
+  },
   optimizeDeps: {
     rolldownOptions: {
       plugins: [rolldownCompatPlugin()],

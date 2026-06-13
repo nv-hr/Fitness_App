@@ -46,7 +46,7 @@ describe('TrendPredictionCard', () => {
   it('renders loading state', () => {
     weightApi.getWeightHistory.mockReturnValue(new Promise(() => {}));
     render(React.createElement(TrendPredictionCard));
-    expect(screen.getByText('Calculating trend...')).toBeTruthy();
+    expect(screen.getByText('Calculating trend…')).toBeTruthy();
   });
 
   it('renders error state', async () => {
@@ -62,7 +62,7 @@ describe('TrendPredictionCard', () => {
     render(React.createElement(TrendPredictionCard));
     await waitFor(() => {
       expect(
-        screen.getByText('Log more weight entries to see your trend.')
+        screen.getByText('Log more weight entries to see your trend prediction.')
       ).toBeTruthy();
     });
   });
@@ -85,7 +85,7 @@ describe('TrendPredictionCard', () => {
     render(React.createElement(TrendPredictionCard));
     await waitFor(() => {
       expect(
-        screen.getByText('Log more weight entries to see your trend.')
+        screen.getByText('Log more weight entries to see your trend prediction.')
       ).toBeTruthy();
     });
   });
@@ -114,7 +114,7 @@ describe('TrendPredictionCard', () => {
     render(React.createElement(TrendPredictionCard));
     await waitFor(() => {
       expect(
-        screen.getByText('Log more weight entries to see your trend.')
+        screen.getByText('Log more weight entries to see your trend prediction.')
       ).toBeTruthy();
     });
   });
@@ -318,7 +318,7 @@ describe('TrendPredictionCard', () => {
       })
     );
     await waitFor(() => {
-      expect(screen.getByText('Stable')).toBeTruthy();
+      expect(screen.getByText('Stable weight')).toBeTruthy();
     });
   });
 
@@ -377,7 +377,7 @@ describe('TrendPredictionCard', () => {
       })
     );
     await waitFor(() => {
-      expect(screen.getByText(/Estimated completion:/)).toBeTruthy();
+      expect(screen.getByText(/Estimated goal reached/)).toBeTruthy();
     });
   });
 
@@ -410,7 +410,7 @@ describe('TrendPredictionCard', () => {
       })
     );
     await waitFor(() => {
-      expect(screen.getByText(/Confidence:/)).toBeTruthy();
+      expect(screen.getByText(/Strong fit/)).toBeTruthy();
     });
   });
 });
