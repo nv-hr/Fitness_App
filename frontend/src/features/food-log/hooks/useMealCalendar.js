@@ -20,6 +20,7 @@ import {
   regenerateCategoryStream,
 } from '../api/dailyMealPlanApi.js';
 import { useCountdownTimer } from '../../../shared/hooks/useCountdownTimer.js';
+import { usePollingWithBackoff } from '../../../shared/hooks/usePollingWithBackoff.js';
 
 /**
  * Manages all state and API interactions for the meal calendar view.
@@ -59,8 +60,10 @@ export function useMealCalendar(onDaySelect) {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
-    const handleUpdate = () => {
-      setRefreshTrigger((prev) => prev + 1);
+    const handleUpdate = (e) => {
+      if (!e.detail || e.detail.type === 'plan-update' || e.detail.type === 'food-log') {
+        setRefreshTrigger((prev) => prev + 1);
+      }
     };
     window.addEventListener('health-system-update', handleUpdate);
     return () => {
@@ -80,6 +83,8 @@ export function useMealCalendar(onDaySelect) {
       if (onDaySelect) onDaySelect(d);
       return d;
     });
+    setDayPlan(null);
+    setPlanLoading(true);
   }, [onDaySelect]);
 
   const handleNextDay = useCallback(() => {
@@ -89,11 +94,15 @@ export function useMealCalendar(onDaySelect) {
       if (onDaySelect) onDaySelect(d);
       return d;
     });
+    setDayPlan(null);
+    setPlanLoading(true);
   }, [onDaySelect]);
 
   const handleGoToToday = useCallback(() => {
     const today = startOfToday();
     setSelectedDay(today);
+    setDayPlan(null);
+    setPlanLoading(true);
     if (onDaySelect) onDaySelect(today);
   }, [onDaySelect]);
 
@@ -120,6 +129,39 @@ export function useMealCalendar(onDaySelect) {
     fetchDayPlan();
     return () => { cancelled = true; };
   }, [selectedDay, refreshTrigger]);
+
+  // ── Smart Polling ──────────────────────────────────────────────────────────
+
+  const pollFn = useCallback(async (dateStr) => {
+    const res = await getDailyMealPlan(dateStr);
+    const plan = res.data?.plan;
+
+    if (plan?.meals && plan.meals.length > 0) {
+      setRefreshTrigger(prev => prev + 1);
+      window.dispatchEvent(new CustomEvent('health-system-update', { detail: { type: 'plan-update' } }));
+      setGenerating(false);
+      setGeneratingStatus('');
+      return true;
+    }
+    return false;
+  }, []);
+
+  const handlePollTimeout = useCallback(() => {
+    setGenerating(false);
+    setGeneratingStatus('');
+    setToast({ message: 'Plan generation timed out. Please try again.' });
+  }, []);
+
+  const startPolling = usePollingWithBackoff(pollFn, {
+    initialDelay: 3000,
+    maxAttempts: 10,
+    factor: 1.5,
+    onTimeout: handlePollTimeout
+  });
+
+  const pollForDailyPlan = useCallback((dateStr) => {
+    startPolling(dateStr);
+  }, [startPolling]);
 
   // ── Manual full-day regeneration ────────────────────────────────────────────
 
@@ -186,15 +228,24 @@ export function useMealCalendar(onDaySelect) {
               resolve();
             },
             (err) => {
-              reject(err);
+              if (err.status === 409) {
+                setGeneratingStatus('Generation in progress...');
+                pollForDailyPlan(dateStr);
+                reject(new Error('polling_started'));
+              } else {
+                reject(err);
+              }
             }
           );
         });
       }
       setGenerating(false);
       setGeneratingStatus('');
-      window.dispatchEvent(new CustomEvent('health-system-update'));
+      window.dispatchEvent(new CustomEvent('health-system-update', { detail: { type: 'plan-update' } }));
     } catch (err) {
+      if (err.message === 'polling_started') {
+        return;
+      }
       if (err.retryAfter || err.code === 'RATE_LIMITED') {
         setGenRetryAfter(err.retryAfter || 150);
       } else {
@@ -203,19 +254,10 @@ export function useMealCalendar(onDaySelect) {
       setGenerating(false);
       setGeneratingStatus('');
     }
-  }, [setGenRetryAfter]);
+  }, [setGenRetryAfter, pollForDailyPlan]);
 
-  // ── Auto-generate plan for today if it's missing ────────────────────────────
-  useEffect(() => {
-    if (!selectedDay) return;
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    const selStr = format(selectedDay, 'yyyy-MM-dd');
-
-    if (selStr === todayStr && !planLoading && !dayPlan && !generating && genRetryAfter === null) {
-      handleGenerateDay();
-    }
-  }, [selectedDay, planLoading, dayPlan, generating, genRetryAfter, handleGenerateDay]);
-
+  // Auto-generation on mount has been disabled by user request.
+  // Users must manually trigger plan generation via the UI.
   // ── Log all items in a meal ─────────────────────────────────────────────────
 
   const handleLogMeal = useCallback(async (mealType) => {
@@ -226,7 +268,7 @@ export function useMealCalendar(onDaySelect) {
       await logMeals(dateStr, [mealType]);
       const res = await getDailyMealPlan(dateStr);
       if (res.data?.plan) setDayPlan(res.data.plan);
-      window.dispatchEvent(new CustomEvent('health-system-update'));
+      window.dispatchEvent(new CustomEvent('health-system-update', { detail: { type: 'food-log' } }));
     } catch (err) {
       setToast({ message: err.message || 'Failed to record meals' });
     } finally {
@@ -255,7 +297,7 @@ export function useMealCalendar(onDaySelect) {
 
     try {
       await toggleItemLogged(dateStr, mealType, foodId, newLogged);
-      window.dispatchEvent(new CustomEvent('health-system-update'));
+      window.dispatchEvent(new CustomEvent('health-system-update', { detail: { type: 'food-log' } }));
     } catch (err) {
       // Roll back optimistic update on failure
       setDayPlan((prev) => prev ? patchPlan(prev, currentLogged) : prev);
@@ -302,8 +344,13 @@ export function useMealCalendar(onDaySelect) {
         );
       });
       setGeneratingStatus('');
-      window.dispatchEvent(new CustomEvent('health-system-update'));
+      window.dispatchEvent(new CustomEvent('health-system-update', { detail: { type: 'plan-update' } }));
     } catch (err) {
+      if (err.status === 409) {
+        setGeneratingStatus('Generation in progress...');
+        pollForDailyPlan(dateStr);
+        return;
+      }
       setGeneratingStatus('');
       if (err.retryAfter || err.code === 'RATE_LIMITED') {
         setSwapRetryAfter(err.retryAfter || 300);
@@ -314,7 +361,7 @@ export function useMealCalendar(onDaySelect) {
     } finally {
       setRegeneratingCat(null);
     }
-  }, [selectedDay, swapRetryAfter, dayPlan, setSwapRetryAfter]);
+  }, [selectedDay, swapRetryAfter, dayPlan, setSwapRetryAfter, pollForDailyPlan]);
 
   // ── Derived state ────────────────────────────────────────────────────────────
 

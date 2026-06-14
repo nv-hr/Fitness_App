@@ -52,6 +52,8 @@ const planCache = new NodeCache({ stdTTL: 3600, checkperiod: 600, maxKeys: 1000 
 // Serializes read-modify-write operations on the same cache key
 const locks = new Map();
 
+export const activeGenerations = new Map();
+
 export async function acquireLock(key, timeout = 15000) {
   const start = Date.now();
   while (locks.get(key)) {
@@ -433,13 +435,26 @@ export function clearCachedPlan(userId, weekStart, planType = 'activity') {
 }
 
 async function generateFallbackPlan(deps) {
-  const { getTopActivities, userId, weekStart, availableDays = 4 } = deps;
+  const { getTopActivities, getActivities, userId, weekStart, availableDays = 4 } = deps;
 
   let topActivities;
   try {
     topActivities = await getTopActivities(userId, 5);
   } catch {
     topActivities = [];
+  }
+
+  if (topActivities.length === 0) {
+    if (getActivities) {
+      try {
+        const dbActivities = await getActivities();
+        if (dbActivities && dbActivities.length > 0) {
+          topActivities = [...dbActivities].sort(() => Math.random() - 0.5).slice(0, 5);
+        }
+      } catch (err) {
+        // ignore
+      }
+    }
   }
 
   if (topActivities.length === 0) {
@@ -500,12 +515,19 @@ async function generateFallbackPlan(deps) {
 export async function generateWeeklyPlan(deps) {
   const { getProfile, getActivityHistory, getActivities, getTopActivities, availableDays = 4 } = deps;
 
-  const cached = getCachedPlan(deps.userId, deps.weekStart);
-  if (cached) {
-    return { plan: cached, fromCache: true, status: 'active' };
+  const lockKey = `weekly_${deps.userId}_${deps.weekStart}`;
+  if (activeGenerations.has(lockKey)) {
+    throw new AppError('GenerationConflict', 'A weekly plan generation is already in progress.', 409);
   }
+  activeGenerations.set(lockKey, true);
 
-  console.log(`[LLM] Activities planning running for user ${deps.userId}, week ${deps.weekStart}`);
+  try {
+    const cached = getCachedPlan(deps.userId, deps.weekStart);
+    if (cached) {
+      return { plan: cached, fromCache: true, status: 'active' };
+    }
+
+    console.log(`[LLM] Activities planning running for user ${deps.userId}, week ${deps.weekStart}`);
 
   let profile, history, dbActivities;
   try {
@@ -517,13 +539,13 @@ export async function generateWeeklyPlan(deps) {
   } catch (err) {
     console.error('[LLM] Failed to fetch user data:', err.message);
     console.warn(`[LLM] Activities planning returning fallback for user ${deps.userId}`);
-    const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
+    const fallback = await generateFallbackPlan({ getTopActivities, getActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
     return { plan: fallback, fromCache: false, status: fallback.status };
   }
 
   if (!profile) {
     console.warn(`[LLM] Activities planning returning fallback for user ${deps.userId} (no profile)`);
-    const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
+    const fallback = await generateFallbackPlan({ getTopActivities, getActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
     return { plan: fallback, fromCache: false, status: fallback.status };
   }
 
@@ -634,8 +656,11 @@ export async function generateWeeklyPlan(deps) {
 
   console.warn('[LLM] All generation attempts failed, returning fallback');
   console.warn(`[LLM] Activities planning returning fallback for user ${deps.userId}`);
-  const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
+  const fallback = await generateFallbackPlan({ getTopActivities, getActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
   return { plan: fallback, fromCache: false, status: fallback.status };
+  } finally {
+    activeGenerations.delete(lockKey);
+  }
 }
 
 export async function regenerateDay(deps, dayIndex) {

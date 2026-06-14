@@ -22,6 +22,9 @@ router.get('/summary', foodController.getDailySummary);
 // GET /api/food/logs?date= — Individual log entries for a date
 router.get('/logs', foodController.getDailyLogs);
 
+// GET /api/food/daily?date= — Daily combined logs and summary
+router.get('/daily', foodController.getDaily);
+
 // GET /api/food/history?days= — Calorie history
 router.get('/history', foodController.getLogHistory);
 

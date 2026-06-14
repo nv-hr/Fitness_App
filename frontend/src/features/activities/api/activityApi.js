@@ -12,8 +12,12 @@ async function getActivityLogs(date) {
   return apiGet(`/api/activities/logs?date=${encodeURIComponent(date)}`);
 }
 
-export async function getActivityHistory(days = 7) {
-  return apiGet(`/api/activities/history?days=${encodeURIComponent(days)}&includeEntries=true`);
+export async function getActivityHistory(days = 7, includeEntries = false) {
+  let url = `/api/activities/history?days=${encodeURIComponent(days)}`;
+  if (includeEntries) {
+    url += '&includeEntries=true';
+  }
+  return apiGet(url);
 }
 
 export async function deleteActivityLog(id) {

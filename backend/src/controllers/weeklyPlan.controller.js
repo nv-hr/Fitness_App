@@ -15,22 +15,6 @@ import { findByUserAndWeek, upsertPlan, syncWeeklyPlanCompletedStates } from '..
 import { isDateWithinTimezoneRange } from '../utils/date.utils.js';
 import { setupSSE } from '../utils/sse.utils.js';
 
-// CR-01: Migration failure cooldown — prevents infinite retry on every GET
-// when LLM is unavailable. After a failed attempt, subsequent requests
-// skip migration for a configurable window.
-const migrationFailCooldown = new Map();
-const MIGRATION_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
-
-function isMigrationOnCooldown(userId, weekStart) {
-  const key = `${userId}_${weekStart}`;
-  const lastAttempt = migrationFailCooldown.get(key);
-  if (!lastAttempt) return false;
-  if (Date.now() - lastAttempt > MIGRATION_COOLDOWN_MS) {
-    migrationFailCooldown.delete(key);
-    return false;
-  }
-  return true;
-}
 
 // WR-02: Infer availableDays from an old-format plan's structure (best-effort).
 // Counts non-empty activity days and clamps to [4, 6]; falls back to 5 if
@@ -84,23 +68,6 @@ async function get(req, res, next) {
     // Try in-memory cache first (faster, no DB hit)
     const cached = getCachedPlan(userId, weekStart);
     if (cached && cached.status !== 'fallback') {
-      // D-01: Check for old-format plan in cache (defensive — migrated plans always
-      // have format_version: 1, but old-format plans cached via swapHandler CR-03
-      // would lack it).
-      if (isOldFormat(cached)) {
-        if (!isMigrationOnCooldown(userId, weekStart)) {
-          const migrated = await attemptMigration(userId, weekStart);
-          if (migrated) {
-            setCachedPlan(userId, weekStart, migrated);
-            return successResponse(res, { plan: migrated, fromCache: false });
-          }
-          // CR-01: Record failed migration to enforce cooldown
-          migrationFailCooldown.set(`${userId}_${weekStart}`, Date.now());
-        }
-        // D-03 / CR-06: Return cached plan as-is — do NOT fall through to DB path,
-        // which would trigger a second migration attempt on the same request.
-        console.warn(`[Migration] LLM failed or cooldown active for user ${userId}, week ${weekStart}. Returning cached old-format plan.`);
-      }
       return successResponse(res, { plan: cached, fromCache: true });
     }
 
@@ -119,21 +86,6 @@ async function get(req, res, next) {
 
     const row = rows[0];
 
-    // D-01: Lazy migration — detect old format by absence of format_version
-    // If the DB plan_data lacks format_version, trigger silent regeneration.
-    if (row.plan_data && isOldFormat(row.plan_data)) {
-      if (!isMigrationOnCooldown(userId, weekStart)) {
-        const migrated = await attemptMigration(userId, weekStart);
-        if (migrated) {
-          setCachedPlan(userId, weekStart, migrated);
-          return successResponse(res, { plan: migrated, fromCache: false });
-        }
-        // CR-01: Record failed migration to enforce cooldown
-        migrationFailCooldown.set(`${userId}_${weekStart}`, Date.now());
-      }
-      // D-03: LLM failure — keep old format, try again after cooldown expires
-      console.warn(`[Migration] LLM failed or cooldown active for user ${userId}, week ${weekStart}. Returning DB old-format plan.`);
-    }
 
     const plan = {
       days: row.plan_data?.days || [],
@@ -306,7 +258,6 @@ async function swapHandler(req, res, next) {
         console.log(`[Migration] Using inferred availableDays=${inferredDays} from old plan (${planForSwap.days?.length || 0} total days, ${planForSwap.days?.filter(d => d.activities?.length > 0).length || 0} activity days).`);
         const migrationResult = await generateWeeklyPlan(migrationDeps);
         if (!migrationResult.plan || !Array.isArray(migrationResult.plan.days) || migrationResult.plan.days.length === 0) {
-          migrationFailCooldown.set(`${userId}_${targetWeekStart}`, Date.now());
           throw new AppError('MigrationError', 'Failed to migrate old-format plan. Cannot proceed with swap.', 500);
         }
         // Persist migrated plan to DB and cache
@@ -336,75 +287,7 @@ async function swapHandler(req, res, next) {
   }
 }
 
-/**
- * Attempt to migrate an old-format plan to the new variable-day format.
- * D-01: Triggers on GET request (lazy regeneration).
- * D-03: On LLM failure, returns null — caller keeps old format.
- * D-02: Transparent — no extra response fields, no notification.
- *
- * @param {number} userId
- * @param {string} weekStart - ISO date string
- * @returns {Promise<object|null>} Migrated plan or null on failure
- */
-async function attemptMigration(userId, weekStart) {
-  // CR-01: Check cooldown before attempting migration
-  if (isMigrationOnCooldown(userId, weekStart)) {
-    console.warn(`[Migration] Cooldown active for user ${userId}, week ${weekStart}. Skipping migration.`);
-    return null;
-  }
 
-  console.log(`[Migration] Old-format plan detected for user ${userId}, week ${weekStart}. Regenerating...`);
-
-  // Clear cache to force fresh LLM call (D-04: prevents generateWeeklyPlan
-  // from returning a stale cached old-format plan)
-  clearCachedPlan(userId, weekStart);
-
-  // WR-02: Infer availableDays from the old plan structure rather than hardcoding 5.
-  // The old plan was cleared from cache above, so re-read from DB for inference.
-  // If DB read fails or returns no data, fall back to default of 5.
-  let inferredDays = 5;
-  try {
-    const dbPlan = await findByUserAndWeek(userId, weekStart);
-    inferredDays = inferAvailableDays(dbPlan?.plan_data || null);
-  } catch {
-    // DB read failure is non-fatal — use default
-  }
-  console.log(`[Migration] Using inferred availableDays=${inferredDays} for user ${userId}, week ${weekStart}.`);
-
-  const deps = {
-    getProfile: (id) => findProfileByUserId(id),
-    getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
-    getActivities: () => getAllActivities(),
-    getTopActivities: (id, limit) => getTopActivities(id, limit),
-    userId,
-    weekStart,
-    availableDays: inferredDays,
-  };
-
-  try {
-    const result = await generateWeeklyPlan(deps);
-    const newPlan = result.plan;
-
-    // Validate the generated plan has minimum required structure
-    if (!newPlan || !Array.isArray(newPlan.days) || newPlan.days.length === 0) {
-      console.warn(`[Migration] Regeneration produced invalid plan (days: ${newPlan?.days?.length || 0}). Keeping old format.`);
-      migrationFailCooldown.set(`${userId}_${weekStart}`, Date.now());
-      return null;
-    }
-
-    // Persist migrated plan to DB and cache
-    await upsertPlan(userId, weekStart, newPlan, 'active');
-    setCachedPlan(userId, weekStart, newPlan);
-    console.log(`[Migration] Successfully migrated plan for user ${userId}, week ${weekStart}.`);
-
-    return newPlan;
-  } catch (err) {
-    // D-03: LLM failure — keep old format, try again after cooldown
-    migrationFailCooldown.set(`${userId}_${weekStart}`, Date.now());
-    console.error(`[Migration] Failed: ${err.message}. Keeping old format for user ${userId}.`);
-    return null;
-  }
-}
 
 async function toggleComplete(req, res, next) {
   try {
@@ -659,7 +542,6 @@ async function swapStream(req, res, next) {
       };
       const migrationResult = await generateWeeklyPlan(migrationDeps);
       if (!migrationResult.plan || !Array.isArray(migrationResult.plan.days) || migrationResult.plan.days.length === 0) {
-        migrationFailCooldown.set(`${userId}_${targetWeekStart}`, Date.now());
         throw new AppError('MigrationError', 'Failed to migrate old-format plan. Cannot proceed with swap.', 500);
       }
       await upsertPlan(userId, targetWeekStart, migrationResult.plan, 'active');

@@ -3,9 +3,25 @@ import { ChevronDown, ChevronUp, Trash2, CalendarRange, Clock, Flame, AlertCircl
 
 export default function ActivityHistory({ history, onDelete }) {
   const [expandedDates, setExpandedDates] = useState({});
+  const [entriesCache, setEntriesCache] = useState({});
+  const [loadingDates, setLoadingDates] = useState({});
 
-  const toggleDate = (date) => {
-    setExpandedDates((prev) => ({ ...prev, [date]: !prev[date] }));
+  const toggleDate = async (date) => {
+    const isExpanding = !expandedDates[date];
+    setExpandedDates((prev) => ({ ...prev, [date]: isExpanding }));
+
+    if (isExpanding && !entriesCache[date]) {
+      setLoadingDates((prev) => ({ ...prev, [date]: true }));
+      try {
+        const { getActivityLogs } = await import('../api/activityApi.js');
+        const res = await getActivityLogs(date);
+        setEntriesCache((prev) => ({ ...prev, [date]: res.data?.logs || [] }));
+      } catch (err) {
+        console.error('Failed to fetch activity logs:', err);
+      } finally {
+        setLoadingDates((prev) => ({ ...prev, [date]: false }));
+      }
+    }
   };
 
   if (!history || history.length === 0) {
@@ -28,7 +44,8 @@ export default function ActivityHistory({ history, onDelete }) {
       <div className="space-y-3">
         {history.map((day) => {
           const isExpanded = expandedDates[day.logged_date];
-          const entries = day.entries || [];
+          const isLoading = loadingDates[day.logged_date];
+          const entries = entriesCache[day.logged_date] || day.entries || [];
 
           return (
             <div key={day.logged_date} className="overflow-hidden border border-slate-200/60 rounded-xl shadow-xs">
@@ -51,7 +68,11 @@ export default function ActivityHistory({ history, onDelete }) {
               {/* Expansion Detail Rows */}
               {isExpanded && (
                 <div className="divide-y divide-slate-100 bg-white px-4 py-1">
-                  {entries.length === 0 ? (
+                  {isLoading ? (
+                    <p className="text-xs text-slate-400 font-semibold text-center py-4">
+                      Loading details...
+                    </p>
+                  ) : entries.length === 0 ? (
                     <p className="text-xs text-slate-400 font-semibold text-center py-4">
                       Log details unavailable.
                     </p>
@@ -75,6 +96,11 @@ export default function ActivityHistory({ history, onDelete }) {
                           onClick={(e) => {
                             e.stopPropagation();
                             onDelete(entry.id);
+                            // Also optimistic remove from cache
+                            setEntriesCache((prev) => ({
+                              ...prev,
+                              [day.logged_date]: prev[day.logged_date].filter(e => e.id !== entry.id)
+                            }));
                           }}
                           className="flex items-center gap-1 px-3 py-1.5 border border-rose-100 hover:border-rose-200 text-rose-550 hover:text-rose-700 bg-rose-50/40 hover:bg-rose-50 text-xs font-bold rounded-lg transition-colors cursor-pointer min-h-[30px]"
                           title="Delete this workout record"

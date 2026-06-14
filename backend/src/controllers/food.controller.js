@@ -168,6 +168,45 @@ export async function getDailyLogs(req, res, next) {
 }
 
 /**
+ * GET /api/food/daily?date= — Daily calorie summary and logs combined.
+ */
+export async function getDaily(req, res, next) {
+  try {
+    const date = req.query.date || new Date().toISOString().split('T')[0];
+
+    const logs = await foodRepo.getDailyLogs(req.user.userId, date);
+
+    const rawTotal = await foodRepo.getDailyTotal(req.user.userId, date);
+    const totalConsumed = Number(rawTotal);
+
+    const profile = await findProfileByUserId(req.user.userId);
+    let calorieTarget = null;
+    if (profile) {
+      const tdee = calculateTdee(profile.weight_kg, profile.height_cm, profile.age, profile.gender, profile.activity_level);
+      if (tdee) {
+        calorieTarget = getCalorieTarget(tdee, profile.fitness_goal, profile.calorie_rate);
+      }
+    }
+
+    const remaining = calorieTarget !== null ? calorieTarget - totalConsumed : null;
+    const isExtremeDeficit = totalConsumed < 1200;
+
+    return successResponse(res, {
+      logs,
+      summary: {
+        date,
+        totalConsumed,
+        calorieTarget,
+        remaining,
+        isExtremeDeficit,
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * GET /api/food/history?days= — Calorie history for past days (LOG-04).
  */
 export async function getLogHistory(req, res, next) {

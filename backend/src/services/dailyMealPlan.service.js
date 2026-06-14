@@ -1,4 +1,4 @@
-import { buildPrompt, callLlmApi, getCachedPlan, setCachedPlan, callLlmStream } from './llm.service.js';
+import { buildPrompt, callLlmApi, getCachedPlan, setCachedPlan, callLlmStream, activeGenerations } from './llm.service.js';
 import { findByUserAndDate, upsertPlan, markItemLogged } from '../repositories/dailyMealPlan.repository.js';
 import { createFoodLog, deleteFoodLogByPlan } from '../repositories/food.repository.js';
 import { pool } from '../config/database.js';
@@ -344,10 +344,18 @@ export async function regenerateCategory(deps) {
  */
 export async function generateDailyMealPlan(deps) {
   const { userId, planDate, getProfile, getAllFoods, getLogHistory, forceFallback, bypassCache, regeneratingMeal } = deps;
-  const cached = getCachedPlan(userId, planDate, 'meal');
-  if (!forceFallback && !bypassCache && cached && cached.status !== 'fallback') {
-    return { plan: cached, fromCache: true, status: 'active' };
+
+  const lockKey = `daily_${userId}_${planDate}`;
+  if (activeGenerations.has(lockKey)) {
+    throw new AppError('GenerationConflict', 'A daily meal plan generation is already in progress.', 409);
   }
+  activeGenerations.set(lockKey, true);
+
+  try {
+    const cached = getCachedPlan(userId, planDate, 'meal');
+    if (!forceFallback && !bypassCache && cached && cached.status !== 'fallback') {
+      return { plan: cached, fromCache: true, status: 'active' };
+    }
   let profile, dbFoods, recentLogs;
   try {
     [profile, dbFoods, recentLogs] = await Promise.all([
@@ -467,6 +475,9 @@ export async function generateDailyMealPlan(deps) {
     console.error('[DailyMealPlan] Failed to persist fallback plan:', err.message);
   }
   return { plan: fallback, fromCache: false, status: 'fallback' };
+  } finally {
+    activeGenerations.delete(lockKey);
+  }
 }
 
 export async function toggleMealPlanItem(userId, planDate, mealType, foodId, logged) {

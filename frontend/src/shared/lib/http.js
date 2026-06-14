@@ -110,11 +110,16 @@ export async function fetchSseStream(path, body, onChunk, onDone, onError) {
 
     if (!response.ok) {
       let errMsg = 'Request failed';
+      let errCode = null;
       try {
         const errJson = await response.json();
         errMsg = errJson.error?.message || errMsg;
+        errCode = errJson.error?.code;
       } catch {}
-      throw new Error(errMsg);
+      const error = new Error(errMsg);
+      error.status = response.status;
+      error.code = errCode;
+      throw error;
     }
 
     const reader = response.body.getReader();

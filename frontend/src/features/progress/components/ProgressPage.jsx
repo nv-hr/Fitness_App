@@ -36,7 +36,7 @@ export default function ProgressPage() {
   /** Bubble success upward so all cards refetch their data simultaneously */
   const handleLogSuccess = useCallback(() => {
     setRefreshKey((k) => k + 1);
-    window.dispatchEvent(new CustomEvent('health-system-update'));
+    window.dispatchEvent(new CustomEvent('health-system-update', { detail: { type: 'plan-update' } }));
   }, []);
 
   return (
