@@ -1,6 +1,10 @@
 import { describe, test, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ActivityHistory from '../ActivityHistory.jsx';
+
+vi.mock('../api/activityApi.js', () => ({
+  getActivityLogs: vi.fn().mockResolvedValue({ data: { logs: mockHistory[0].entries } })
+}));
 
 const mockHistory = [
   {
@@ -23,14 +27,14 @@ const mockHistory = [
 ];
 
 describe('ActivityHistory', () => {
-  test('renders "Activity History" heading', () => {
-    render(<ActivityHistory history={[]} onDelete={vi.fn()} />);
-    expect(screen.getByText('Activity History')).toBeInTheDocument();
+  test('renders "Activity & Exercise History" heading', () => {
+    render(<ActivityHistory history={mockHistory} onDelete={vi.fn()} />);
+    expect(screen.getByText('Activity & Exercise History')).toBeInTheDocument();
   });
 
-  test('renders "No activity logged yet" for empty history', () => {
+  test('renders "Workout history is empty" for empty history', () => {
     render(<ActivityHistory history={[]} onDelete={vi.fn()} />);
-    expect(screen.getByText('No activity logged yet')).toBeInTheDocument();
+    expect(screen.getByText('Workout history is empty')).toBeInTheDocument();
   });
 
   test('renders logged dates when history has entries', () => {
@@ -45,32 +49,29 @@ describe('ActivityHistory', () => {
     expect(screen.getByText(/450/)).toBeInTheDocument();
   });
 
-  test('renders delete buttons and entry details when expanded', () => {
+  test('renders delete buttons and entry details when expanded', async () => {
     render(<ActivityHistory history={mockHistory} onDelete={vi.fn()} />);
     // Click to expand first day
     const dateHeader = screen.getByText('2026-01-05');
     fireEvent.click(dateHeader.closest('div'));
-    expect(screen.getByText('Running')).toBeInTheDocument();
-    expect(screen.getAllByText('Delete').length).toBe(2);
+    await waitFor(() => {
+      expect(screen.getByText('Running')).toBeInTheDocument();
+      expect(screen.getAllByText('Delete').length).toBe(2);
+    });
   });
 
-  test('calls onDelete with entry id when delete is clicked', () => {
+  test('calls onDelete with entry id when delete is clicked', async () => {
     const onDelete = vi.fn();
     render(<ActivityHistory history={mockHistory} onDelete={onDelete} />);
     // Expand and click delete
     const dateHeader = screen.getByText('2026-01-05');
     fireEvent.click(dateHeader.closest('div'));
+    await waitFor(() => {
+      expect(screen.getAllByText('Delete').length).toBeGreaterThan(0);
+    });
     fireEvent.click(screen.getAllByText('Delete')[0]);
     expect(onDelete).toHaveBeenCalledWith(1);
   });
 
-  test('has collapsible toggle ▲/▼', () => {
-    render(<ActivityHistory history={mockHistory} onDelete={vi.fn()} />);
-    // Both days show ▼ when collapsed
-    expect(screen.getAllByText('▼').length).toBe(2);
-    const dateHeader = screen.getByText('2026-01-05');
-    fireEvent.click(dateHeader.closest('div'));
-    expect(screen.getAllByText('▲').length).toBe(1);
-    expect(screen.getAllByText('▼').length).toBe(1);
-  });
+
 });

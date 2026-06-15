@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
-import { getDailyLogs, getLogHistory, getRecentFoods, logFood, deleteFoodLog } from '../api/foodLogApi.js';
+import { getDaily, getLogHistory, getRecentFoods, logFood, deleteFoodLog } from '../api/foodLogApi.js';
 import { calculatePreviewCalories } from '../utils/previewCalories.js';
 
 export function useFoodLog() {
@@ -18,40 +18,44 @@ export function useFoodLog() {
 
   const today = format(new Date(), 'yyyy-MM-dd');
 
-  const refreshData = useCallback(async () => {
+  const loadData = useCallback(async () => {
     try {
-      const [logsRes, historyRes, recentRes] = await Promise.all([
-        getDailyLogs(today),
+      const [dailyRes, historyRes, recentRes] = await Promise.all([
+        getDaily(today),
         getLogHistory(7),
         getRecentFoods(),
       ]);
-      setLogs(logsRes.data || []);
+      setLogs(dailyRes.data?.logs || []);
       setHistory(historyRes.data || []);
       setRecentFoods(recentRes.data || []);
-    } catch {
-      // Silently fail
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   }, [today]);
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const [logsRes, historyRes, recentRes] = await Promise.all([
-          getDailyLogs(today),
-          getLogHistory(7),
-          getRecentFoods(),
-        ]);
-        setLogs(logsRes.data || []);
-        setHistory(historyRes.data || []);
-        setRecentFoods(recentRes.data || []);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    }
     loadData();
-  }, [today]);
+  }, [loadData]);
+
+  const refreshDailyLogs = async () => {
+    try {
+      const res = await getDaily(today);
+      setLogs(res.data?.logs || []);
+    } catch {
+      // Silently fail
+    }
+  };
+
+  const refreshRecentFoods = async () => {
+    try {
+      const res = await getRecentFoods();
+      setRecentFoods(res.data || []);
+    } catch {
+      // Silently fail
+    }
+  };
 
   const handleFoodSelect = (food) => {
     setSelectedFood(food);
@@ -108,8 +112,9 @@ export function useFoodLog() {
       setSuccessMsg(`Food intake logged: ${selectedFood.name}`);
       setSelectedFood(null);
       setPortion('');
-      await refreshData();
-      window.dispatchEvent(new CustomEvent('health-system-update'));
+      await refreshDailyLogs();
+      await refreshRecentFoods();
+      window.dispatchEvent(new CustomEvent('health-system-update', { detail: { type: 'food-log' } }));
     } catch (err) {
       setError(err.message || 'Failed to save food log');
     } finally {
@@ -123,8 +128,8 @@ export function useFoodLog() {
       setSuccessMsg('');
       await deleteFoodLog(logId);
       setSuccessMsg('Food entry removed.');
-      await refreshData();
-      window.dispatchEvent(new CustomEvent('health-system-update'));
+      await refreshDailyLogs();
+      window.dispatchEvent(new CustomEvent('health-system-update', { detail: { type: 'food-log' } }));
     } catch (err) {
       setError(err.message || 'Failed to delete food entry');
     }
@@ -132,8 +137,9 @@ export function useFoodLog() {
 
   const handleCustomFoodSuccess = async () => {
     setShowCustomForm(false);
-    await refreshData();
-    window.dispatchEvent(new CustomEvent('health-system-update'));
+    await refreshDailyLogs();
+    await refreshRecentFoods();
+    window.dispatchEvent(new CustomEvent('health-system-update', { detail: { type: 'food-log' } }));
   };
 
   return {

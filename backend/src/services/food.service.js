@@ -8,7 +8,7 @@ const VALID_CATEGORIES = ['proteins', 'carbs', 'vegetables', 'fruits', 'dairy', 
  * @param {Function} countFoods - Repository function to count foods
  * @returns {Promise<number>}
  */
-export async function getSeededFoodCount(countFoods) {
+async function getSeededFoodCount(countFoods) {
   return countFoods({ is_custom: false });
 }
 
@@ -17,7 +17,7 @@ export async function getSeededFoodCount(countFoods) {
  * @param {Function} findByCategory - Repository function to count by category
  * @returns {Promise<Object>} Object with category keys and count values
  */
-export async function getFoodsByCategory(findByCategory) {
+async function getFoodsByCategory(findByCategory) {
   const result = {};
   for (const category of VALID_CATEGORIES) {
     result[category] = await findByCategory(category, { is_custom: false });
@@ -27,13 +27,15 @@ export async function getFoodsByCategory(findByCategory) {
 
 /**
  * Validate custom food input data.
+ * @deprecated Use validateCustomFoodData instead. Retained for backward compatibility.
  * @param {Object} data
  * @param {string} data.name - Food name (1-100 characters)
  * @param {number} data.calories_per_100g - Calories per 100g (0-5000)
  * @param {string} data.category - Must be one of 7 valid categories
  * @throws {ValidationError} with English message on failure
  */
-export function validateFoodData(data) {
+// fallow-ignore-next-line unused-export
+export function _deprecated_validateFoodData(data) {
   const { name, calories_per_100g, category } = data;
 
   if (!name || typeof name !== 'string' || name.trim().length < 1 || name.trim().length > 100) {

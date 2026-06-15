@@ -1,5 +1,6 @@
 import { pool } from '../config/database.js';
 import { AppError } from '../utils/errors.js';
+import { getHistoryCutoffStr } from '../utils/date.utils.js';
 
 /**
  * Get random activities filtered by goal tags (D-45: goal-filtered daily shuffle).
@@ -40,6 +41,46 @@ export async function getAllActivities(goalTags = []) {
     return rows;
   } catch (err) {
     throw new AppError('DatabaseError', `Failed to get all activities: ${err.message}`, 500);
+  }
+}
+
+/**
+ * Get activities filtered by a specific goal tag and calorie ceiling.
+ * Uses JSONB @> operator to ensure the tag is present.
+ * @param {string} fitnessGoal
+ * @param {number} maxCalories
+ * @returns {Promise<Array>}
+ */
+async function getActivitiesByGoalAndCeiling(fitnessGoal, maxCalories) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM activities 
+       WHERE goal_tags @> $1 AND estimated_calories <= $2 
+       ORDER BY name ASC`,
+      [JSON.stringify([fitnessGoal]), maxCalories]
+    );
+    return rows;
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to get activities by goal and ceiling: ${err.message}`, 500);
+  }
+}
+
+/**
+ * Get activities filtered by calorie ceiling only (fallback query).
+ * @param {number} maxCalories
+ * @returns {Promise<Array>}
+ */
+async function getAllActivitiesWithCeiling(maxCalories) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM activities 
+       WHERE estimated_calories <= $1 
+       ORDER BY name ASC`,
+      [maxCalories]
+    );
+    return rows;
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to get activities with ceiling: ${err.message}`, 500);
   }
 }
 
@@ -145,11 +186,8 @@ export async function getActivityLogsByDate(userId, date) {
  * @returns {Promise<Array>}
  */
 export async function getActivityHistory(userId, days = 7) {
-  days = Math.min(Math.max(1, Math.floor(days)), 365);
   try {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - (days - 1));
-    const cutoffStr = cutoffDate.toISOString().split('T')[0];
+    const cutoffStr = getHistoryCutoffStr(days, true);
     const { rows } = await pool.query(
       `SELECT al.logged_date, SUM(al.duration_min) as total_minutes, SUM(al.calories_burned) as total_burned, COUNT(*) as entry_count
        FROM activity_logs al
@@ -174,7 +212,7 @@ export async function getActivityHistory(userId, days = 7) {
  * @param {string} endDate
  * @returns {Promise<Array>}
  */
-export async function getActivityLogsInRange(userId, startDate, endDate) {
+async function getActivityLogsInRange(userId, startDate, endDate) {
   try {
     const { rows } = await pool.query(
       `SELECT al.*, a.name as activity_name
@@ -338,11 +376,8 @@ export async function getDailyActivityTotal(userId, date) {
  * @returns {Promise<Array>}
  */
 export async function getActivityHistoryWithEntries(userId, days = 7) {
-  days = Math.min(Math.max(1, Math.floor(days)), 365);
   try {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - (days - 1));
-    const cutoffStr = cutoffDate.toISOString().split('T')[0];
+    const cutoffStr = getHistoryCutoffStr(days, true);
     const { rows } = await pool.query(
       `SELECT al.*, a.name as activity_name
        FROM activity_logs al

@@ -102,7 +102,7 @@ export function useProfileForm(onSaveSuccess) {
         setExistingProfile(response.data.profile);
       }
       setSuccess('Health profile successfully saved and analyzed!');
-      window.dispatchEvent(new CustomEvent('health-system-update'));
+      window.dispatchEvent(new CustomEvent('health-system-update', { detail: { type: 'plan-update' } }));
       if (onSaveSuccess) {
         // Wait briefly so they can read the success message
         setTimeout(() => {

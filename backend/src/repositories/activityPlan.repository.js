@@ -1,37 +1,12 @@
-import { pool } from '../config/database.js';
 import { AppError } from '../utils/errors.js';
+import { findPlanByUserAndDate, upsertPlanBase } from './basePlan.repository.js';
 
 export async function findByUserAndDate(userId, planDate, clientOverride) {
-  const db = clientOverride || pool;
-  try {
-    const { rows } = await db.query(
-      `SELECT id, user_id, plan_date, plan_data, status, created_at, updated_at
-       FROM activity_plans
-       WHERE user_id = $1 AND plan_date = $2
-       LIMIT 1`,
-      [userId, planDate]
-    );
-    return rows[0] || null;
-  } catch (err) {
-    throw new AppError('DatabaseError', `Failed to find activity plan: ${err.message}`, 500);
-  }
+  return findPlanByUserAndDate('activity_plans', userId, planDate, clientOverride);
 }
 
 export async function upsertPlan(userId, planDate, planData, status = 'active', clientOverride) {
-  const db = clientOverride || pool;
-  try {
-    const { rows } = await db.query(
-      `INSERT INTO activity_plans (user_id, plan_date, plan_data, status)
-       VALUES ($1, $2, $3::jsonb, $4)
-       ON CONFLICT (user_id, plan_date)
-       DO UPDATE SET plan_data = $3::jsonb, status = $4, updated_at = NOW()
-       RETURNING id, user_id, plan_date, plan_data, status, created_at, updated_at`,
-      [userId, planDate, JSON.stringify(planData), status]
-    );
-    return rows[0] || null;
-  } catch (err) {
-    throw new AppError('DatabaseError', `Failed to upsert activity plan: ${err.message}`, 500);
-  }
+  return upsertPlanBase('activity_plans', userId, planDate, planData, status, clientOverride);
 }
 
 export async function markActivitiesLogged(userId, planDate, activityIndexes, clientOverride) {

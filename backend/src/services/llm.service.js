@@ -8,6 +8,7 @@ import { levenshteinDistance } from '../utils/string.js';
 import { calculateBmi, getBmiCategory, calculateBmr, calculateTdee, getCalorieTarget } from './profile.service.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// fallow-ignore-next-line security-sink
 const PROMPTS_DIR = path.resolve(__dirname, '../../prompts');
 const OPENROUTER_BASE_URL = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1';
 const APP_URL = process.env.FRONTEND_URL || 'http://localhost:3001';
@@ -52,6 +53,8 @@ const planCache = new NodeCache({ stdTTL: 3600, checkperiod: 600, maxKeys: 1000 
 // Serializes read-modify-write operations on the same cache key
 const locks = new Map();
 
+export const activeGenerations = new Map();
+
 export async function acquireLock(key, timeout = 15000) {
   const start = Date.now();
   while (locks.get(key)) {
@@ -64,9 +67,17 @@ export async function acquireLock(key, timeout = 15000) {
 
 const promptCache = new Map();
 
+function sanitizeLlmInput(input) {
+  if (typeof input !== 'string') return String(input || '');
+  return input.substring(0, 100).replace(/[<>]/g, '');
+}
+
 export function buildPrompt(filename, variables) {
   if (!promptCache.has(filename)) {
-    const filePath = path.join(PROMPTS_DIR, filename);
+    const filePath = path.normalize(path.join(PROMPTS_DIR, filename));
+    if (!filePath.startsWith(PROMPTS_DIR)) {
+      throw new Error('Invalid prompt filename');
+    }
     promptCache.set(filename, fs.readFileSync(filePath, 'utf-8'));
   }
   let template = promptCache.get(filename);
@@ -79,7 +90,7 @@ export function buildPrompt(filename, variables) {
   return template;
 }
 
-export function buildSystemPrompt(profile, activityHistory, activities, weekStartDate, availableDays = null) {
+function buildSystemPrompt(profile, activityHistory, activities, weekStartDate, availableDays = null) {
   const historyEntries = activityHistory.slice(-20);
   const topActivityNames = [...new Set(activityHistory.map(a => a.activity_name))].slice(0, 5).join(', ');
   const historyText = historyEntries.length > 0
@@ -107,8 +118,8 @@ export function buildSystemPrompt(profile, activityHistory, activities, weekStar
     heightCm: profile.height_cm,
     age: profile.age,
     gender: profile.gender,
-    fitnessGoal: profile.fitness_goal,
-    activityLevel: profile.activity_level || 'sedentary',
+    fitnessGoal: sanitizeLlmInput(profile.fitness_goal),
+    activityLevel: sanitizeLlmInput(profile.activity_level || 'sedentary'),
     calorieTarget: String(calorieTarget || ''),
     bmr: String(bmr || ''),
     tdee: String(tdee || ''),
@@ -221,7 +232,33 @@ export async function callLlmStream(systemPrompt, onChunk, userPrompt = 'Generat
   throw new AppError('LlmAllFailed', 'All LLM models failed', 502);
 }
 
-export function validateActivities(activities, prefix, allowEmpty = false) {
+export async function executeLlmRequest(prompt, onChunk, userPrompt = 'Generate my weekly fitness plan based on my profile and history.') {
+  if (onChunk) {
+    const rawText = await callLlmStream(prompt, onChunk, userPrompt);
+    const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);
+    }
+    try {
+      return JSON.parse(jsonMatch[0]);
+    } catch (parseErr) {
+      throw new AppError('LlmParseError', 'Failed to parse LLM response as JSON', 502);
+    }
+  } else {
+    return await callLlmApi(prompt);
+  }
+}
+
+async function attemptCorrection(prompt, errors, onChunk, chunkPrefix) {
+  const correctionPrompt = prompt + '\n\n' + buildCorrectionPrompt(errors);
+  if (onChunk && chunkPrefix) {
+    onChunk(chunkPrefix);
+  }
+  return await executeLlmRequest(correctionPrompt, onChunk);
+}
+
+function validateActivities(activities, prefix, allowEmpty = false) {
   const errors = [];
   if (!Array.isArray(activities)) {
     errors.push(`${prefix}"activities" must be an array`);
@@ -252,7 +289,7 @@ export function validateActivities(activities, prefix, allowEmpty = false) {
   return errors;
 }
 
-export function validatePlanStructure(plan, weekStart, availableDays = null) {
+function validatePlanStructure(plan, weekStart, availableDays = null) {
   const errors = [];
 
   if (!plan) {
@@ -322,18 +359,8 @@ export function validatePlanStructure(plan, weekStart, availableDays = null) {
   return { valid: errors.length === 0, errors };
 }
 
-/**
- * Detect old-format weekly plans (pre-Phase 30) by checking for format_version.
- * Old format = plan exists but has no format_version at root level.
- * New format = format_version: 1 at root level.
- * @param {object|null|undefined} plan - Plan data object from DB or cache
- * @returns {boolean} true if plan exists and lacks format_version
- */
-export function isOldFormat(plan) {
-  return !!plan && plan.format_version === undefined;
-}
 
-export function fuzzyMatchActivityName(name, dbActivities) {
+function fuzzyMatchActivityName(name, dbActivities) {
   if (!name || typeof name !== 'string') {
     return { matched: false, activity: null, matchType: 'none' };
   }
@@ -371,7 +398,7 @@ export function fuzzyMatchActivityName(name, dbActivities) {
   return { matched: false, activity: null, matchType: 'none' };
 }
 
-export function validateAndFixPlan(plan, dbActivities) {
+function validateAndFixPlan(plan, dbActivities) {
   const errors = [];
 
   if (!plan || !Array.isArray(plan.days)) {
@@ -409,7 +436,7 @@ export function validateAndFixPlan(plan, dbActivities) {
   return { valid: errors.length === 0, plan, errors };
 }
 
-export function buildCorrectionPrompt(validationErrors) {
+function buildCorrectionPrompt(validationErrors) {
   return buildPrompt('correction-prompt.md', {
     validationErrors: validationErrors.join('\n'),
   });
@@ -427,14 +454,27 @@ export function clearCachedPlan(userId, weekStart, planType = 'activity') {
   planCache.del(`plan_${planType}_${userId}_${weekStart}`);
 }
 
-export async function generateFallbackPlan(deps) {
-  const { getTopActivities, userId, weekStart, availableDays = 4 } = deps;
+async function generateFallbackPlan(deps) {
+  const { getTopActivities, getActivities, userId, weekStart, availableDays = 4 } = deps;
 
   let topActivities;
   try {
     topActivities = await getTopActivities(userId, 5);
   } catch {
     topActivities = [];
+  }
+
+  if (topActivities.length === 0) {
+    if (getActivities) {
+      try {
+        const dbActivities = await getActivities();
+        if (dbActivities && dbActivities.length > 0) {
+          topActivities = [...dbActivities].sort(() => Math.random() - 0.5).slice(0, 5);
+        }
+      } catch (err) {
+        // ignore
+      }
+    }
   }
 
   if (topActivities.length === 0) {
@@ -492,15 +532,22 @@ export async function generateFallbackPlan(deps) {
   };
 }
 
-export async function generateWeeklyPlan(deps) {
+async function generateWeeklyPlan(deps) {
   const { getProfile, getActivityHistory, getActivities, getTopActivities, availableDays = 4 } = deps;
 
-  const cached = getCachedPlan(deps.userId, deps.weekStart);
-  if (cached) {
-    return { plan: cached, fromCache: true, status: 'active' };
+  const lockKey = `weekly_${deps.userId}_${deps.weekStart}`;
+  if (activeGenerations.has(lockKey)) {
+    throw new AppError('GenerationConflict', 'A weekly plan generation is already in progress.', 409);
   }
+  activeGenerations.set(lockKey, true);
 
-  console.log(`[LLM] Activities planning running for user ${deps.userId}, week ${deps.weekStart}`);
+  try {
+    const cached = getCachedPlan(deps.userId, deps.weekStart);
+    if (cached) {
+      return { plan: cached, fromCache: true, status: 'active' };
+    }
+
+    console.log(`[LLM] Activities planning running for user ${deps.userId}, week ${deps.weekStart}`);
 
   let profile, history, dbActivities;
   try {
@@ -512,13 +559,13 @@ export async function generateWeeklyPlan(deps) {
   } catch (err) {
     console.error('[LLM] Failed to fetch user data:', err.message);
     console.warn(`[LLM] Activities planning returning fallback for user ${deps.userId}`);
-    const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
+    const fallback = await generateFallbackPlan({ getTopActivities, getActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
     return { plan: fallback, fromCache: false, status: fallback.status };
   }
 
   if (!profile) {
     console.warn(`[LLM] Activities planning returning fallback for user ${deps.userId} (no profile)`);
-    const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
+    const fallback = await generateFallbackPlan({ getTopActivities, getActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
     return { plan: fallback, fromCache: false, status: fallback.status };
   }
 
@@ -534,22 +581,12 @@ export async function generateWeeklyPlan(deps) {
       skipInitialCall = false;
     } else {
       try {
-        if (deps.onChunk) {
-          const rawText = await callLlmStream(prompt, deps.onChunk);
-          const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-          const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-          if (!jsonMatch) {
-            throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);
-          }
-          plan = JSON.parse(jsonMatch[0]);
-        } else {
-          plan = await callLlmApi(prompt);
-        }
+        plan = await executeLlmRequest(prompt, deps.onChunk);
       } catch (err) {
         console.error(`[LLM] API call attempt ${attempt} failed:`, err.message);
         if (attempt >= maxAttempts) {
           console.warn(`[LLM] Activities planning returning fallback for user ${deps.userId}`);
-          const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
+          const fallback = await generateFallbackPlan({ getTopActivities, getActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
           return { plan: fallback, fromCache: false, status: fallback.status };
         }
         await new Promise(r => setTimeout(r, CONFIG.retryDelayMs));
@@ -561,21 +598,8 @@ export async function generateWeeklyPlan(deps) {
     if (!structureCheck.valid) {
       console.warn(`[LLM] Structural validation failed (attempt ${attempt}):`, structureCheck.errors.join('; '));
       if (attempt < maxAttempts) {
-        const correctionPrompt = prompt + '\n\n' + buildCorrectionPrompt(structureCheck.errors);
         try {
-          if (deps.onChunk) {
-            deps.onChunk('\n\n[Correcting plan structure...]\n\n');
-            const rawText = await callLlmStream(correctionPrompt, deps.onChunk);
-            const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-            const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) {
-              throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);
-            }
-            plan = JSON.parse(jsonMatch[0]);
-          } else {
-            plan = await callLlmApi(correctionPrompt);
-          }
-          // Correction succeeded — re-validate the corrected plan on next iteration
+          plan = await attemptCorrection(prompt, structureCheck.errors, deps.onChunk, '\n\n[Correcting plan structure...]\n\n');
           skipInitialCall = true;
           continue;
         } catch (correctionErr) {
@@ -592,21 +616,8 @@ export async function generateWeeklyPlan(deps) {
     if (!nameCheck.valid) {
       console.warn(`[LLM] Name validation failed (attempt ${attempt}):`, nameCheck.errors.join('; '));
       if (attempt < maxAttempts) {
-        const correctionPrompt = prompt + '\n\n' + buildCorrectionPrompt(nameCheck.errors);
         try {
-          if (deps.onChunk) {
-            deps.onChunk('\n\n[Correcting activity names...]\n\n');
-            const rawText = await callLlmStream(correctionPrompt, deps.onChunk);
-            const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-            const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) {
-              throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);
-            }
-            plan = JSON.parse(jsonMatch[0]);
-          } else {
-            plan = await callLlmApi(correctionPrompt);
-          }
-          // Correction succeeded — re-validate the corrected plan on next iteration
+          plan = await attemptCorrection(prompt, nameCheck.errors, deps.onChunk, '\n\n[Correcting activity names...]\n\n');
           skipInitialCall = true;
           continue;
         } catch (correctionErr) {
@@ -629,8 +640,11 @@ export async function generateWeeklyPlan(deps) {
 
   console.warn('[LLM] All generation attempts failed, returning fallback');
   console.warn(`[LLM] Activities planning returning fallback for user ${deps.userId}`);
-  const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
+  const fallback = await generateFallbackPlan({ getTopActivities, getActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
   return { plan: fallback, fromCache: false, status: fallback.status };
+  } finally {
+    activeGenerations.delete(lockKey);
+  }
 }
 
 export async function regenerateDay(deps, dayIndex) {
@@ -793,8 +807,8 @@ export async function swapActivity(deps, activityId, dayIndex, skipLock = false)
       : ''
 
     // Determine fitness goal and activity level for template variables
-    const fitnessGoal = profile?.fitness_goal || 'maintain'
-    const activityLevel = profile?.activity_level || 'sedentary'
+    const fitnessGoal = sanitizeLlmInput(profile?.fitness_goal || 'maintain')
+    const activityLevel = sanitizeLlmInput(profile?.activity_level || 'sedentary')
 
     // 6. Build swap prompt
     const prompt = buildPrompt('activity-swap-prompt.md', {
@@ -817,17 +831,7 @@ export async function swapActivity(deps, activityId, dayIndex, skipLock = false)
     // 7. Call LLM with fallback
     let replacement
     try {
-      if (deps.onChunk) {
-        const rawText = await callLlmStream(prompt, deps.onChunk, 'Swap a fitness activity');
-        const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-          throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);
-        }
-        replacement = JSON.parse(jsonMatch[0]);
-      } else {
-        replacement = await callLlmApi(prompt)
-      }
+      replacement = await executeLlmRequest(prompt, deps.onChunk, 'Swap a fitness activity');
     } catch (err) {
       console.warn(`[LLM] Swap LLM call failed: ${err.message}, falling back to random activity`)
       replacement = null

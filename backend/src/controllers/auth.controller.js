@@ -3,6 +3,7 @@ import { successResponse, errorResponse } from '../utils/response.js';
 import { ValidationError, AuthenticationError } from '../utils/errors.js';
 import { findById, updatePasswordHash } from '../repositories/user.repository.js';
 import bcrypt from 'bcryptjs';
+import { registerSchema, loginSchema } from '../utils/validation.js';
 
 /**
  * Cookie options for httpOnly JWT cookie (per D-01).
@@ -20,7 +21,8 @@ const cookieOptions = {
  */
 export async function register(req, res, next) {
   try {
-    const { email, password, pdpConsent } = req.body;
+    const validatedData = registerSchema.parse(req.body);
+    const { email, password, pdpConsent } = validatedData;
     const { user, token } = await registerUser({ email, password, pdpConsent });
 
     // D-01: Set httpOnly JWT cookie
@@ -28,6 +30,10 @@ export async function register(req, res, next) {
 
     return successResponse(res, { user }, 201);
   } catch (err) {
+    if (err.name === 'ZodError') {
+      const message = err.issues.map(e => e.message).join(', ');
+      return errorResponse(res, message, 400, 'VALIDATION_ERROR');
+    }
     if (err instanceof ValidationError) {
       return errorResponse(res, err.message, 400, 'VALIDATION_ERROR');
     }
@@ -41,7 +47,8 @@ export async function register(req, res, next) {
  */
 export async function login(req, res, next) {
   try {
-    const { email, password } = req.body;
+    const validatedData = loginSchema.parse(req.body);
+    const { email, password } = validatedData;
     const { user, token } = await loginUser({ email, password });
 
     // D-01: Set httpOnly JWT cookie
@@ -49,6 +56,10 @@ export async function login(req, res, next) {
 
     return successResponse(res, { user });
   } catch (err) {
+    if (err.name === 'ZodError') {
+      const message = err.issues.map(e => e.message).join(', ');
+      return errorResponse(res, message, 400, 'VALIDATION_ERROR');
+    }
     if (err instanceof AuthenticationError) {
       return errorResponse(res, err.message, 401, 'AUTHENTICATION_ERROR');
     }
@@ -131,12 +142,4 @@ export async function googleCallback(req, res, next) {
   }
 }
 
-export default {
-  register,
-  login,
-  logout,
-  getMe,
-  setPassword,
-  googleCallback,
-};
 

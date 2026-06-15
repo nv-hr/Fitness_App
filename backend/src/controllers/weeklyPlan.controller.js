@@ -1,5 +1,6 @@
 import { successResponse, errorResponse } from '../utils/response.js';
-import { generateWeeklyPlan, getCachedPlan, setCachedPlan, clearCachedPlan, regenerateDay, swapActivity, isOldFormat, acquireLock } from '../services/llm.service.js';
+import { getCachedPlan, setCachedPlan, clearCachedPlan, regenerateDay, swapActivity, acquireLock } from '../services/llm.service.js';
+import { generateWeeklyPlanAlgorithm } from '../services/activityPlan/index.js';
 import { findByUserId as findProfileByUserId } from '../repositories/profile.repository.js';
 import { pool } from '../config/database.js';
 import { AppError } from '../utils/errors.js';
@@ -12,33 +13,11 @@ import {
   deleteActivityLogByPlan,
 } from '../repositories/activity.repository.js';
 import { findByUserAndWeek, upsertPlan, syncWeeklyPlanCompletedStates } from '../repositories/weeklyPlan.repository.js';
+import { isDateWithinTimezoneRange } from '../utils/date.utils.js';
+import { setupSSE } from '../utils/sse.utils.js';
 
-// CR-01: Migration failure cooldown — prevents infinite retry on every GET
-// when LLM is unavailable. After a failed attempt, subsequent requests
-// skip migration for a configurable window.
-const migrationFailCooldown = new Map();
-const MIGRATION_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 
-function isMigrationOnCooldown(userId, weekStart) {
-  const key = `${userId}_${weekStart}`;
-  const lastAttempt = migrationFailCooldown.get(key);
-  if (!lastAttempt) return false;
-  if (Date.now() - lastAttempt > MIGRATION_COOLDOWN_MS) {
-    migrationFailCooldown.delete(key);
-    return false;
-  }
-  return true;
-}
 
-// WR-02: Infer availableDays from an old-format plan's structure (best-effort).
-// Counts non-empty activity days and clamps to [4, 6]; falls back to 5 if
-// the old plan has no days array. This preserves the user's original plan
-// structure rather than silently switching to a fixed 5-day default.
-function inferAvailableDays(oldPlan) {
-  if (!oldPlan?.days) return 5;
-  const nonEmptyDays = oldPlan.days.filter(d => d.activities?.length > 0).length;
-  return Math.max(4, Math.min(6, nonEmptyDays || 5));
-}
 
 function isValidDateString(str) {
   if (typeof str !== 'string') return false;
@@ -56,18 +35,18 @@ function getMonday(date) {
   return d.toISOString().split('T')[0];
 }
 
-function isDateWithinTimezoneRange(dateStr) {
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setUTCDate(today.getUTCDate() - 1);
-  const tomorrow = new Date(today);
-  tomorrow.setUTCDate(today.getUTCDate() + 1);
-
-  const todayStr = today.toISOString().split('T')[0];
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
-
-  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr;
+function validateWeekAndDay(weekStart, dayIndex, res) {
+  if (dayIndex !== undefined) {
+    if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {
+      return { error: errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR') };
+    }
+  }
+  let targetWeekStart = weekStart;
+  if (targetWeekStart && !isValidDateString(targetWeekStart)) {
+    return { error: errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR') };
+  }
+  targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());
+  return { targetWeekStart };
 }
 
 async function get(req, res, next) {
@@ -75,31 +54,13 @@ async function get(req, res, next) {
     const userId = req.user.userId;
     let weekStart = req.query.weekStart;
 
-    if (weekStart && !isValidDateString(weekStart)) {
-      return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
-    }
-    weekStart = getMonday(weekStart ? new Date(weekStart) : new Date());
+    const validated = validateWeekAndDay(weekStart, undefined, res);
+    if (validated.error) return validated.error;
+    weekStart = validated.targetWeekStart;
 
     // Try in-memory cache first (faster, no DB hit)
     const cached = getCachedPlan(userId, weekStart);
     if (cached && cached.status !== 'fallback') {
-      // D-01: Check for old-format plan in cache (defensive — migrated plans always
-      // have format_version: 1, but old-format plans cached via swapHandler CR-03
-      // would lack it).
-      if (isOldFormat(cached)) {
-        if (!isMigrationOnCooldown(userId, weekStart)) {
-          const migrated = await attemptMigration(userId, weekStart);
-          if (migrated) {
-            setCachedPlan(userId, weekStart, migrated);
-            return successResponse(res, { plan: migrated, fromCache: false });
-          }
-          // CR-01: Record failed migration to enforce cooldown
-          migrationFailCooldown.set(`${userId}_${weekStart}`, Date.now());
-        }
-        // D-03 / CR-06: Return cached plan as-is — do NOT fall through to DB path,
-        // which would trigger a second migration attempt on the same request.
-        console.warn(`[Migration] LLM failed or cooldown active for user ${userId}, week ${weekStart}. Returning cached old-format plan.`);
-      }
       return successResponse(res, { plan: cached, fromCache: true });
     }
 
@@ -118,21 +79,6 @@ async function get(req, res, next) {
 
     const row = rows[0];
 
-    // D-01: Lazy migration — detect old format by absence of format_version
-    // If the DB plan_data lacks format_version, trigger silent regeneration.
-    if (row.plan_data && isOldFormat(row.plan_data)) {
-      if (!isMigrationOnCooldown(userId, weekStart)) {
-        const migrated = await attemptMigration(userId, weekStart);
-        if (migrated) {
-          setCachedPlan(userId, weekStart, migrated);
-          return successResponse(res, { plan: migrated, fromCache: false });
-        }
-        // CR-01: Record failed migration to enforce cooldown
-        migrationFailCooldown.set(`${userId}_${weekStart}`, Date.now());
-      }
-      // D-03: LLM failure — keep old format, try again after cooldown expires
-      console.warn(`[Migration] LLM failed or cooldown active for user ${userId}, week ${weekStart}. Returning DB old-format plan.`);
-    }
 
     const plan = {
       days: row.plan_data?.days || [],
@@ -153,10 +99,9 @@ async function generate(req, res, next) {
     const userId = req.user.userId;
     let weekStart = req.body.weekStart;
 
-    if (weekStart && !isValidDateString(weekStart)) {
-      return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
-    }
-    weekStart = getMonday(weekStart ? new Date(weekStart) : new Date());
+    const validated = validateWeekAndDay(weekStart, undefined, res);
+    if (validated.error) return validated.error;
+    weekStart = validated.targetWeekStart;
 
     // Extract and validate availableDays (4-6 range, default 4)
     let availableDays = req.body.availableDays;
@@ -173,7 +118,7 @@ async function generate(req, res, next) {
     // Check DB for existing plan before regenerating (cache was wiped on restart)
     if (!force) {
       const existingPlan = await findByUserAndWeek(userId, weekStart);
-      if (existingPlan && existingPlan.plan_data && Array.isArray(existingPlan.plan_data.days) && !isOldFormat(existingPlan.plan_data)) {
+      if (existingPlan && existingPlan.plan_data && Array.isArray(existingPlan.plan_data.days)) {
         setCachedPlan(userId, weekStart, existingPlan.plan_data);
         return successResponse(res, { plan: existingPlan.plan_data, fromCache: false });
       }
@@ -181,15 +126,16 @@ async function generate(req, res, next) {
       clearCachedPlan(userId, weekStart);
     }
 
-    const result = await generateWeeklyPlan({
-      getProfile: (id) => findProfileByUserId(id),
-      getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
-      getActivities: () => getAllActivities(),
-      getTopActivities: (id, limit) => getTopActivities(id, limit),
-      userId,
+    const profile = await findProfileByUserId(userId);
+    const activities = await getAllActivities();
+    
+    const generatedPlan = generateWeeklyPlanAlgorithm({
+      profile,
+      activities,
       weekStart,
-      availableDays, // pass through to service
     });
+    
+    const result = { plan: generatedPlan, status: 'active' };
 
     // Persist to DB so toggleComplete, swapHandler, and subsequent
     // page loads can find the plan (generateWeeklyPlan only caches in memory).
@@ -208,15 +154,9 @@ async function regenerateDayHandler(req, res, next) {
     const userId = req.user.userId;
     const { weekStart, dayIndex, availableDays } = req.body;
 
-    if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {
-      return errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR');
-    }
-
-    let targetWeekStart = weekStart;
-    if (targetWeekStart && !isValidDateString(targetWeekStart)) {
-      return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
-    }
-    targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());
+    const validated = validateWeekAndDay(weekStart, dayIndex, res);
+    if (validated.error) return validated.error;
+    let targetWeekStart = validated.targetWeekStart;
 
     const deps = {
       getProfile: (id) => findProfileByUserId(id),
@@ -258,17 +198,9 @@ async function swapHandler(req, res, next) {
       return errorResponse(res, 'activityId must be a positive integer', 400, 'VALIDATION_ERROR');
     }
 
-    // Validate dayIndex
-    if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {
-      return errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR');
-    }
-
-    // Validate and normalize weekStart
-    let targetWeekStart = weekStart;
-    if (targetWeekStart && !isValidDateString(targetWeekStart)) {
-      return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
-    }
-    targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());
+    const validated = validateWeekAndDay(weekStart, dayIndex, res);
+    if (validated.error) return validated.error;
+    let targetWeekStart = validated.targetWeekStart;
 
     const targetDateObj = new Date(targetWeekStart);
     targetDateObj.setUTCDate(targetDateObj.getUTCDate() + dayIndex);
@@ -302,36 +234,8 @@ async function swapHandler(req, res, next) {
         weekStart: targetWeekStart,
       };
 
-      // D-04: Auto-trigger migration if plan is old format, then retry swap
-      if (planForSwap && isOldFormat(planForSwap)) {
-        console.log(`[Migration] Old-format plan detected during swap for user ${userId}, week ${targetWeekStart}. Migrating...`);
-        clearCachedPlan(userId, targetWeekStart);
-        // WR-02: Infer availableDays from the old plan's structure rather than hardcoding 5
-        const inferredDays = inferAvailableDays(planForSwap);
-        const migrationDeps = {
-          getProfile: (id) => findProfileByUserId(id),
-          getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
-          getActivities: () => getAllActivities(),
-          getTopActivities: (id, limit) => getTopActivities(id, limit),
-          userId,
-          weekStart: targetWeekStart,
-          availableDays: inferredDays,
-        };
-        console.log(`[Migration] Using inferred availableDays=${inferredDays} from old plan (${planForSwap.days?.length || 0} total days, ${planForSwap.days?.filter(d => d.activities?.length > 0).length || 0} activity days).`);
-        const migrationResult = await generateWeeklyPlan(migrationDeps);
-        if (!migrationResult.plan || !Array.isArray(migrationResult.plan.days) || migrationResult.plan.days.length === 0) {
-          migrationFailCooldown.set(`${userId}_${targetWeekStart}`, Date.now());
-          throw new AppError('MigrationError', 'Failed to migrate old-format plan. Cannot proceed with swap.', 500);
-        }
-        // Persist migrated plan to DB and cache
-        await upsertPlan(userId, targetWeekStart, migrationResult.plan, 'active');
-        console.log(`[Migration] Successfully migrated plan for swap. Proceeding with swap.`);
-      }
-
-      // Re-read availableDays from (now potentially migrated) cached plan
-      const updatedCached = getCachedPlan(userId, targetWeekStart);
-      if (updatedCached && Array.isArray(updatedCached.days)) {
-        const activityDays = updatedCached.days.filter(d => d.rest_day === false).length;
+      if (planForSwap && Array.isArray(planForSwap.days)) {
+        const activityDays = planForSwap.days.filter(d => d.rest_day === false).length;
         if (activityDays > 0) deps.availableDays = activityDays;
       }
 
@@ -350,90 +254,16 @@ async function swapHandler(req, res, next) {
   }
 }
 
-/**
- * Attempt to migrate an old-format plan to the new variable-day format.
- * D-01: Triggers on GET request (lazy regeneration).
- * D-03: On LLM failure, returns null — caller keeps old format.
- * D-02: Transparent — no extra response fields, no notification.
- *
- * @param {number} userId
- * @param {string} weekStart - ISO date string
- * @returns {Promise<object|null>} Migrated plan or null on failure
- */
-async function attemptMigration(userId, weekStart) {
-  // CR-01: Check cooldown before attempting migration
-  if (isMigrationOnCooldown(userId, weekStart)) {
-    console.warn(`[Migration] Cooldown active for user ${userId}, week ${weekStart}. Skipping migration.`);
-    return null;
-  }
 
-  console.log(`[Migration] Old-format plan detected for user ${userId}, week ${weekStart}. Regenerating...`);
-
-  // Clear cache to force fresh LLM call (D-04: prevents generateWeeklyPlan
-  // from returning a stale cached old-format plan)
-  clearCachedPlan(userId, weekStart);
-
-  // WR-02: Infer availableDays from the old plan structure rather than hardcoding 5.
-  // The old plan was cleared from cache above, so re-read from DB for inference.
-  // If DB read fails or returns no data, fall back to default of 5.
-  let inferredDays = 5;
-  try {
-    const dbPlan = await findByUserAndWeek(userId, weekStart);
-    inferredDays = inferAvailableDays(dbPlan?.plan_data || null);
-  } catch {
-    // DB read failure is non-fatal — use default
-  }
-  console.log(`[Migration] Using inferred availableDays=${inferredDays} for user ${userId}, week ${weekStart}.`);
-
-  const deps = {
-    getProfile: (id) => findProfileByUserId(id),
-    getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
-    getActivities: () => getAllActivities(),
-    getTopActivities: (id, limit) => getTopActivities(id, limit),
-    userId,
-    weekStart,
-    availableDays: inferredDays,
-  };
-
-  try {
-    const result = await generateWeeklyPlan(deps);
-    const newPlan = result.plan;
-
-    // Validate the generated plan has minimum required structure
-    if (!newPlan || !Array.isArray(newPlan.days) || newPlan.days.length === 0) {
-      console.warn(`[Migration] Regeneration produced invalid plan (days: ${newPlan?.days?.length || 0}). Keeping old format.`);
-      migrationFailCooldown.set(`${userId}_${weekStart}`, Date.now());
-      return null;
-    }
-
-    // Persist migrated plan to DB and cache
-    await upsertPlan(userId, weekStart, newPlan, 'active');
-    setCachedPlan(userId, weekStart, newPlan);
-    console.log(`[Migration] Successfully migrated plan for user ${userId}, week ${weekStart}.`);
-
-    return newPlan;
-  } catch (err) {
-    // D-03: LLM failure — keep old format, try again after cooldown
-    migrationFailCooldown.set(`${userId}_${weekStart}`, Date.now());
-    console.error(`[Migration] Failed: ${err.message}. Keeping old format for user ${userId}.`);
-    return null;
-  }
-}
 
 async function toggleComplete(req, res, next) {
   try {
     const userId = req.user.userId;
     const { weekStart, dayIndex, activityId, completed } = req.body;
 
-    // Validate weekStart
-    if (!weekStart || !isValidDateString(weekStart)) {
-      return errorResponse(res, 'Invalid or missing weekStart date', 400, 'VALIDATION_ERROR');
-    }
-
-    // Validate dayIndex
-    if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {
-      return errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR');
-    }
+    const validated = validateWeekAndDay(weekStart, dayIndex, res);
+    if (validated.error) return validated.error;
+    const targetWeekStart = validated.targetWeekStart;
 
     // Validate activityId
     if (activityId === undefined || activityId === null) {
@@ -444,9 +274,6 @@ async function toggleComplete(req, res, next) {
     if (typeof completed !== 'boolean') {
       return errorResponse(res, 'completed must be a boolean', 400, 'VALIDATION_ERROR');
     }
-
-    // Normalize weekStart
-    const targetWeekStart = getMonday(weekStart ? new Date(weekStart) : new Date());
 
     // Check cache first (fast path — plan may have been generated this session)
     let planData = getCachedPlan(userId, targetWeekStart);
@@ -525,10 +352,9 @@ async function generateStream(req, res, next) {
   const userId = req.user.userId;
   let weekStart = req.body.weekStart;
 
-  if (weekStart && !isValidDateString(weekStart)) {
-    return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
-  }
-  weekStart = getMonday(weekStart ? new Date(weekStart) : new Date());
+  const validated = validateWeekAndDay(weekStart, undefined, res);
+  if (validated.error) return validated.error;
+  weekStart = validated.targetWeekStart;
 
   let availableDays = req.body.availableDays;
   if (availableDays !== undefined && availableDays !== null) {
@@ -540,21 +366,14 @@ async function generateStream(req, res, next) {
   }
 
   const force = req.body.force === true;
-  console.log(`[DEBUG] generateStream called for user ${userId}, weekStart ${weekStart}, force=${force}`, req.body);
+  console.log(`[DEBUG] generateStream called for user ${userId}, weekStart ${weekStart}, force=${force}`);
 
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-
-  const onChunk = (chunk) => {
-    res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
-  };
+  const onChunk = setupSSE(res);
 
   try {
     if (!force) {
       const existingPlan = await findByUserAndWeek(userId, weekStart);
-      if (existingPlan && existingPlan.plan_data && Array.isArray(existingPlan.plan_data.days) && !isOldFormat(existingPlan.plan_data)) {
+      if (existingPlan && existingPlan.plan_data && Array.isArray(existingPlan.plan_data.days)) {
         setCachedPlan(userId, weekStart, existingPlan.plan_data);
         res.write(`data: ${JSON.stringify({ type: 'done', plan: existingPlan.plan_data })}\n\n`);
         res.end();
@@ -564,16 +383,16 @@ async function generateStream(req, res, next) {
       clearCachedPlan(userId, weekStart);
     }
 
-    const result = await generateWeeklyPlan({
-      getProfile: (id) => findProfileByUserId(id),
-      getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
-      getActivities: () => getAllActivities(),
-      getTopActivities: (id, limit) => getTopActivities(id, limit),
-      userId,
+    const profile = await findProfileByUserId(userId);
+    const activities = await getAllActivities();
+    
+    const generatedPlan = generateWeeklyPlanAlgorithm({
+      profile,
+      activities,
       weekStart,
-      availableDays,
-      onChunk,
     });
+    
+    const result = { plan: generatedPlan, status: 'active' };
 
     if (result.plan && Array.isArray(result.plan.days)) {
       await upsertPlan(userId, weekStart, result.plan, result.status || 'active');
@@ -591,24 +410,11 @@ async function regenerateDayStream(req, res, next) {
   const userId = req.user.userId;
   const { weekStart, dayIndex, availableDays } = req.body;
 
-  if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {
-    return errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR');
-  }
+  const validated = validateWeekAndDay(weekStart, dayIndex, res);
+  if (validated.error) return validated.error;
+  let targetWeekStart = validated.targetWeekStart;
 
-  let targetWeekStart = weekStart;
-  if (targetWeekStart && !isValidDateString(targetWeekStart)) {
-    return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
-  }
-  targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());
-
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-
-  const onChunk = (chunk) => {
-    res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
-  };
+  const onChunk = setupSSE(res);
 
   try {
     const deps = {
@@ -653,15 +459,9 @@ async function swapStream(req, res, next) {
   if (typeof activityId !== 'number' || activityId < 1) {
     return errorResponse(res, 'activityId must be a positive integer', 400, 'VALIDATION_ERROR');
   }
-  if (typeof dayIndex !== 'number' || dayIndex < 0 || dayIndex > 6) {
-    return errorResponse(res, 'dayIndex must be a number between 0 and 6', 400, 'VALIDATION_ERROR');
-  }
-
-  let targetWeekStart = weekStart;
-  if (targetWeekStart && !isValidDateString(targetWeekStart)) {
-    return errorResponse(res, 'Invalid weekStart date format', 400, 'VALIDATION_ERROR');
-  }
-  targetWeekStart = getMonday(targetWeekStart ? new Date(targetWeekStart) : new Date());
+  const validated = validateWeekAndDay(weekStart, dayIndex, res);
+  if (validated.error) return validated.error;
+  let targetWeekStart = validated.targetWeekStart;
 
   const targetDateObj = new Date(targetWeekStart);
   targetDateObj.setUTCDate(targetDateObj.getUTCDate() + dayIndex);
@@ -669,14 +469,7 @@ async function swapStream(req, res, next) {
   if (!isDateWithinTimezoneRange(targetDateStr)) {
     return errorResponse(res, 'Can only swap activities for today (considering timezone differences)', 400, 'VALIDATION_ERROR');
   }
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-
-  const onChunk = (chunk) => {
-    res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
-  };
+  const onChunk = setupSSE(res);
 
   const lockKey = `swap_${userId}_${targetWeekStart}`;
   const release = await acquireLock(lockKey);
@@ -701,30 +494,8 @@ async function swapStream(req, res, next) {
       onChunk,
     };
 
-    if (planForSwap && isOldFormat(planForSwap)) {
-      clearCachedPlan(userId, targetWeekStart);
-      const inferredDays = inferAvailableDays(planForSwap);
-      const migrationDeps = {
-        getProfile: (id) => findProfileByUserId(id),
-        getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
-        getActivities: () => getAllActivities(),
-        getTopActivities: (id, limit) => getTopActivities(id, limit),
-        userId,
-        weekStart: targetWeekStart,
-        availableDays: inferredDays,
-        onChunk,
-      };
-      const migrationResult = await generateWeeklyPlan(migrationDeps);
-      if (!migrationResult.plan || !Array.isArray(migrationResult.plan.days) || migrationResult.plan.days.length === 0) {
-        migrationFailCooldown.set(`${userId}_${targetWeekStart}`, Date.now());
-        throw new AppError('MigrationError', 'Failed to migrate old-format plan. Cannot proceed with swap.', 500);
-      }
-      await upsertPlan(userId, targetWeekStart, migrationResult.plan, 'active');
-    }
-
-    const updatedCached = getCachedPlan(userId, targetWeekStart);
-    if (updatedCached && Array.isArray(updatedCached.days)) {
-      const activityDays = updatedCached.days.filter(d => d.rest_day === false).length;
+    if (planForSwap && Array.isArray(planForSwap.days)) {
+      const activityDays = planForSwap.days.filter(d => d.rest_day === false).length;
       if (activityDays > 0) deps.availableDays = activityDays;
     }
 

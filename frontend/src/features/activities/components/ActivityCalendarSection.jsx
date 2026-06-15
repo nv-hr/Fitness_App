@@ -75,11 +75,11 @@ export default function ActivityCalendarSection({ onDaySelect, onMonthChange, da
                 isNotToday
                   ? undefined
                   : () =>
-                      handleToggleComplete(
-                        activity.activity_id,
-                        (selectedDay.getDay() + 6) % 7,
-                        completedActivities.has(activity.activity_id)
-                      )
+                    handleToggleComplete(
+                      activity.activity_id,
+                      (selectedDay.getDay() + 6) % 7,
+                      completedActivities.has(activity.activity_id)
+                    )
               }
               disableSwap={isNotToday}
               disableToggle={isNotToday}

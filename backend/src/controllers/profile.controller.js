@@ -81,4 +81,3 @@ export async function updateProfile(req, res, next) {
   }
 }
 
-export default { createProfile, getProfile, updateProfile };

@@ -12,7 +12,7 @@ import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import passport from './config/passport.js';
 import authRoutes from './routes/auth.routes.js';
-import authController from './controllers/auth.controller.js';
+import * as authController from './controllers/auth.controller.js';
 import profileRoutes from './routes/profile.routes.js';
 import foodRoutes from './routes/food.routes.js';
 import activityRoutes from './routes/activity.routes.js';

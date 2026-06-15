@@ -93,6 +93,18 @@ export default function Router() {
           }
         />
 
+        {/* Change Password Flow (AuthLayout instead of AppShell) */}
+        <Route
+          path="/change-password"
+          element={
+            <ProtectedRoute>
+              <PasswordGuard>
+                <AuthLayout><ChangePasswordPage /></AuthLayout>
+              </PasswordGuard>
+            </ProtectedRoute>
+          }
+        />
+
         {/* Protected app pages — full authenticated shell wrapped in PasswordGuard */}
         <Route
           element={
@@ -108,7 +120,6 @@ export default function Router() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/profile" element={<ProfileForm />} />
           <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/change-password" element={<ChangePasswordPage />} />
           <Route path="/bmi" element={<BMICalculator />} />
           <Route path="/tdee" element={<TDEECalculator />} />
           <Route path="/food-log" element={<FoodLogPage />} />

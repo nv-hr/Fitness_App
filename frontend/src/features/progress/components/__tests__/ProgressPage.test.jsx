@@ -5,10 +5,10 @@ import userEvent from '@testing-library/user-event';
 import ProgressPage from '../ProgressPage.jsx';
 
 vi.mock('../../api/weightApi.js');
-vi.mock('../../profile/api/profileApi.js');
+vi.mock('../../../profile/api/profileApi.js');
 
 import * as weightApi from '../../api/weightApi.js';
-import * as profileApi from '../../profile/api/profileApi.js';
+import * as profileApi from '../../../profile/api/profileApi.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -19,7 +19,7 @@ describe('ProgressPage', () => {
   it('renders heading', () => {
     weightApi.getWeightHistory.mockReturnValue(new Promise(() => {}));
     render(React.createElement(ProgressPage));
-    expect(screen.getByText('Progress')).toBeTruthy();
+    expect(screen.getByText('Health Progress Tracker')).toBeTruthy();
   });
 
   it('renders all three sections', () => {

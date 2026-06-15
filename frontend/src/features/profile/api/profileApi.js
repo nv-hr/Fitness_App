@@ -3,7 +3,7 @@ import { apiGet, apiPost, apiFetch } from '../../../shared/lib/http.js';
 let profileCache = null;
 let profilePromise = null;
 
-export function clearProfileCache() {
+function clearProfileCache() {
   profileCache = null;
   profilePromise = null;
 }
@@ -16,6 +16,7 @@ export async function createProfile(data) {
     gender: data.gender,
     fitnessGoal: data.fitnessGoal,
     activityLevel: data.activityLevel,
+    calorieRate: data.calorieRate,
     targetWeightKg: data.targetWeightKg || null,
     targetDate: data.targetDate || null,
   });
@@ -52,6 +53,7 @@ export async function updateProfile(data) {
       gender: data.gender,
       fitnessGoal: data.fitnessGoal,
       activityLevel: data.activityLevel,
+      calorieRate: data.calorieRate,
       targetWeightKg: data.targetWeightKg || null,
       targetDate: data.targetDate || null,
     }),

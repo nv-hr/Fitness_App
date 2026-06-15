@@ -12,15 +12,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { format, isToday, startOfToday, startOfWeek, startOfMonth } from 'date-fns';
 import {
   getWeeklyPlan,
-  generateWeeklyPlan,
-  swapActivity,
   toggleActivityComplete,
-  regenerateDay,
   generateWeeklyPlanStream,
   swapActivityStream,
-  regenerateDayStream,
 } from '../api/activityCalendarApi.js';
 import { useCountdownTimer } from '../../../shared/hooks/useCountdownTimer.js';
+import { usePollingWithBackoff } from '../../../shared/hooks/usePollingWithBackoff.js';
+
+const weeklyPlanCache = new Map();
 
 /**
  * Manages all state and API interactions for the activity calendar view.
@@ -60,8 +59,10 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
-    const handleUpdate = () => {
-      setRefreshTrigger((prev) => prev + 1);
+    const handleUpdate = (e) => {
+      if (!e.detail || e.detail.type === 'plan-update' || e.detail.type === 'activity-log') {
+        setRefreshTrigger((prev) => prev + 1);
+      }
     };
     window.addEventListener('health-system-update', handleUpdate);
     return () => {
@@ -81,6 +82,8 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
       if (onDaySelect) onDaySelect(d);
       return d;
     });
+    setDayPlan(null);
+    setPlanLoading(true);
   }, [onDaySelect]);
 
   const handleNextDay = useCallback(() => {
@@ -90,11 +93,15 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
       if (onDaySelect) onDaySelect(d);
       return d;
     });
+    setDayPlan(null);
+    setPlanLoading(true);
   }, [onDaySelect]);
 
   const handleGoToToday = useCallback(() => {
     const today = startOfToday();
     setSelectedDay(today);
+    setDayPlan(null);
+    setPlanLoading(true);
     if (onDaySelect) onDaySelect(today);
   }, [onDaySelect]);
 
@@ -116,8 +123,17 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
     async function fetchDayPlan() {
       setPlanLoading(true);
       try {
-        const res = await getWeeklyPlan(weekStart);
-        const plan = res.data?.plan;
+        let plan;
+        // If refreshTrigger > 0, it means we got a health-system-update and should bypass cache
+        const forceRefresh = refreshTrigger > 0;
+        if (!forceRefresh && weeklyPlanCache.has(weekStart)) {
+          plan = weeklyPlanCache.get(weekStart);
+        } else {
+          const res = await getWeeklyPlan(weekStart);
+          plan = res.data?.plan;
+          if (plan) weeklyPlanCache.set(weekStart, plan);
+        }
+        
         if (cancelled) return;
 
         if (plan?.days) {
@@ -145,43 +161,44 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
     return () => { cancelled = true; };
   }, [selectedDay, refreshTrigger]);
 
+  // ── Smart Polling ──────────────────────────────────────────────────────────
+
+  const pollFn = useCallback(async (weekStart) => {
+    const res = await getWeeklyPlan(weekStart);
+    const plan = res.data?.plan;
+
+    if (plan?.days && plan.days.length > 0) {
+      weeklyPlanCache.set(weekStart, plan);
+      setRefreshTrigger(prev => prev + 1);
+      window.dispatchEvent(new CustomEvent('health-system-update', { detail: { type: 'plan-update' } }));
+      setGenerating(false);
+      setGeneratingStatus('');
+      return true;
+    }
+    return false;
+  }, []);
+
+  const handlePollTimeout = useCallback(() => {
+    setGenerating(false);
+    setGeneratingStatus('');
+    setToast({ message: 'Plan generation timed out. Please try again.' });
+  }, []);
+
+  const startPolling = usePollingWithBackoff(pollFn, {
+    initialDelay: 3000,
+    maxAttempts: 10,
+    factor: 1.5,
+    onTimeout: handlePollTimeout
+  });
+
+  const pollForWeeklyPlan = useCallback((weekStart) => {
+    startPolling(weekStart);
+  }, [startPolling]);
+
   // ── Auto-generate plan for today if it's missing ────────────────────────────
 
-  useEffect(() => {
-    if (!selectedDay) return;
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    const selStr = format(selectedDay, 'yyyy-MM-dd');
-
-    if (selStr === todayStr && !planLoading && !dayPlan && !generating && genRetryAfter === null) {
-      setGenerating(true);
-      setGeneratingStatus('Auto-formulating week plan...');
-      const weekStart = format(startOfWeek(selectedDay, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-
-      generateWeeklyPlanStream(
-        weekStart,
-        4,
-        false, // force
-        (chunk) => {
-          setGeneratingStatus(`Auto-formulating: ${chunk}`);
-        },
-        (plan) => {
-          if (plan?.days) {
-            const found = plan.days.find((d) => d.date === todayStr);
-            if (found) setDayPlan(found);
-          }
-          setGenerating(false);
-          setGeneratingStatus('');
-        },
-        (err) => {
-          if (err.retryAfter || err.code === 'RATE_LIMITED') {
-            setGenRetryAfter(err.retryAfter || 150);
-          }
-          setGenerating(false);
-          setGeneratingStatus('');
-        }
-      );
-    }
-  }, [selectedDay, planLoading, dayPlan, generating, genRetryAfter, setGenRetryAfter]);
+  // Auto-generation on mount has been disabled by user request.
+  // Users must manually trigger plan generation via the UI.
 
   // ── Manual full-week regeneration ───────────────────────────────────────────
 
@@ -228,12 +245,18 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
               setCompletedActivities(completed);
             }
           }
+          weeklyPlanCache.set(weekStart, plan);
         }
-        window.dispatchEvent(new CustomEvent('health-system-update'));
+        window.dispatchEvent(new CustomEvent('health-system-update', { detail: { type: 'plan-update' } }));
         setGenerating(false);
         setGeneratingStatus('');
       },
       (err) => {
+        if (err.status === 409) {
+          setGeneratingStatus('Generation in progress...');
+          pollForWeeklyPlan(weekStart);
+          return;
+        }
         if (err.retryAfter || err.code === 'RATE_LIMITED') {
           setGenRetryAfter(err.retryAfter || 150);
         } else {
@@ -262,11 +285,12 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
       },
       (plan) => {
         if (plan?.days) {
+          weeklyPlanCache.set(weekStart, plan);
           const dateStr = format(selectedDay, 'yyyy-MM-dd');
           const found = plan.days.find((d) => d.date === dateStr);
           if (found) setDayPlan(found);
         }
-        window.dispatchEvent(new CustomEvent('health-system-update'));
+        window.dispatchEvent(new CustomEvent('health-system-update', { detail: { type: 'plan-update' } }));
         setSwappingActivityId(null);
       },
       (err) => {
@@ -299,7 +323,9 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
 
     try {
       await toggleActivityComplete(weekStart, dayIndex, activityId, newCompleted);
-      window.dispatchEvent(new CustomEvent('health-system-update'));
+      // Invalidate cache for this week
+      weeklyPlanCache.delete(weekStart);
+      window.dispatchEvent(new CustomEvent('health-system-update', { detail: { type: 'activity-log' } }));
     } catch (err) {
       // Roll back optimistic update on failure
       setCompletedActivities((prev) => {

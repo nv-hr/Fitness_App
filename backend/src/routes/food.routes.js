@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import foodController from '../controllers/food.controller.js';
+import * as foodController from '../controllers/food.controller.js';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
 
 const router = Router();
@@ -21,6 +21,9 @@ router.get('/summary', foodController.getDailySummary);
 
 // GET /api/food/logs?date= — Individual log entries for a date
 router.get('/logs', foodController.getDailyLogs);
+
+// GET /api/food/daily?date= — Daily combined logs and summary
+router.get('/daily', foodController.getDaily);
 
 // GET /api/food/history?days= — Calorie history
 router.get('/history', foodController.getLogHistory);

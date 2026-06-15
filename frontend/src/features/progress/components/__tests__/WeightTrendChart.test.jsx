@@ -37,7 +37,7 @@ describe('WeightTrendChart', () => {
   it('renders loading state', () => {
     weightApi.getWeightHistory.mockReturnValue(new Promise(() => {}));
     render(React.createElement(WeightTrendChart));
-    expect(screen.getByText('Loading chart...')).toBeTruthy();
+    expect(screen.getByText('Loading chart…')).toBeTruthy();
   });
 
   it('renders error state', async () => {
@@ -60,7 +60,7 @@ describe('WeightTrendChart', () => {
     weightApi.getWeightHistory.mockResolvedValue({ data: { entries: [makeEntry(1, 75)] } });
     render(React.createElement(WeightTrendChart));
     await waitFor(() => {
-      expect(screen.getByText(/At least 2 weight entries/)).toBeTruthy();
+      expect(screen.getByText(/Log at least 2 entries/)).toBeTruthy();
     });
   });
 
@@ -102,10 +102,10 @@ describe('WeightTrendChart', () => {
     });
     render(React.createElement(WeightTrendChart));
     await waitFor(() => {
-      expect(screen.getByText('30 days')).toBeTruthy();
+      expect(screen.getByText('30d')).toBeTruthy();
     });
     await waitFor(() => {
-      expect(screen.getByText(/At least 2 weight entries/)).toBeTruthy();
+      expect(screen.getByText(/Log at least 2 entries/)).toBeTruthy();
     });
   });
 
@@ -115,8 +115,8 @@ describe('WeightTrendChart', () => {
     });
     render(React.createElement(WeightTrendChart));
     await waitFor(() => {
-      const btn30 = screen.getByText('30 days');
-      expect(btn30.style.background).toBe('rgb(37, 99, 235)');
+      const btn30 = screen.getByText('30d');
+      expect(btn30.className).toMatch(/bg-emerald-700/);
     });
   });
 
@@ -138,7 +138,7 @@ describe('WeightTrendChart', () => {
     });
     render(React.createElement(WeightTrendChart));
     await waitFor(() => {
-      expect(screen.getByText(/No data in selected range/)).toBeTruthy();
+      expect(screen.getByText(/No data in the selected range/)).toBeTruthy();
     });
   });
 });

@@ -1,6 +1,36 @@
 import { useMemo } from 'react';
 import { parseISO, differenceInDays, addDays } from 'date-fns';
 
+function determineTrendStatus(hasGoal, profile, daysUntilTarget, rateKgPerWeek, kgToGoal) {
+  if (!hasGoal || daysUntilTarget <= 0) {
+    return { colorStatus: 'neutral', statusLabel: null };
+  }
+
+  const goal = profile.fitness_goal;
+  const isOnTrack =
+    (goal === 'lose_weight' && rateKgPerWeek < 0) ||
+    (goal === 'build_muscle' && rateKgPerWeek > 0) ||
+    (goal === 'gain_weight' && rateKgPerWeek > 0) ||
+    (goal === 'maintain' && Math.abs(rateKgPerWeek) < 0.1);
+
+  if (goal === 'maintain') {
+    if (Math.abs(rateKgPerWeek) < 0.1) return { colorStatus: 'green', statusLabel: 'On Track' };
+    if (Math.abs(rateKgPerWeek) < 0.25) return { colorStatus: 'amber', statusLabel: 'Slower than expected' };
+    return { colorStatus: 'red', statusLabel: 'Off Track' };
+  }
+
+  if (!isOnTrack) {
+    return { colorStatus: 'red', statusLabel: 'Off Track' };
+  }
+
+  const expectedRate = kgToGoal / (daysUntilTarget / 7);
+  const ratio = expectedRate !== 0 ? Math.abs(rateKgPerWeek) / Math.abs(expectedRate) : 0;
+
+  if (ratio >= 0.8) return { colorStatus: 'green', statusLabel: 'On Track' };
+  if (ratio >= 0.4) return { colorStatus: 'amber', statusLabel: 'Slower than expected' };
+  return { colorStatus: 'red', statusLabel: 'Off Track' };
+}
+
 /**
  * Ordinary Least Squares linear regression.
  * @param {{ x: number, y: number }[]} points
@@ -119,67 +149,15 @@ export function useTrendPrediction(weightEntries, profile) {
     const hasGoal = profile?.target_weight_kg && profile?.target_date;
     const noGoalSet = !hasGoal;
 
-    // Determine colorStatus and statusLabel
-    let colorStatus = null;
-    let statusLabel = null;
-
-    if (!hasGoal) {
-      colorStatus = 'neutral';
-    } else {
-      const targetWeight = parseFloat(profile.target_weight_kg);
-      const targetDate = parseISO(profile.target_date);
-      const today = new Date();
-      const daysUntilTarget = differenceInDays(targetDate, today);
-
-      if (daysUntilTarget <= 0) {
-        colorStatus = 'neutral';
-      } else {
-        const goal = profile.fitness_goal;
-        const isOnTrack =
-          (goal === 'lose_weight' && rateKgPerWeek < 0) ||
-          (goal === 'build_muscle' && rateKgPerWeek > 0) ||
-          (goal === 'gain_weight' && rateKgPerWeek > 0) ||
-          (goal === 'maintain' && Math.abs(rateKgPerWeek) < 0.1);
-
-        if (goal === 'maintain') {
-          if (Math.abs(rateKgPerWeek) < 0.1) {
-            colorStatus = 'green';
-            statusLabel = 'On Track';
-          } else if (Math.abs(rateKgPerWeek) < 0.25) {
-            colorStatus = 'amber';
-            statusLabel = 'Slower than expected';
-          } else {
-            colorStatus = 'red';
-            statusLabel = 'Off Track';
-          }
-        } else if (!isOnTrack) {
-          colorStatus = 'red';
-          statusLabel = 'Off Track';
-        } else {
-          const expectedRate =
-            (targetWeight - currentWeight) / (daysUntilTarget / 7);
-          const ratio = expectedRate !== 0
-            ? Math.abs(rateKgPerWeek) / Math.abs(expectedRate)
-            : 0;
-
-          if (ratio >= 0.8) {
-            colorStatus = 'green';
-            statusLabel = 'On Track';
-          } else if (ratio >= 0.4) {
-            colorStatus = 'amber';
-            statusLabel = 'Slower than expected';
-          } else {
-            colorStatus = 'red';
-            statusLabel = 'Off Track';
-          }
-        }
-      }
-    }
-
     // Compute kgToGoal
     const kgToGoal = hasGoal
       ? parseFloat(profile.target_weight_kg) - currentWeight
       : null;
+
+    // Determine colorStatus and statusLabel
+    const targetDate = hasGoal ? parseISO(profile.target_date) : null;
+    const daysUntilTarget = targetDate ? differenceInDays(targetDate, new Date()) : 0;
+    const { colorStatus, statusLabel } = determineTrendStatus(hasGoal, profile, daysUntilTarget, rateKgPerWeek, kgToGoal);
 
     // Compute estimatedDate
     let estimatedDate = null;

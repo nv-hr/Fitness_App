@@ -1,5 +1,6 @@
 import { pool } from '../config/database.js';
 import { AppError } from '../utils/errors.js';
+import { getHistoryCutoffStr } from '../utils/date.utils.js';
 
 /**
  * Search foods by name (seeded + user's custom foods).
@@ -122,11 +123,8 @@ export async function getDailyTotal(userId, logDate) {
  * @returns {Promise<Array>}
  */
 export async function getLogHistory(userId, days = 7) {
-  days = Math.min(Math.max(1, Math.floor(days)), 365);
   try {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-    const cutoffStr = cutoffDate.toISOString().split('T')[0];
+    const cutoffStr = getHistoryCutoffStr(days, false);
     
     // Why LEFT JOIN and JSON_AGG: We fetch complete food intake details (including names from foods or custom entries)
     // aggregated per day so the UI can display detailed lists inside the history panel in a single request.
@@ -232,7 +230,7 @@ export async function batchLogItems(userId, items, clientOverride) {
  * @param {boolean} filters.is_custom
  * @returns {Promise<number>}
  */
-export async function countFoods({ is_custom }) {
+async function countFoods({ is_custom }) {
   try {
     const { rows } = await pool.query(
       'SELECT COUNT(*) as count FROM foods WHERE is_custom = $1',
@@ -251,7 +249,7 @@ export async function countFoods({ is_custom }) {
  * @param {boolean} filters.is_custom
  * @returns {Promise<number>}
  */
-export async function findByCategory(category, { is_custom } = {}) {
+async function findByCategory(category, { is_custom } = {}) {
   try {
     let query = 'SELECT COUNT(*) as count FROM foods WHERE category = $1';
     const params = [category];
@@ -278,7 +276,7 @@ export async function findByCategory(category, { is_custom } = {}) {
  * @param {number} limit
  * @returns {Promise<Array>}
  */
-export async function getFoodsByCategory(userId, category, limit = 50) {
+async function getFoodsByCategory(userId, category, limit = 50) {
   try {
     const { rows } = await pool.query(
       `SELECT id, name, calories_per_100g, category

@@ -5,7 +5,7 @@ import { getRandomActivities, getAllActivities } from '../repositories/activity.
  * @param {string} fitnessGoal
  * @returns {string[]}
  */
-export function mapFitnessGoalToTags(fitnessGoal) {
+function mapFitnessGoalToTags(fitnessGoal) {
   const mapping = {
     lose_weight: ['lose_weight'],
     maintain: ['maintain'],
@@ -22,7 +22,7 @@ export function mapFitnessGoalToTags(fitnessGoal) {
  * @param {number} count
  * @returns {Promise<Array>}
  */
-export async function getRecommendations(userId, fitnessGoal, count = 5) {
+async function getRecommendations(userId, fitnessGoal, count = 5) {
   const goalTags = mapFitnessGoalToTags(fitnessGoal);
   let activities = await getRandomActivities(goalTags, count);
 

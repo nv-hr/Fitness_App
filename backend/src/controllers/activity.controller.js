@@ -9,19 +9,7 @@ import { getCachedPlan, setCachedPlan } from '../services/llm.service.js';
 import { findByUserAndWeek, upsertPlan } from '../repositories/weeklyPlan.repository.js';
 import { pool } from '../config/database.js';
 
-function isDateWithinTimezoneRange(dateStr) {
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setUTCDate(today.getUTCDate() - 1);
-  const tomorrow = new Date(today);
-  tomorrow.setUTCDate(today.getUTCDate() + 1);
-  
-  const todayStr = today.toISOString().split('T')[0];
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
-  
-  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr;
-}
+import { isDateWithinTimezoneRange } from '../utils/date.utils.js';
 
 /**
  * GET /api/activities — Full activity pool filtered by user's goal.

@@ -1,27 +1,16 @@
 import * as foodRepo from '../repositories/food.repository.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { ValidationError } from '../utils/errors.js';
-import { calculateCalories, validateFoodData, validateCustomFoodData } from '../services/food.service.js';
+import { calculateCalories, validateCustomFoodData } from '../services/food.service.js';
 import { findByUserId as findProfileByUserId } from '../repositories/profile.repository.js';
 import { calculateTdee, getCalorieTarget } from '../services/profile.service.js';
-import { markItemLogged, syncItemLoggedState } from '../repositories/dailyMealPlan.repository.js';
+import { markItemLogged } from '../repositories/dailyMealPlan.repository.js';
+import { syncItemLoggedState } from '../repositories/mealPlanSync.repository.js';
 import { clearCachedPlan } from '../services/llm.service.js';
 
 const VALID_MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 
-function isDateWithinTimezoneRange(dateStr) {
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setUTCDate(today.getUTCDate() - 1);
-  const tomorrow = new Date(today);
-  tomorrow.setUTCDate(today.getUTCDate() + 1);
-  
-  const todayStr = today.toISOString().split('T')[0];
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
-  
-  return dateStr === todayStr || dateStr === yesterdayStr || dateStr === tomorrowStr;
-}
+import { isDateWithinTimezoneRange } from '../utils/date.utils.js';
 
 /**
  * GET /api/food/search?q= — Search foods by name (FOOD-01, FOOD-02).
@@ -179,6 +168,45 @@ export async function getDailyLogs(req, res, next) {
 }
 
 /**
+ * GET /api/food/daily?date= — Daily calorie summary and logs combined.
+ */
+export async function getDaily(req, res, next) {
+  try {
+    const date = req.query.date || new Date().toISOString().split('T')[0];
+
+    const logs = await foodRepo.getDailyLogs(req.user.userId, date);
+
+    const rawTotal = await foodRepo.getDailyTotal(req.user.userId, date);
+    const totalConsumed = Number(rawTotal);
+
+    const profile = await findProfileByUserId(req.user.userId);
+    let calorieTarget = null;
+    if (profile) {
+      const tdee = calculateTdee(profile.weight_kg, profile.height_cm, profile.age, profile.gender, profile.activity_level);
+      if (tdee) {
+        calorieTarget = getCalorieTarget(tdee, profile.fitness_goal, profile.calorie_rate);
+      }
+    }
+
+    const remaining = calorieTarget !== null ? calorieTarget - totalConsumed : null;
+    const isExtremeDeficit = totalConsumed < 1200;
+
+    return successResponse(res, {
+      logs,
+      summary: {
+        date,
+        totalConsumed,
+        calorieTarget,
+        remaining,
+        isExtremeDeficit,
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * GET /api/food/history?days= — Calorie history for past days (LOG-04).
  */
 export async function getLogHistory(req, res, next) {
@@ -245,13 +273,3 @@ export async function deleteFoodLog(req, res, next) {
   }
 }
 
-export default {
-  searchFoods,
-  createCustomFood,
-  logFood,
-  getDailySummary,
-  getDailyLogs,
-  getLogHistory,
-  getRecentFoods,
-  deleteFoodLog,
-};

@@ -58,7 +58,7 @@ export default function ActivityLogSection() {
       setSuccessMsg('Activity logged successfully!');
       setLoggingActivity(null);
       await refreshHistory();
-      window.dispatchEvent(new CustomEvent('health-system-update'));
+      window.dispatchEvent(new CustomEvent('health-system-update', { detail: { type: 'activity-log' } }));
     } catch (err) {
       setError(err.message || 'Failed to log activity');
     }
@@ -74,7 +74,7 @@ export default function ActivityLogSection() {
       setError('');
       await deleteActivityLog(logId);
       await refreshHistory();
-      window.dispatchEvent(new CustomEvent('health-system-update'));
+      window.dispatchEvent(new CustomEvent('health-system-update', { detail: { type: 'activity-log' } }));
     } catch (err) {
       setError(err.message || 'Failed to delete activity log');
     }

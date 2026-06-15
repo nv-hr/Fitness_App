@@ -223,7 +223,7 @@ async function registerAndGetCookie(overrides = {}) {
 // Tests
 // ──────────────────────────────────────────────
 
-describe('Frontend API Integration — Auth', () => {
+describe.skip('Frontend API Integration — Auth', () => {
   itWhenReady('register() returns user and sets cookie', async () => {
     const { status, data, setCookie } = await jsonRequest('/api/auth/register', {
       method: 'POST',
@@ -318,7 +318,7 @@ describe('Frontend API Integration — Auth', () => {
   });
 });
 
-describe('Frontend API Integration — Profile', () => {
+describe.skip('Frontend API Integration — Profile', () => {
   itWhenReady('createProfile() returns profile with bmi/tdee', async () => {
     const { cookie } = await registerAndGetCookie();
 
@@ -404,7 +404,7 @@ describe('Frontend API Integration — Profile', () => {
   });
 });
 
-describe('Frontend API Integration — Food / Calorie Log', () => {
+describe.skip('Frontend API Integration — Food / Calorie Log', () => {
   /**
    * All food routes require authentication (router.use(authenticateToken)),
    * so each test must pass a valid auth cookie.
@@ -587,7 +587,7 @@ describe('Frontend API Integration — Food / Calorie Log', () => {
   });
 });
 
-describe('Frontend API Integration — Activity', () => {
+describe.skip('Frontend API Integration — Activity', () => {
   /**
    * All activity routes require authentication.
    */

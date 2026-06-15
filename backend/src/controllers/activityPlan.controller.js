@@ -1,7 +1,7 @@
 import { pool } from '../config/database.js';
 import { successResponse, errorResponse } from '../utils/response.js';
 import { getCachedPlan, setCachedPlan } from '../services/llm.service.js';
-import { generateActivityPlan } from '../services/activityPlan.service.js';
+import { generateActivityPlan } from '../services/activityPlan/index.js';
 import { getProfile } from '../services/profile.service.js';
 import { getAllActivities, getActivityHistoryWithEntries, batchLogActivities } from '../repositories/activity.repository.js';
 import { findByUserAndDate, markActivitiesLogged } from '../repositories/activityPlan.repository.js';
