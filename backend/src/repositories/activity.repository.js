@@ -45,6 +45,46 @@ export async function getAllActivities(goalTags = []) {
 }
 
 /**
+ * Get activities filtered by a specific goal tag and calorie ceiling.
+ * Uses JSONB @> operator to ensure the tag is present.
+ * @param {string} fitnessGoal
+ * @param {number} maxCalories
+ * @returns {Promise<Array>}
+ */
+async function getActivitiesByGoalAndCeiling(fitnessGoal, maxCalories) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM activities 
+       WHERE goal_tags @> $1 AND estimated_calories <= $2 
+       ORDER BY name ASC`,
+      [JSON.stringify([fitnessGoal]), maxCalories]
+    );
+    return rows;
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to get activities by goal and ceiling: ${err.message}`, 500);
+  }
+}
+
+/**
+ * Get activities filtered by calorie ceiling only (fallback query).
+ * @param {number} maxCalories
+ * @returns {Promise<Array>}
+ */
+async function getAllActivitiesWithCeiling(maxCalories) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM activities 
+       WHERE estimated_calories <= $1 
+       ORDER BY name ASC`,
+      [maxCalories]
+    );
+    return rows;
+  } catch (err) {
+    throw new AppError('DatabaseError', `Failed to get activities with ceiling: ${err.message}`, 500);
+  }
+}
+
+/**
  * Get a single activity by ID.
  * @param {number} activityId
  * @returns {Promise<Object|null>}

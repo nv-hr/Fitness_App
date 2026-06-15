@@ -4,7 +4,7 @@ import { AppError } from '../utils/errors.js';
 const profileCache = new Map();
 const CACHE_TTL_MS = 30 * 1000;
 
-export function invalidateProfileCache(userId) {
+function invalidateProfileCache(userId) {
   profileCache.delete(userId);
 }
 
@@ -26,7 +26,7 @@ export function invalidateProfileCache(userId) {
 export async function create({ userId, weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate, targetWeightKg, targetDate }) {
   try {
     const { rows } = await pool.query(
-      'INSERT INTO profiles (user_id, weight_kg, height_cm, age, gender, fitness_goal, activity_level, calorie_rate, target_weight_kg, target_date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *',
+      'INSERT INTO profiles (user_id, weight_kg, height_cm, age, gender, fitness_goal, activity_level, calorie_rate, target_weight_kg, target_date) VALUES ($1, $2, $3, $4, $5, $6, $7::activity_level, $8, $9, $10) RETURNING *',
       [userId, weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate, targetWeightKg, targetDate]
     );
     invalidateProfileCache(userId);
@@ -100,7 +100,7 @@ export async function updateWeightKg(userId, weightKg) {
 export async function updateByUserId(userId, { weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate, targetWeightKg, targetDate }) {
   try {
     const { rows } = await pool.query(
-      'UPDATE profiles SET weight_kg = $1, height_cm = $2, age = $3, gender = $4, fitness_goal = $5, activity_level = $6, calorie_rate = $7, target_weight_kg = $8, target_date = $9, updated_at = NOW() WHERE user_id = $10 RETURNING *',
+      'UPDATE profiles SET weight_kg = $1, height_cm = $2, age = $3, gender = $4, fitness_goal = $5, activity_level = $6::activity_level, calorie_rate = $7, target_weight_kg = $8, target_date = $9, updated_at = NOW() WHERE user_id = $10 RETURNING *',
       [weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate, targetWeightKg, targetDate, userId]
     );
     if (!rows[0]) {

@@ -10,3 +10,7 @@ export {
   generateFallbackActivityPlan as _deprecated_generateFallbackActivityPlan,
   generateActivityPlan,
 } from './generator.js';
+
+export {
+  generateWeeklyPlanAlgorithm,
+} from './weeklyPlanAlgorithm.js';

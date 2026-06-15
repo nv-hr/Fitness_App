@@ -12,13 +12,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { format, isToday, startOfToday, startOfWeek, startOfMonth } from 'date-fns';
 import {
   getWeeklyPlan,
-  generateWeeklyPlan,
-  swapActivity,
   toggleActivityComplete,
-  regenerateDay,
   generateWeeklyPlanStream,
   swapActivityStream,
-  regenerateDayStream,
 } from '../api/activityCalendarApi.js';
 import { useCountdownTimer } from '../../../shared/hooks/useCountdownTimer.js';
 import { usePollingWithBackoff } from '../../../shared/hooks/usePollingWithBackoff.js';

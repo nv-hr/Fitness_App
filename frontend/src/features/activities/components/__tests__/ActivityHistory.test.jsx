@@ -1,6 +1,10 @@
 import { describe, test, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ActivityHistory from '../ActivityHistory.jsx';
+
+vi.mock('../api/activityApi.js', () => ({
+  getActivityLogs: vi.fn().mockResolvedValue({ data: { logs: mockHistory[0].entries } })
+}));
 
 const mockHistory = [
   {
@@ -45,21 +49,26 @@ describe('ActivityHistory', () => {
     expect(screen.getByText(/450/)).toBeInTheDocument();
   });
 
-  test('renders delete buttons and entry details when expanded', () => {
+  test('renders delete buttons and entry details when expanded', async () => {
     render(<ActivityHistory history={mockHistory} onDelete={vi.fn()} />);
     // Click to expand first day
     const dateHeader = screen.getByText('2026-01-05');
     fireEvent.click(dateHeader.closest('div'));
-    expect(screen.getByText('Running')).toBeInTheDocument();
-    expect(screen.getAllByText('Delete').length).toBe(2);
+    await waitFor(() => {
+      expect(screen.getByText('Running')).toBeInTheDocument();
+      expect(screen.getAllByText('Delete').length).toBe(2);
+    });
   });
 
-  test('calls onDelete with entry id when delete is clicked', () => {
+  test('calls onDelete with entry id when delete is clicked', async () => {
     const onDelete = vi.fn();
     render(<ActivityHistory history={mockHistory} onDelete={onDelete} />);
     // Expand and click delete
     const dateHeader = screen.getByText('2026-01-05');
     fireEvent.click(dateHeader.closest('div'));
+    await waitFor(() => {
+      expect(screen.getAllByText('Delete').length).toBeGreaterThan(0);
+    });
     fireEvent.click(screen.getAllByText('Delete')[0]);
     expect(onDelete).toHaveBeenCalledWith(1);
   });

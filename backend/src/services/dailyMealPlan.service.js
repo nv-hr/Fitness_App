@@ -1,4 +1,4 @@
-import { buildPrompt, callLlmApi, getCachedPlan, setCachedPlan, callLlmStream, activeGenerations } from './llm.service.js';
+import { buildPrompt, callLlmApi, getCachedPlan, setCachedPlan, callLlmStream, activeGenerations, executeLlmRequest } from './llm.service.js';
 import { findByUserAndDate, upsertPlan, markItemLogged } from '../repositories/dailyMealPlan.repository.js';
 import { createFoodLog, deleteFoodLogByPlan } from '../repositories/food.repository.js';
 import { pool } from '../config/database.js';
@@ -336,6 +336,26 @@ export async function regenerateCategory(deps) {
   return { plan: data };
 }
 
+async function processFallbackPlan(userId, planDate, calorieTarget, dbFoods) {
+  const fallback = generateFallbackDailyMealPlan(calorieTarget, dbFoods || []);
+  fallback.date = planDate;
+  fallback.calorie_target = calorieTarget;
+  fallback.generated_at = new Date().toISOString();
+  fallback.llm_model = 'template-fallback';
+  for (const meal of fallback.meals) {
+    for (const item of (meal.items || [])) {
+      item.logged = false;
+    }
+  }
+  try {
+    await upsertPlan(userId, planDate, fallback, 'fallback');
+  } catch (err) {
+    console.error('[DailyMealPlan] Failed to persist fallback plan:', err.message);
+  }
+  setCachedPlan(userId, planDate, JSON.parse(JSON.stringify(fallback)), 'meal');
+  return { plan: fallback, fromCache: false, status: 'fallback' };
+}
+
 /**
  * Generate a daily meal plan using LLM or fallback template.
  * 
@@ -380,23 +400,7 @@ export async function generateDailyMealPlan(deps) {
   const bmiCategory = profile.bmiCategory;
 
   if (forceFallback) {
-    const fallback = generateFallbackDailyMealPlan(calorieTarget, dbFoods || []);
-    fallback.date = planDate;
-    fallback.calorie_target = calorieTarget;
-    fallback.generated_at = new Date().toISOString();
-    fallback.llm_model = 'template-fallback';
-    for (const meal of fallback.meals) {
-      for (const item of (meal.items || [])) {
-        item.logged = false;
-      }
-    }
-    try {
-      await upsertPlan(userId, planDate, fallback, 'fallback');
-    } catch (err) {
-      console.error('[DailyMealPlan] Failed to persist fallback plan:', err.message);
-    }
-    setCachedPlan(userId, planDate, JSON.parse(JSON.stringify(fallback)), 'meal');
-    return { plan: fallback, fromCache: false, status: 'fallback' };
+    return await processFallbackPlan(userId, planDate, calorieTarget, dbFoods);
   }
   const prompt = buildDailyMealPlanPrompt(userProfile, dbFoods, recentLogs, planDate, calorieTarget, tdee, bmi, bmiCategory, regeneratingMeal);
   console.log(`[LLM] Meal planning running for user ${userId}, date ${planDate}`);
@@ -407,23 +411,12 @@ export async function generateDailyMealPlan(deps) {
   while (attempt < maxAttempts) {
     attempt++;
     try {
-      if (deps.onChunk) {
-        const rawText = await callLlmStream(prompt, deps.onChunk, 'Generate my daily meal plan based on my profile and history.');
-        const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-          throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);
-        }
-        plan = JSON.parse(jsonMatch[0]);
-      } else {
-        plan = await callLlmApi(prompt);
-      }
+      plan = await executeLlmRequest(prompt, deps.onChunk, 'Generate my daily meal plan based on my profile and history.');
     } catch (err) {
       console.error(`[DailyMealPlan] LLM API call attempt ${attempt} failed:`, err.message);
       if (attempt >= maxAttempts) {
         console.warn(`[LLM] Meal planning returning fallback for user ${userId} (attempts exhausted)`);
-        const fallback = generateFallbackDailyMealPlan(calorieTarget, dbFoods || []);
-        return { plan: fallback, fromCache: false, status: 'fallback' };
+        return await processFallbackPlan(userId, planDate, calorieTarget, dbFoods);
       }
       continue;
     }
@@ -459,22 +452,7 @@ export async function generateDailyMealPlan(deps) {
     return { plan, fromCache: false, status: 'active' };
   }
   console.warn(`[LLM] Meal planning returning fallback for user ${userId} (all attempts failed)`);
-  const fallback = generateFallbackDailyMealPlan(calorieTarget, dbFoods || []);
-  fallback.date = planDate;
-  fallback.calorie_target = calorieTarget;
-  fallback.generated_at = new Date().toISOString();
-  fallback.llm_model = 'template-fallback';
-  for (const meal of fallback.meals) {
-    for (const item of (meal.items || [])) {
-      item.logged = false;
-    }
-  }
-  try {
-    await upsertPlan(userId, planDate, fallback, 'fallback');
-  } catch (err) {
-    console.error('[DailyMealPlan] Failed to persist fallback plan:', err.message);
-  }
-  return { plan: fallback, fromCache: false, status: 'fallback' };
+  return await processFallbackPlan(userId, planDate, calorieTarget, dbFoods);
   } finally {
     activeGenerations.delete(lockKey);
   }

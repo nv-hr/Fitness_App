@@ -9,6 +9,22 @@
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+function getSafeUrl(path) {
+  const target = `${API_BASE}${path}`;
+  try {
+    const url = new URL(target, window.location.origin);
+    const allowedHosts = ['localhost', '127.0.0.1'];
+    if (import.meta.env.VITE_API_HOST) allowedHosts.push(import.meta.env.VITE_API_HOST);
+    if (url.hostname && !allowedHosts.includes(url.hostname)) {
+      throw new Error(`SSRF Prevention: Host ${url.hostname} is not allowed.`);
+    }
+    return url.href;
+  } catch (e) {
+    if (e.message.startsWith('SSRF')) throw e;
+    return target; // fallback for relative paths if URL parsing fails unexpectedly
+  }
+}
+
 /**
  * Base fetch wrapper. Automatically includes credentials and serialises
  * JSON errors into thrown `Error` instances with `.retryAfter` and `.code`.
@@ -24,7 +40,7 @@ export async function apiFetch(path, options = {}) {
     ...options.headers,
   };
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(getSafeUrl(path), {
     ...options,
     headers,
     credentials: 'include',
@@ -99,7 +115,7 @@ export async function apiDelete(path) {
  */
 export async function fetchSseStream(path, body, onChunk, onDone, onError) {
   try {
-    const response = await fetch(`${API_BASE}${path}`, {
+    const response = await fetch(getSafeUrl(path), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -8,6 +8,7 @@ import { levenshteinDistance } from '../utils/string.js';
 import { calculateBmi, getBmiCategory, calculateBmr, calculateTdee, getCalorieTarget } from './profile.service.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// fallow-ignore-next-line security-sink
 const PROMPTS_DIR = path.resolve(__dirname, '../../prompts');
 const OPENROUTER_BASE_URL = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1';
 const APP_URL = process.env.FRONTEND_URL || 'http://localhost:3001';
@@ -73,7 +74,10 @@ function sanitizeLlmInput(input) {
 
 export function buildPrompt(filename, variables) {
   if (!promptCache.has(filename)) {
-    const filePath = path.join(PROMPTS_DIR, filename);
+    const filePath = path.normalize(path.join(PROMPTS_DIR, filename));
+    if (!filePath.startsWith(PROMPTS_DIR)) {
+      throw new Error('Invalid prompt filename');
+    }
     promptCache.set(filename, fs.readFileSync(filePath, 'utf-8'));
   }
   let template = promptCache.get(filename);
@@ -228,6 +232,32 @@ export async function callLlmStream(systemPrompt, onChunk, userPrompt = 'Generat
   throw new AppError('LlmAllFailed', 'All LLM models failed', 502);
 }
 
+export async function executeLlmRequest(prompt, onChunk, userPrompt = 'Generate my weekly fitness plan based on my profile and history.') {
+  if (onChunk) {
+    const rawText = await callLlmStream(prompt, onChunk, userPrompt);
+    const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);
+    }
+    try {
+      return JSON.parse(jsonMatch[0]);
+    } catch (parseErr) {
+      throw new AppError('LlmParseError', 'Failed to parse LLM response as JSON', 502);
+    }
+  } else {
+    return await callLlmApi(prompt);
+  }
+}
+
+async function attemptCorrection(prompt, errors, onChunk, chunkPrefix) {
+  const correctionPrompt = prompt + '\n\n' + buildCorrectionPrompt(errors);
+  if (onChunk && chunkPrefix) {
+    onChunk(chunkPrefix);
+  }
+  return await executeLlmRequest(correctionPrompt, onChunk);
+}
+
 function validateActivities(activities, prefix, allowEmpty = false) {
   const errors = [];
   if (!Array.isArray(activities)) {
@@ -329,16 +359,6 @@ function validatePlanStructure(plan, weekStart, availableDays = null) {
   return { valid: errors.length === 0, errors };
 }
 
-/**
- * Detect old-format weekly plans (pre-Phase 30) by checking for format_version.
- * Old format = plan exists but has no format_version at root level.
- * New format = format_version: 1 at root level.
- * @param {object|null|undefined} plan - Plan data object from DB or cache
- * @returns {boolean} true if plan exists and lacks format_version
- */
-export function isOldFormat(plan) {
-  return !!plan && plan.format_version === undefined;
-}
 
 function fuzzyMatchActivityName(name, dbActivities) {
   if (!name || typeof name !== 'string') {
@@ -512,7 +532,7 @@ async function generateFallbackPlan(deps) {
   };
 }
 
-export async function generateWeeklyPlan(deps) {
+async function generateWeeklyPlan(deps) {
   const { getProfile, getActivityHistory, getActivities, getTopActivities, availableDays = 4 } = deps;
 
   const lockKey = `weekly_${deps.userId}_${deps.weekStart}`;
@@ -561,22 +581,12 @@ export async function generateWeeklyPlan(deps) {
       skipInitialCall = false;
     } else {
       try {
-        if (deps.onChunk) {
-          const rawText = await callLlmStream(prompt, deps.onChunk);
-          const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-          const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-          if (!jsonMatch) {
-            throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);
-          }
-          plan = JSON.parse(jsonMatch[0]);
-        } else {
-          plan = await callLlmApi(prompt);
-        }
+        plan = await executeLlmRequest(prompt, deps.onChunk);
       } catch (err) {
         console.error(`[LLM] API call attempt ${attempt} failed:`, err.message);
         if (attempt >= maxAttempts) {
           console.warn(`[LLM] Activities planning returning fallback for user ${deps.userId}`);
-          const fallback = await generateFallbackPlan({ getTopActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
+          const fallback = await generateFallbackPlan({ getTopActivities, getActivities, userId: deps.userId, weekStart: deps.weekStart, availableDays });
           return { plan: fallback, fromCache: false, status: fallback.status };
         }
         await new Promise(r => setTimeout(r, CONFIG.retryDelayMs));
@@ -588,21 +598,8 @@ export async function generateWeeklyPlan(deps) {
     if (!structureCheck.valid) {
       console.warn(`[LLM] Structural validation failed (attempt ${attempt}):`, structureCheck.errors.join('; '));
       if (attempt < maxAttempts) {
-        const correctionPrompt = prompt + '\n\n' + buildCorrectionPrompt(structureCheck.errors);
         try {
-          if (deps.onChunk) {
-            deps.onChunk('\n\n[Correcting plan structure...]\n\n');
-            const rawText = await callLlmStream(correctionPrompt, deps.onChunk);
-            const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-            const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) {
-              throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);
-            }
-            plan = JSON.parse(jsonMatch[0]);
-          } else {
-            plan = await callLlmApi(correctionPrompt);
-          }
-          // Correction succeeded — re-validate the corrected plan on next iteration
+          plan = await attemptCorrection(prompt, structureCheck.errors, deps.onChunk, '\n\n[Correcting plan structure...]\n\n');
           skipInitialCall = true;
           continue;
         } catch (correctionErr) {
@@ -619,21 +616,8 @@ export async function generateWeeklyPlan(deps) {
     if (!nameCheck.valid) {
       console.warn(`[LLM] Name validation failed (attempt ${attempt}):`, nameCheck.errors.join('; '));
       if (attempt < maxAttempts) {
-        const correctionPrompt = prompt + '\n\n' + buildCorrectionPrompt(nameCheck.errors);
         try {
-          if (deps.onChunk) {
-            deps.onChunk('\n\n[Correcting activity names...]\n\n');
-            const rawText = await callLlmStream(correctionPrompt, deps.onChunk);
-            const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-            const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) {
-              throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);
-            }
-            plan = JSON.parse(jsonMatch[0]);
-          } else {
-            plan = await callLlmApi(correctionPrompt);
-          }
-          // Correction succeeded — re-validate the corrected plan on next iteration
+          plan = await attemptCorrection(prompt, nameCheck.errors, deps.onChunk, '\n\n[Correcting activity names...]\n\n');
           skipInitialCall = true;
           continue;
         } catch (correctionErr) {
@@ -847,17 +831,7 @@ export async function swapActivity(deps, activityId, dayIndex, skipLock = false)
     // 7. Call LLM with fallback
     let replacement
     try {
-      if (deps.onChunk) {
-        const rawText = await callLlmStream(prompt, deps.onChunk, 'Swap a fitness activity');
-        const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-          throw new AppError('LlmParseError', 'No JSON object found in LLM response', 502);
-        }
-        replacement = JSON.parse(jsonMatch[0]);
-      } else {
-        replacement = await callLlmApi(prompt)
-      }
+      replacement = await executeLlmRequest(prompt, deps.onChunk, 'Swap a fitness activity');
     } catch (err) {
       console.warn(`[LLM] Swap LLM call failed: ${err.message}, falling back to random activity`)
       replacement = null

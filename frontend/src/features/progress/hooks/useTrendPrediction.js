@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { parseISO, differenceInDays, addDays } from 'date-fns';
 
-export function determineTrendStatus(hasGoal, profile, daysUntilTarget, rateKgPerWeek, kgToGoal) {
+function determineTrendStatus(hasGoal, profile, daysUntilTarget, rateKgPerWeek, kgToGoal) {
   if (!hasGoal || daysUntilTarget <= 0) {
     return { colorStatus: 'neutral', statusLabel: null };
   }

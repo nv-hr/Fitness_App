@@ -99,7 +99,7 @@ export default function ActivityHistory({ history, onDelete }) {
                             // Also optimistic remove from cache
                             setEntriesCache((prev) => ({
                               ...prev,
-                              [day.logged_date]: prev[day.logged_date].filter(e => e.id !== entry.id)
+                              [day.logged_date]: (prev[day.logged_date] || day.entries || []).filter(e => e.id !== entry.id)
                             }));
                           }}
                           className="flex items-center gap-1 px-3 py-1.5 border border-rose-100 hover:border-rose-200 text-rose-550 hover:text-rose-700 bg-rose-50/40 hover:bg-rose-50 text-xs font-bold rounded-lg transition-colors cursor-pointer min-h-[30px]"

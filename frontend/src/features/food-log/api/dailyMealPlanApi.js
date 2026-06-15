@@ -9,7 +9,7 @@ export async function generateDailyMealPlan(date, options = {}) {
   return apiPost('/api/daily-meal-plans/generate', { date, ...options });
 }
 
-export function generateDailyMealPlanStream(date, onChunk, onDone, onError) {
+function generateDailyMealPlanStream(date, onChunk, onDone, onError) {
   return fetchSseStream('/api/daily-meal-plans/generate-stream', { date }, onChunk, onDone, onError);
 }
 
@@ -21,7 +21,7 @@ export async function toggleItemLogged(date, mealType, foodId, logged) {
   return apiPost('/api/daily-meal-plans/toggle-item', { date, mealType, foodId, logged });
 }
 
-export async function regenerateCategory(date, mealType) {
+async function regenerateCategory(date, mealType) {
   return apiPost('/api/daily-meal-plans/regenerate-category', { date, mealType });
 }
 

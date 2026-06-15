@@ -100,7 +100,7 @@ export function getCalorieTarget(tdee, fitnessGoal, calorieRate) {
  * @param {Object} data
  */
 function validateProfileData(data) {
-  const { weightKg, heightCm, age, gender, fitnessGoal, targetWeightKg, targetDate } = data;
+  const { weightKg, heightCm, age, gender, fitnessGoal, activityLevel, targetWeightKg, targetDate } = data;
 
   if (weightKg == null || weightKg < 2 || weightKg > 300) {
     throw new ValidationError('Weight must be between 2-300 kg');
@@ -116,6 +116,9 @@ function validateProfileData(data) {
   }
   if (!['lose_weight', 'maintain', 'gain_weight'].includes(fitnessGoal)) {
     throw new ValidationError('Fitness goal must be lose_weight, maintain, or gain_weight');
+  }
+  if (activityLevel != null && !['sedentary', 'light', 'moderate', 'very_active', 'extra_active'].includes(activityLevel)) {
+    throw new ValidationError('Activity level must be sedentary, light, moderate, very_active, or extra_active');
   }
 
   if (targetWeightKg != null && (targetWeightKg < 2 || targetWeightKg > 300)) {

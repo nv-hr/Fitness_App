@@ -15,8 +15,6 @@ import {
   generateDailyMealPlan,
   logMeals,
   toggleItemLogged,
-  regenerateCategory,
-  generateDailyMealPlanStream,
   regenerateCategoryStream,
 } from '../api/dailyMealPlanApi.js';
 import { useCountdownTimer } from '../../../shared/hooks/useCountdownTimer.js';

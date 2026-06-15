@@ -1,5 +1,6 @@
 import { successResponse, errorResponse } from '../utils/response.js';
-import { generateWeeklyPlan, getCachedPlan, setCachedPlan, clearCachedPlan, regenerateDay, swapActivity, isOldFormat, acquireLock } from '../services/llm.service.js';
+import { getCachedPlan, setCachedPlan, clearCachedPlan, regenerateDay, swapActivity, acquireLock } from '../services/llm.service.js';
+import { generateWeeklyPlanAlgorithm } from '../services/activityPlan/index.js';
 import { findByUserId as findProfileByUserId } from '../repositories/profile.repository.js';
 import { pool } from '../config/database.js';
 import { AppError } from '../utils/errors.js';
@@ -16,15 +17,7 @@ import { isDateWithinTimezoneRange } from '../utils/date.utils.js';
 import { setupSSE } from '../utils/sse.utils.js';
 
 
-// WR-02: Infer availableDays from an old-format plan's structure (best-effort).
-// Counts non-empty activity days and clamps to [4, 6]; falls back to 5 if
-// the old plan has no days array. This preserves the user's original plan
-// structure rather than silently switching to a fixed 5-day default.
-function inferAvailableDays(oldPlan) {
-  if (!oldPlan?.days) return 5;
-  const nonEmptyDays = oldPlan.days.filter(d => d.activities?.length > 0).length;
-  return Math.max(4, Math.min(6, nonEmptyDays || 5));
-}
+
 
 function isValidDateString(str) {
   if (typeof str !== 'string') return false;
@@ -125,7 +118,7 @@ async function generate(req, res, next) {
     // Check DB for existing plan before regenerating (cache was wiped on restart)
     if (!force) {
       const existingPlan = await findByUserAndWeek(userId, weekStart);
-      if (existingPlan && existingPlan.plan_data && Array.isArray(existingPlan.plan_data.days) && !isOldFormat(existingPlan.plan_data)) {
+      if (existingPlan && existingPlan.plan_data && Array.isArray(existingPlan.plan_data.days)) {
         setCachedPlan(userId, weekStart, existingPlan.plan_data);
         return successResponse(res, { plan: existingPlan.plan_data, fromCache: false });
       }
@@ -133,15 +126,16 @@ async function generate(req, res, next) {
       clearCachedPlan(userId, weekStart);
     }
 
-    const result = await generateWeeklyPlan({
-      getProfile: (id) => findProfileByUserId(id),
-      getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
-      getActivities: () => getAllActivities(),
-      getTopActivities: (id, limit) => getTopActivities(id, limit),
-      userId,
+    const profile = await findProfileByUserId(userId);
+    const activities = await getAllActivities();
+    
+    const generatedPlan = generateWeeklyPlanAlgorithm({
+      profile,
+      activities,
       weekStart,
-      availableDays, // pass through to service
     });
+    
+    const result = { plan: generatedPlan, status: 'active' };
 
     // Persist to DB so toggleComplete, swapHandler, and subsequent
     // page loads can find the plan (generateWeeklyPlan only caches in memory).
@@ -240,35 +234,8 @@ async function swapHandler(req, res, next) {
         weekStart: targetWeekStart,
       };
 
-      // D-04: Auto-trigger migration if plan is old format, then retry swap
-      if (planForSwap && isOldFormat(planForSwap)) {
-        console.log(`[Migration] Old-format plan detected during swap for user ${userId}, week ${targetWeekStart}. Migrating...`);
-        clearCachedPlan(userId, targetWeekStart);
-        // WR-02: Infer availableDays from the old plan's structure rather than hardcoding 5
-        const inferredDays = inferAvailableDays(planForSwap);
-        const migrationDeps = {
-          getProfile: (id) => findProfileByUserId(id),
-          getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
-          getActivities: () => getAllActivities(),
-          getTopActivities: (id, limit) => getTopActivities(id, limit),
-          userId,
-          weekStart: targetWeekStart,
-          availableDays: inferredDays,
-        };
-        console.log(`[Migration] Using inferred availableDays=${inferredDays} from old plan (${planForSwap.days?.length || 0} total days, ${planForSwap.days?.filter(d => d.activities?.length > 0).length || 0} activity days).`);
-        const migrationResult = await generateWeeklyPlan(migrationDeps);
-        if (!migrationResult.plan || !Array.isArray(migrationResult.plan.days) || migrationResult.plan.days.length === 0) {
-          throw new AppError('MigrationError', 'Failed to migrate old-format plan. Cannot proceed with swap.', 500);
-        }
-        // Persist migrated plan to DB and cache
-        await upsertPlan(userId, targetWeekStart, migrationResult.plan, 'active');
-        console.log(`[Migration] Successfully migrated plan for swap. Proceeding with swap.`);
-      }
-
-      // Re-read availableDays from (now potentially migrated) cached plan
-      const updatedCached = getCachedPlan(userId, targetWeekStart);
-      if (updatedCached && Array.isArray(updatedCached.days)) {
-        const activityDays = updatedCached.days.filter(d => d.rest_day === false).length;
+      if (planForSwap && Array.isArray(planForSwap.days)) {
+        const activityDays = planForSwap.days.filter(d => d.rest_day === false).length;
         if (activityDays > 0) deps.availableDays = activityDays;
       }
 
@@ -399,14 +366,14 @@ async function generateStream(req, res, next) {
   }
 
   const force = req.body.force === true;
-  console.log(`[DEBUG] generateStream called for user ${userId}, weekStart ${weekStart}, force=${force}`, req.body);
+  console.log(`[DEBUG] generateStream called for user ${userId}, weekStart ${weekStart}, force=${force}`);
 
   const onChunk = setupSSE(res);
 
   try {
     if (!force) {
       const existingPlan = await findByUserAndWeek(userId, weekStart);
-      if (existingPlan && existingPlan.plan_data && Array.isArray(existingPlan.plan_data.days) && !isOldFormat(existingPlan.plan_data)) {
+      if (existingPlan && existingPlan.plan_data && Array.isArray(existingPlan.plan_data.days)) {
         setCachedPlan(userId, weekStart, existingPlan.plan_data);
         res.write(`data: ${JSON.stringify({ type: 'done', plan: existingPlan.plan_data })}\n\n`);
         res.end();
@@ -416,16 +383,16 @@ async function generateStream(req, res, next) {
       clearCachedPlan(userId, weekStart);
     }
 
-    const result = await generateWeeklyPlan({
-      getProfile: (id) => findProfileByUserId(id),
-      getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
-      getActivities: () => getAllActivities(),
-      getTopActivities: (id, limit) => getTopActivities(id, limit),
-      userId,
+    const profile = await findProfileByUserId(userId);
+    const activities = await getAllActivities();
+    
+    const generatedPlan = generateWeeklyPlanAlgorithm({
+      profile,
+      activities,
       weekStart,
-      availableDays,
-      onChunk,
     });
+    
+    const result = { plan: generatedPlan, status: 'active' };
 
     if (result.plan && Array.isArray(result.plan.days)) {
       await upsertPlan(userId, weekStart, result.plan, result.status || 'active');
@@ -527,29 +494,8 @@ async function swapStream(req, res, next) {
       onChunk,
     };
 
-    if (planForSwap && isOldFormat(planForSwap)) {
-      clearCachedPlan(userId, targetWeekStart);
-      const inferredDays = inferAvailableDays(planForSwap);
-      const migrationDeps = {
-        getProfile: (id) => findProfileByUserId(id),
-        getActivityHistory: (id, days) => getActivityHistoryWithEntries(id, days),
-        getActivities: () => getAllActivities(),
-        getTopActivities: (id, limit) => getTopActivities(id, limit),
-        userId,
-        weekStart: targetWeekStart,
-        availableDays: inferredDays,
-        onChunk,
-      };
-      const migrationResult = await generateWeeklyPlan(migrationDeps);
-      if (!migrationResult.plan || !Array.isArray(migrationResult.plan.days) || migrationResult.plan.days.length === 0) {
-        throw new AppError('MigrationError', 'Failed to migrate old-format plan. Cannot proceed with swap.', 500);
-      }
-      await upsertPlan(userId, targetWeekStart, migrationResult.plan, 'active');
-    }
-
-    const updatedCached = getCachedPlan(userId, targetWeekStart);
-    if (updatedCached && Array.isArray(updatedCached.days)) {
-      const activityDays = updatedCached.days.filter(d => d.rest_day === false).length;
+    if (planForSwap && Array.isArray(planForSwap.days)) {
+      const activityDays = planForSwap.days.filter(d => d.rest_day === false).length;
       if (activityDays > 0) deps.availableDays = activityDays;
     }
 
