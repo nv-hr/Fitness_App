@@ -132,7 +132,7 @@ function validateProfileData(data) {
       throw new ValidationError('Target weight must be greater than current weight for weight gain goal');
     }
   }
-  if (targetDate != null) {
+  if (targetDate != null && targetDate !== '') {
     const today = new Date().toISOString().split('T')[0];
     if (targetDate < today) {
       throw new ValidationError('Target date must be today or later');
@@ -160,8 +160,8 @@ export async function createProfile(userId, profileData) {
     fitnessGoal,
     activityLevel,
     calorieRate,
-    targetWeightKg,
-    targetDate,
+    targetWeightKg: (targetWeightKg === '' || targetWeightKg === undefined) ? null : targetWeightKg,
+    targetDate: (targetDate === '' || targetDate === undefined) ? null : targetDate,
   });
 
   try {
@@ -216,7 +216,17 @@ export async function updateProfile(userId, profileData) {
 
   const { weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate, targetWeightKg, targetDate } = profileData;
 
-  await updateByUserId(userId, { weightKg, heightCm, age, gender, fitnessGoal, activityLevel, calorieRate, targetWeightKg, targetDate });
+  await updateByUserId(userId, {
+    weightKg,
+    heightCm,
+    age,
+    gender,
+    fitnessGoal,
+    activityLevel,
+    calorieRate,
+    targetWeightKg: (targetWeightKg === '' || targetWeightKg === undefined) ? null : targetWeightKg,
+    targetDate: targetDate || null,
+  });
 
   try {
     const { upsertWeightLog } = await import('../repositories/weightLog.repository.js');

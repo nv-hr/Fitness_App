@@ -5,8 +5,8 @@ import { ValidationError, NotFoundError } from '../utils/errors.js';
 export async function postWeight(req, res, next) {
   try {
     const userId = req.user.userId;
-    const { weightKg, loggedDate, notes } = req.body;
-    const entry = await weightLogService.logWeight(userId, { weightKg, loggedDate, notes });
+    const { weightKg, loggedDate, notes, timezone } = req.body;
+    const entry = await weightLogService.logWeight(userId, { weightKg, loggedDate, notes, timezone });
     return successResponse(res, { entry }, 201);
   } catch (err) {
     if (err instanceof ValidationError) {
@@ -20,7 +20,8 @@ export async function getWeightHistory(req, res, next) {
   try {
     const userId = req.user.userId;
     const limit = parseInt(req.query.limit, 10) || 50;
-    const entries = await weightLogService.getHistory(userId, limit);
+    const timezone = req.query.timezone || 'UTC';
+    const entries = await weightLogService.getHistory(userId, limit, timezone);
     return successResponse(res, { entries });
   } catch (err) {
     next(err);

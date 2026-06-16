@@ -53,6 +53,11 @@ This separation ensures that the frontend remains lightweight, the backend focus
 - Distinct functionality must reside in separate files.
 - Every exported function must include JSDoc/TSDoc comments explaining the *why*, not just the *what*.
 
+### Documentation & Specifications
+- Maintain up-to-date documentation describing core architecture, data models, and features.
+- All feature implementations MUST include corresponding specification updates (via `openspec`) to ensure the design intent is captured.
+- Unused dependency removals MUST be documented in corresponding specs.
+
 ### Linting and Formatting
 - Always ensure your code is linted and formatted before committing. Check for existing utility functions before adding new libraries.
 - Avoid committing `.env` files or any secrets (API keys, passwords) to version control.

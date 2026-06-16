@@ -5,7 +5,17 @@ export async function getWeeklyPlan(weekStart) {
   return apiGet(`/api/weekly-plans${params}`);
 }
 
-async function generateWeeklyPlan(weekStart, availableDays, force) {
+/**
+ * Generates a weekly activity plan via a standard REST call.
+ * This is used for auto-generation on page mount to avoid the complexity
+ * of SSE streaming when silent background generation is needed.
+ *
+ * @param {string} weekStart - The Monday start date of the week (YYYY-MM-DD)
+ * @param {number} availableDays - Number of days to generate workouts for
+ * @param {boolean} force - Whether to force regeneration and overwrite existing plan
+ * @returns {Promise<object>} The generated weekly plan object
+ */
+export async function generateWeeklyPlan(weekStart, availableDays, force) {
   return apiPost('/api/weekly-plans/generate', {
     weekStart,
     ...(availableDays != null && { availableDays }),

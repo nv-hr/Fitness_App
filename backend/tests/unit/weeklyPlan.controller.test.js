@@ -35,7 +35,8 @@ jest.unstable_mockModule('../../src/services/llm.service.js', () => ({
   clearCachedPlan: jest.fn(),
   acquireLock: jest.fn(),
   swapActivity: jest.fn(),
-  regenerateDay: jest.fn()
+  regenerateDay: jest.fn(),
+  activeGenerations: new Map()
 }));
 
 describe('weeklyPlan.controller', () => {
@@ -84,6 +85,38 @@ describe('weeklyPlan.controller', () => {
       expect(mockGetAllActivities).toHaveBeenCalled();
       expect(mockGenerateWeeklyPlanAlgorithm).toHaveBeenCalled();
       expect(mockUpsertPlan).toHaveBeenCalled();
+    });
+
+    it('should return 400 if user profile does not exist', async () => {
+      mockFindByUserId.mockResolvedValue(null);
+
+      const response = await request(app)
+        .post('/api/weekly-plans/generate')
+        .send({ weekStart: '2023-01-01', force: true });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.error.code).toBe('NO_PROFILE');
+    });
+
+    it('should return 409 if plan generation is already in progress', async () => {
+      mockFindByUserId.mockResolvedValue({ id: 1, fitness_goal: 'maintain', activity_level: 'moderate' });
+      const { activeGenerations } = await import('../../src/services/llm.service.js');
+      
+      // Simulate lock being held by setting the lock key
+      activeGenerations.set('weekly_1_2022-12-26', true);
+
+      try {
+        const response = await request(app)
+          .post('/api/weekly-plans/generate')
+          .send({ weekStart: '2022-12-26', force: true });
+
+        expect(response.status).toBe(409);
+        expect(response.body.success).toBe(false);
+        expect(response.body.error.code).toBe('GenerationConflict');
+      } finally {
+        activeGenerations.delete('weekly_1_2022-12-26');
+      }
     });
   });
 
