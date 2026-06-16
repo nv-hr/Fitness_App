@@ -36,6 +36,16 @@ import { LandingPage }                from '../features/landing/index.js';
 import { SettingsPage, ChangePasswordPage } from '../features/settings/index.js';
 
 /**
+ * Helper to check if a user needs to set up a password
+ */
+function hasNoPassword(user) {
+  return user.has_password === false || 
+         user.has_password === 'false' || 
+         user.has_password === null || 
+         user.has_password === undefined;
+}
+
+/**
  * Renders the landing page for guests and the dashboard for authenticated users.
  * Kept in Router.jsx because it straddles auth state and routing simultaneously.
  *
@@ -45,7 +55,7 @@ function HomeRoute() {
   const { user, loading } = useAuth();
   if (loading) return <Loader message="Loading..." />;
   if (!user) return <LandingPage />;
-  if (user.has_password === false || user.has_password === 'false' || user.has_password === null || user.has_password === undefined) {
+  if (hasNoPassword(user)) {
     return <Navigate to="/setup-password" replace />;
   }
   return <Navigate to="/dashboard" replace />;
@@ -148,7 +158,7 @@ export default function Router() {
  */
 function HasPasswordRedirect({ children }) {
   const { user } = useAuth();
-  if (user && user.has_password !== false && user.has_password !== 'false' && user.has_password !== null && user.has_password !== undefined) {
+  if (user && !hasNoPassword(user)) {
     return <Navigate to="/dashboard" replace />;
   }
   return children;

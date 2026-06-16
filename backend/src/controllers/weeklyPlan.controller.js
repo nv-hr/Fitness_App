@@ -1,5 +1,5 @@
 import { successResponse, errorResponse } from '../utils/response.js';
-import { getCachedPlan, setCachedPlan, clearCachedPlan, regenerateDay, swapActivity, acquireLock } from '../services/llm.service.js';
+import { getCachedPlan, setCachedPlan, clearCachedPlan, regenerateDay, swapActivity, acquireLock, activeGenerations } from '../services/llm.service.js';
 import { generateWeeklyPlanAlgorithm } from '../services/activityPlan/index.js';
 import { findByUserId as findProfileByUserId } from '../repositories/profile.repository.js';
 import { pool } from '../config/database.js';
@@ -126,24 +126,44 @@ async function generate(req, res, next) {
       clearCachedPlan(userId, weekStart);
     }
 
-    const profile = await findProfileByUserId(userId);
-    const activities = await getAllActivities();
-    
-    const generatedPlan = generateWeeklyPlanAlgorithm({
-      profile,
-      activities,
-      weekStart,
-    });
-    
-    const result = { plan: generatedPlan, status: 'active' };
-
-    // Persist to DB so toggleComplete, swapHandler, and subsequent
-    // page loads can find the plan (generateWeeklyPlan only caches in memory).
-    if (result.plan && Array.isArray(result.plan.days)) {
-      await upsertPlan(userId, weekStart, result.plan, result.status || 'active');
+    // Acquire lock to prevent concurrent generation for the same user and week start
+    const lockKey = `weekly_${userId}_${weekStart}`;
+    if (activeGenerations.has(lockKey)) {
+      return errorResponse(res, 'A weekly plan generation is already in progress.', 409, 'GenerationConflict');
     }
+    activeGenerations.set(lockKey, true);
 
-    return successResponse(res, result);
+    try {
+      const profile = await findProfileByUserId(userId);
+      if (!profile) {
+        return errorResponse(
+          res,
+          'User profile not set up. Please complete your profile before generating a plan.',
+          400,
+          'NO_PROFILE'
+        );
+      }
+
+      const activities = await getAllActivities();
+      
+      const generatedPlan = generateWeeklyPlanAlgorithm({
+        profile,
+        activities,
+        weekStart,
+      });
+      
+      const result = { plan: generatedPlan, status: 'active' };
+
+      // Persist to DB so toggleComplete, swapHandler, and subsequent
+      // page loads can find the plan (generateWeeklyPlan only caches in memory).
+      if (result.plan && Array.isArray(result.plan.days)) {
+        await upsertPlan(userId, weekStart, result.plan, result.status || 'active');
+      }
+
+      return successResponse(res, result);
+    } finally {
+      activeGenerations.delete(lockKey);
+    }
   } catch (err) {
     next(err);
   }
@@ -349,32 +369,32 @@ async function toggleComplete(req, res, next) {
 }
 
 async function generateStream(req, res, next) {
-  const userId = req.user.userId;
-  let weekStart = req.body.weekStart;
-
-  const validated = validateWeekAndDay(weekStart, undefined, res);
-  if (validated.error) return validated.error;
-  weekStart = validated.targetWeekStart;
-
-  let availableDays = req.body.availableDays;
-  if (availableDays !== undefined && availableDays !== null) {
-    if (!Number.isInteger(availableDays) || availableDays < 4 || availableDays > 6) {
-      return errorResponse(res, 'availableDays must be an integer between 4 and 6', 400, 'VALIDATION_ERROR');
-    }
-  } else {
-    availableDays = 4;
-  }
-
-  const force = req.body.force === true;
-  console.log(`[DEBUG] generateStream called for user ${userId}, weekStart ${weekStart}, force=${force}`);
-
-  const onChunk = setupSSE(res);
-
   try {
+    const userId = req.user.userId;
+    let weekStart = req.body.weekStart;
+
+    const validated = validateWeekAndDay(weekStart, undefined, res);
+    if (validated.error) return validated.error;
+    weekStart = validated.targetWeekStart;
+
+    let availableDays = req.body.availableDays;
+    if (availableDays !== undefined && availableDays !== null) {
+      if (!Number.isInteger(availableDays) || availableDays < 4 || availableDays > 6) {
+        return errorResponse(res, 'availableDays must be an integer between 4 and 6', 400, 'VALIDATION_ERROR');
+      }
+    } else {
+      availableDays = 4;
+    }
+
+    const force = req.body.force === true;
+    console.log(`[DEBUG] generateStream called for user ${userId}, weekStart ${weekStart}, force=${force}`);
+
+    // If !force, check DB first before locking/streaming
     if (!force) {
       const existingPlan = await findByUserAndWeek(userId, weekStart);
       if (existingPlan && existingPlan.plan_data && Array.isArray(existingPlan.plan_data.days)) {
         setCachedPlan(userId, weekStart, existingPlan.plan_data);
+        const onChunk = setupSSE(res);
         res.write(`data: ${JSON.stringify({ type: 'done', plan: existingPlan.plan_data })}\n\n`);
         res.end();
         return;
@@ -383,26 +403,58 @@ async function generateStream(req, res, next) {
       clearCachedPlan(userId, weekStart);
     }
 
-    const profile = await findProfileByUserId(userId);
-    const activities = await getAllActivities();
-    
-    const generatedPlan = generateWeeklyPlanAlgorithm({
-      profile,
-      activities,
-      weekStart,
-    });
-    
-    const result = { plan: generatedPlan, status: 'active' };
-
-    if (result.plan && Array.isArray(result.plan.days)) {
-      await upsertPlan(userId, weekStart, result.plan, result.status || 'active');
+    // Check lock
+    const lockKey = `weekly_${userId}_${weekStart}`;
+    if (activeGenerations.has(lockKey)) {
+      return errorResponse(res, 'A weekly plan generation is already in progress.', 409, 'GenerationConflict');
     }
 
-    res.write(`data: ${JSON.stringify({ type: 'done', plan: result.plan })}\n\n`);
-    res.end();
+    // Check profile
+    const profile = await findProfileByUserId(userId);
+    if (!profile) {
+      return errorResponse(
+        res,
+        'User profile not set up. Please complete your profile before generating a plan.',
+        400,
+        'NO_PROFILE'
+      );
+    }
+
+    // Acquire lock
+    activeGenerations.set(lockKey, true);
+
+    try {
+      const onChunk = setupSSE(res);
+      const activities = await getAllActivities();
+      
+      const generatedPlan = generateWeeklyPlanAlgorithm({
+        profile,
+        activities,
+        weekStart,
+      });
+      
+      const result = { plan: generatedPlan, status: 'active' };
+
+      if (result.plan && Array.isArray(result.plan.days)) {
+        await upsertPlan(userId, weekStart, result.plan, result.status || 'active');
+      }
+
+      res.write(`data: ${JSON.stringify({ type: 'done', plan: result.plan })}\n\n`);
+      res.end();
+    } finally {
+      activeGenerations.delete(lockKey);
+    }
   } catch (err) {
-    res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
-    res.end();
+    if (res.headersSent) {
+      try {
+        res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
+        res.end();
+      } catch (writeErr) {
+        console.error('Failed to write SSE error:', writeErr);
+      }
+    } else {
+      next(err);
+    }
   }
 }
 

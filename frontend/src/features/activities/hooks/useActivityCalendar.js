@@ -8,13 +8,14 @@
  * that already existed in MealCalendarSection.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { format, isToday, startOfToday, startOfWeek, startOfMonth } from 'date-fns';
 import {
   getWeeklyPlan,
   toggleActivityComplete,
   generateWeeklyPlanStream,
   swapActivityStream,
+  generateWeeklyPlan,
 } from '../api/activityCalendarApi.js';
 import { useCountdownTimer } from '../../../shared/hooks/useCountdownTimer.js';
 import { usePollingWithBackoff } from '../../../shared/hooks/usePollingWithBackoff.js';
@@ -50,7 +51,9 @@ const weeklyPlanCache = new Map();
 export function useActivityCalendar(onDaySelect, onMonthChange) {
   const [selectedDay, setSelectedDay] = useState(() => startOfToday());
   const [dayPlan, setDayPlan] = useState(null);
-  const [planLoading, setPlanLoading] = useState(false);
+  const [planLoading, setPlanLoading] = useState(true);
+  const autoGenerateFiredRef = useRef(false);
+  const hasFetched = useRef(false);
   const [generating, setGenerating] = useState(false);
   const [generatingStatus, setGeneratingStatus] = useState('');
   const [swappingActivityId, setSwappingActivityId] = useState(null);
@@ -121,6 +124,7 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
     let cancelled = false;
 
     async function fetchDayPlan() {
+      hasFetched.current = false;
       setPlanLoading(true);
       try {
         let plan;
@@ -153,7 +157,10 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
       } catch {
         if (!cancelled) setDayPlan({ date: format(selectedDay, 'yyyy-MM-dd'), activities: [] });
       } finally {
-        if (!cancelled) setPlanLoading(false);
+        if (!cancelled) {
+          hasFetched.current = true;
+          setPlanLoading(false);
+        }
       }
     }
 
@@ -197,8 +204,43 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
 
   // ── Auto-generate plan for today if it's missing ────────────────────────────
 
-  // Auto-generation on mount has been disabled by user request.
-  // Users must manually trigger plan generation via the UI.
+  useEffect(() => {
+    if (planLoading || !hasFetched.current || autoGenerateFiredRef.current) return;
+    if (dayPlan !== null) return;
+
+    const currentWeekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+    const selectedWeekStart = format(startOfWeek(selectedDay, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+    if (currentWeekStart !== selectedWeekStart) return;
+
+    autoGenerateFiredRef.current = true;
+    setGenerating(true);
+    setGeneratingStatus('Generating your plan...');
+
+    generateWeeklyPlan(currentWeekStart, 4, false)
+      .then((res) => {
+        const plan = res.data?.plan;
+        if (plan) {
+          weeklyPlanCache.set(currentWeekStart, plan);
+        }
+        setRefreshTrigger((prev) => prev + 1);
+        window.dispatchEvent(new CustomEvent('health-system-update', { detail: { type: 'plan-update' } }));
+      })
+      .catch((err) => {
+        if (err.status === 409) {
+          // Silent: plan already being generated elsewhere
+          return;
+        }
+        if (err.status === 400) {
+          setToast({ message: 'Please complete your profile to generate a plan' });
+        } else {
+          setToast({ message: err.message || 'Failed to generate plan' });
+        }
+      })
+      .finally(() => {
+        setGenerating(false);
+        setGeneratingStatus('');
+      });
+  }, [planLoading, dayPlan, selectedDay]);
 
   // ── Manual full-week regeneration ───────────────────────────────────────────
 
@@ -209,6 +251,21 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
 
     const targetDay = selectedDay || new Date();
     const weekStart = format(startOfWeek(targetDay, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+
+    const onGenerateError = (err) => {
+      if (err.status === 409) {
+        setGeneratingStatus('Generation in progress...');
+        pollForWeeklyPlan(weekStart);
+        return;
+      }
+      if (err.retryAfter || err.code === 'RATE_LIMITED') {
+        setGenRetryAfter(err.retryAfter || 150);
+      } else {
+        setToast({ message: err.message || 'Failed to generate plan' });
+      }
+      setGenerating(false);
+      setGeneratingStatus('');
+    };
 
     generateWeeklyPlanStream(
       weekStart,
@@ -251,20 +308,7 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
         setGenerating(false);
         setGeneratingStatus('');
       },
-      (err) => {
-        if (err.status === 409) {
-          setGeneratingStatus('Generation in progress...');
-          pollForWeeklyPlan(weekStart);
-          return;
-        }
-        if (err.retryAfter || err.code === 'RATE_LIMITED') {
-          setGenRetryAfter(err.retryAfter || 150);
-        } else {
-          setToast({ message: err.message || 'Failed to generate plan' });
-        }
-        setGenerating(false);
-        setGeneratingStatus('');
-      }
+      onGenerateError
     );
   }, [selectedDay, setGenRetryAfter]);
 
@@ -274,6 +318,18 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
     if (swapRetryAfter > 0 || !selectedDay) return;
 
     const weekStart = format(startOfWeek(selectedDay, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+
+    const onSwapError = (err) => {
+      if (err.retryAfter || err.code === 'RATE_LIMITED') {
+        setSwapRetryAfter(err.retryAfter || 300);
+        setToast({ message: `Daily workout swap limit reached. Please wait ${err.retryAfter || 300}s.` });
+      } else if (err.code === 'NOT_FOUND_ERROR') {
+        setToast({ message: 'Activity not found in active plan.' });
+      } else {
+        setToast({ message: 'Unable to swap activity.' });
+      }
+      setSwappingActivityId(null);
+    };
 
     setSwappingActivityId(`${dayIndex}-${activityId}`);
     swapActivityStream(
@@ -293,17 +349,7 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
         window.dispatchEvent(new CustomEvent('health-system-update', { detail: { type: 'plan-update' } }));
         setSwappingActivityId(null);
       },
-      (err) => {
-        if (err.retryAfter || err.code === 'RATE_LIMITED') {
-          setSwapRetryAfter(err.retryAfter || 300);
-          setToast({ message: `Daily workout swap limit reached. Please wait ${err.retryAfter || 300}s.` });
-        } else if (err.code === 'NOT_FOUND_ERROR') {
-          setToast({ message: 'Activity not found in active plan.' });
-        } else {
-          setToast({ message: 'Unable to swap activity.' });
-        }
-        setSwappingActivityId(null);
-      }
+      onSwapError
     );
   }, [selectedDay, swapRetryAfter, setSwapRetryAfter]);
 

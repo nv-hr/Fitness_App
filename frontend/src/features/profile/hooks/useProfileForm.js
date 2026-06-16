@@ -57,7 +57,7 @@ export function useProfileForm(onSaveSuccess) {
           setValue('targetWeightKg', profile.target_weight_kg);
         }
         if (profile.target_date) {
-          setValue('targetDate', profile.target_date);
+          setValue('targetDate', typeof profile.target_date === 'string' ? profile.target_date.split('T')[0] : profile.target_date);
         }
         setBmiResult({ bmi: response.data.bmi, bmiCategory: response.data.bmiCategory });
         if (response.data.tdee) {

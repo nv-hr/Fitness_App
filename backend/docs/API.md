@@ -6,6 +6,11 @@
 
 The Fitness App API provides endpoints for BMI calculation, TDEE estimation, food logging and calorie tracking, and physical activity recommendations. All responses follow a standard format with `success` boolean and `data` or `error` payload.
 
+### Documentation & Specifications Maintenance
+- Any changes to endpoints, request payloads, or response structures MUST be documented in this `API.md` file immediately.
+- Correlating feature specifications and requirements MUST be updated in the `openspec/specs/` directory as part of any pull request.
+- Unused dependencies or dead code identified by `Fallow` should be removed, and their removal documented in the `code-health` spec.
+
 ## Response Format
 
 ### Success Response

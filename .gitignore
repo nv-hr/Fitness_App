@@ -5,3 +5,11 @@ coverage/
 .DS_Store
 *.log
 .env
+
+# Agent and generation tool outputs
+openspec/
+graphify-out/
+.opencode/
+.fallow/
+.agents/
+.agent/
