@@ -210,6 +210,21 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
     const targetDay = selectedDay || new Date();
     const weekStart = format(startOfWeek(targetDay, { weekStartsOn: 1 }), 'yyyy-MM-dd');
 
+    const onGenerateError = (err) => {
+      if (err.status === 409) {
+        setGeneratingStatus('Generation in progress...');
+        pollForWeeklyPlan(weekStart);
+        return;
+      }
+      if (err.retryAfter || err.code === 'RATE_LIMITED') {
+        setGenRetryAfter(err.retryAfter || 150);
+      } else {
+        setToast({ message: err.message || 'Failed to generate plan' });
+      }
+      setGenerating(false);
+      setGeneratingStatus('');
+    };
+
     generateWeeklyPlanStream(
       weekStart,
       4,
@@ -251,20 +266,7 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
         setGenerating(false);
         setGeneratingStatus('');
       },
-      (err) => {
-        if (err.status === 409) {
-          setGeneratingStatus('Generation in progress...');
-          pollForWeeklyPlan(weekStart);
-          return;
-        }
-        if (err.retryAfter || err.code === 'RATE_LIMITED') {
-          setGenRetryAfter(err.retryAfter || 150);
-        } else {
-          setToast({ message: err.message || 'Failed to generate plan' });
-        }
-        setGenerating(false);
-        setGeneratingStatus('');
-      }
+      onGenerateError
     );
   }, [selectedDay, setGenRetryAfter]);
 
@@ -274,6 +276,18 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
     if (swapRetryAfter > 0 || !selectedDay) return;
 
     const weekStart = format(startOfWeek(selectedDay, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+
+    const onSwapError = (err) => {
+      if (err.retryAfter || err.code === 'RATE_LIMITED') {
+        setSwapRetryAfter(err.retryAfter || 300);
+        setToast({ message: `Daily workout swap limit reached. Please wait ${err.retryAfter || 300}s.` });
+      } else if (err.code === 'NOT_FOUND_ERROR') {
+        setToast({ message: 'Activity not found in active plan.' });
+      } else {
+        setToast({ message: 'Unable to swap activity.' });
+      }
+      setSwappingActivityId(null);
+    };
 
     setSwappingActivityId(`${dayIndex}-${activityId}`);
     swapActivityStream(
@@ -293,17 +307,7 @@ export function useActivityCalendar(onDaySelect, onMonthChange) {
         window.dispatchEvent(new CustomEvent('health-system-update', { detail: { type: 'plan-update' } }));
         setSwappingActivityId(null);
       },
-      (err) => {
-        if (err.retryAfter || err.code === 'RATE_LIMITED') {
-          setSwapRetryAfter(err.retryAfter || 300);
-          setToast({ message: `Daily workout swap limit reached. Please wait ${err.retryAfter || 300}s.` });
-        } else if (err.code === 'NOT_FOUND_ERROR') {
-          setToast({ message: 'Activity not found in active plan.' });
-        } else {
-          setToast({ message: 'Unable to swap activity.' });
-        }
-        setSwappingActivityId(null);
-      }
+      onSwapError
     );
   }, [selectedDay, swapRetryAfter, setSwapRetryAfter]);
 
